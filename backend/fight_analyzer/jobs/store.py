@@ -23,10 +23,12 @@ from fight_analyzer.contracts import (
     JobOutputs,
     JobStatus,
     JobType,
+    MatchSetup,
     PipelineStage,
     StageProgress,
 )
 from fight_analyzer.contracts.common import utcnow
+from fight_analyzer.contracts.fighters import swap_fighter_ids
 
 # Each entry upgrades the schema by one version (PRAGMA user_version).
 MIGRATIONS: tuple[str, ...] = (
@@ -303,7 +305,9 @@ class JobStore:
                      message: str) -> Job | None:
         """Exchange red and blue in one transaction: every selection anchor and the names
         swap together and the job is queued again, so all results are derived again from
-        the swapped fighter ids. None if not allowed now or nothing was selected yet."""
+        the swapped fighter ids. User inputs that belong to a person (finish winner, point
+        deductions) get that person's new fighter id, so they stay with the person.
+        None if not allowed now or nothing was selected yet."""
         def swapped(params: dict[str, Any]) -> dict[str, Any] | None:
             selection = params.get("selection")
             if not selection:
@@ -311,8 +315,12 @@ class JobStore:
             anchors = [{**a, "red_detection_id": a.get("blue_detection_id"),
                         "blue_detection_id": a.get("red_detection_id")} for a in selection["anchors"]]
             names = {**DEFAULT_NAMES, **(params.get("names") or {})}
-            return {"selection": {**selection, "anchors": anchors},
-                    "names": {"red": names["blue"], "blue": names["red"]}}
+            patch: dict[str, Any] = {"selection": {**selection, "anchors": anchors},
+                                     "names": {"red": names["blue"], "blue": names["red"]}}
+            # Every user input stored by fighter id belongs to a person: swap each one here.
+            if params.get("match"):
+                patch["match"] = swap_fighter_ids(MatchSetup.model_validate(params["match"])).model_dump(mode="json")
+            return patch
 
         return self.resubmit(job_id, allowed=allowed, params_patch=swapped, clear_outputs=clear_outputs,
                              message=message)

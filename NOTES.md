@@ -1,7 +1,9 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 20 Ekim 2026 (Aşama 9 sonrası). Ayrıntılı teknik açıklama
-[README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
+Son güncelleme: 8 Kasım 2026 (v2 başlangıcı, taraf değiştirme düzeltmesi). Ayrıntılı
+teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
+v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
+CLAUDE.md geçerlidir.
 
 ## Değişmeyen kurallar
 
@@ -43,6 +45,9 @@ Son güncelleme: 20 Ekim 2026 (Aşama 9 sonrası). Ayrıntılı teknik açıklam
   sonra yalnızca görünüm. Kullanıcı birden çok karede seçim/düzeltme ve "bu karede
   görünmüyor" işareti ekleyebilir; yeniden seçim pozları yeniden çıkarmaz.
 - Emin olunamayan yerde kimlik "belirsiz" kalır (yanlış atamak yerine).
+- "Tarafları değiştir" seçim noktalarını ve adları takas eder; kişiye ait kullanıcı
+  girdileri (bitişte kazanan, puan kesintileri) kişiyle birlikte taşınır. 8 Kasım
+  2026'daki düzeltmeye kadar bu girdiler köşede kalıyor, yani diğer dövüşçüye geçiyordu.
 
 ### Hareket, olaylar, momentum
 - Kamera hareketi arka plandan (LK + RANSAC, grafik maskesi) çıkarılır; hızlar gövde

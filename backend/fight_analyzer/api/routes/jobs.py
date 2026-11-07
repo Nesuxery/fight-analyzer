@@ -340,8 +340,9 @@ def set_exclusions(store: StoreDep, job_id: JobId, body: SegmentExclusions) -> J
 
 @router.post("/{job_id}/swap", response_model=Job, status_code=202)
 def swap_corners(store: StoreDep, job_id: JobId) -> Job:
-    """Exchange the red and blue corners (selection and names together); identities, events,
-    statistics and momentum are derived again from cached poses."""
+    """Exchange the red and blue corners (selection and names together; the finish winner and
+    point deductions stay with their fighter); identities, events, statistics and momentum
+    are derived again from cached poses."""
     job = _job(store, job_id)
     if job.selection is None:
         raise ApiProblem(409, "no_selection", "Önce dövüşçüleri seçin.")

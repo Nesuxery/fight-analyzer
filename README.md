@@ -486,9 +486,10 @@ oynatma hızını değiştirmek ya da ileri-geri atlamak sayıları değiştirme
 **Kontroller:** oynat/duraklat; 0,25× · 0,5× · 1× · 2×; bir kare ve bir saniye
 ileri/geri; iskelet, olay efekti, mesafe ve diğer kişiler katmanları; tam ekran;
 isim düzenleme; **taraf değiştirme** (`POST /jobs/{id}/swap`: seçim noktaları ve
-isimler tek işlemde yer değiştirir, kimlikler, olaylar, istatistikler ve momentum
-yeni taraflara göre birlikte yeniden üretilir; bu sırada sonuç ekranı "Sonuçlar
-yeniden hesaplanıyor" gösterir, eski sonuç güncelmiş gibi gösterilmez);
+isimler tek işlemde yer değiştirir; kişiye ait girdiler, yani bitişte kazanan ve
+puan kesintileri, kişiyle birlikte taşınır; kimlikler, olaylar, istatistikler ve
+momentum yeni taraflara göre birlikte yeniden üretilir; bu sırada sonuç ekranı
+"Sonuçlar yeniden hesaplanıyor" gösterir, eski sonuç güncelmiş gibi gösterilmez);
 **dövüşçüleri yeniden seçme** (poz çıkarımı tekrar çalışmaz, önbellekten
 okunur).
 

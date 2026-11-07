@@ -1,0 +1,44 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Local runtime data: database, uploaded videos, models, outputs and exports
+data/
+output/
+outputs/
+exports/
+
+# Videos
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.avi
+
+# Model weights
+*.pt
+*.onnx
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+*-wal
+*-shm
+
+# Secrets
+.env
+.env.*
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/

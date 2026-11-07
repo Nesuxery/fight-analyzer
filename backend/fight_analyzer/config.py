@@ -1,0 +1,277 @@
+"""Runtime settings, read from FA_* environment variables."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+DevicePreference = Literal["auto", "cpu", "cuda"]
+
+ACCEPTED_EXTENSIONS: tuple[str, ...] = ("mp4", "mov", "m4v", "mkv", "webm", "avi")
+
+
+@dataclass(frozen=True)
+class UploadLimitSettings:
+    max_bytes: int = 8 * 1024**3
+    min_duration_s: float = 0.5
+    max_duration_s: float = 3600.0
+    # Limits on the displayed (rotation-corrected) size of the source.
+    max_long_side: int = 3840
+    max_short_side: int = 2160
+    min_short_side: int = 144
+
+
+@dataclass(frozen=True)
+class TranscodeSettings:
+    """Browser-playable constant-frame-rate analysis copy (H.264 + AAC MP4)."""
+
+    max_short_side: int = 1080
+    max_fps: float = 30.0
+    crf: int = 20
+    preset: str = "veryfast"
+    audio_bitrate_k: int = 128
+
+
+@dataclass(frozen=True)
+class PoseSettings:
+    imgsz: int = 640
+    conf: float = 0.25
+    iou: float = 0.7
+    max_det: int = 20
+    batch: int = 4
+    # Seconds between preview frames sent to the UI while pose runs.
+    preview_interval_s: float = 1.5
+
+
+@dataclass(frozen=True)
+class TrackingSettings:
+    """Shot detection, short-term tracking and identity assignment.
+    All values are part of the tracking cache keys."""
+
+    tracker: str = "ocsort"  # Ultralytics tracker config used inside each shot
+    # Camera cuts: 1 - Bhattacharyya distance of consecutive frame colour histograms.
+    cut_threshold: float = 0.5
+    cut_relative: float = 4.0  # ... or this many times the local median, if >= cut_floor
+    # Low on purpose: in octagon broadcasts both shots are mostly the same canvas, so a
+    # hard cut can move the colour histogram only ~0.2 (camera motion stays ~10x lower).
+    cut_floor: float = 0.12
+    min_shot_frames: int = 6
+    # Detections whose boxes overlap this much are "in contact" (clinch, crossing, referee between).
+    contact_iou: float = 0.15
+    contact_cover: float = 0.45
+    split_gap_frames: int = 3
+    # Identity
+    short_gap_s: float = 1.0  # occlusion kept as "occluded" before it becomes "uncertain"
+    motion_gap_s: float = 1.0  # beyond this gap, position/motion is not used
+    accept: float = 0.58
+    accept_after_cut: float = 0.64
+    margin: float = 0.08
+    min_similarity: float = 0.45
+    update_confidence: float = 0.75
+    candidates: int = 8
+
+
+@dataclass(frozen=True)
+class MotionSettings:
+    """Motion signals and event detection. Lengths are in torso lengths ("body
+    units", mid-shoulders to mid-hips), times in seconds: nothing depends on the
+    frame rate. Part of the event cache key."""
+
+    kp_min_conf: float = 0.5  # joints below this are not measurements
+    max_gap_s: float = 0.15  # longer holes restart smoothing/velocity
+    # One-Euro filter (time based): less smoothing the faster a joint moves.
+    smooth_min_cutoff_hz: float = 2.0
+    smooth_beta: float = 1.0  # cutoff increase per body unit/s of speed
+    smooth_d_cutoff_hz: float = 4.0
+    # Velocity = displacement over this much time (positions interpolated in time),
+    # so a 30 fps and a 60 fps copy of the same motion give the same speeds.
+    velocity_window_s: float = 0.067
+    spike_body: float = 0.6  # one-frame jumps of this size are keypoint errors
+    max_speed: float = 40.0  # body units/s; faster is a keypoint error, not motion
+    activity_ref: float = 4.0  # limb speed counted as full activity
+    # Strikes (speeds of the striking joint relative to the hips)
+    strike_low: float = 3.0  # an attempt starts/ends where speed crosses this
+    punch_peak: float = 6.0
+    punch_extension: float = 0.55  # reach toward the opponent's upper body / arm length
+    punch_extension_gain: float = 0.15
+    punch_toward: float = 0.5  # cosine between motion and the direction to the opponent
+    strike_max_distance: float = 3.5  # fighters' distance at the peak
+    strike_max_duration_s: float = 1.0
+    kick_peak: float = 6.0
+    kick_extension: float = 0.7  # hip-ankle distance / leg length
+    kick_raise: float = 0.5  # kicking ankle above the standing one
+    kick_toward: float = 0.3
+    knee_peak: float = 5.0
+    knee_max_distance: float = 2.0
+    same_motion_s: float = 0.12  # peaks of different limbs closer than this: one motion
+    leg_over_punch_s: float = 0.25  # a kick/knee hides arm motion this close to it
+    contact_reach: float = 0.5  # striking joint this close to an opponent joint (and inside the box)
+    # Possible impact: after a possible contact the opponent's head moves this far (torso
+    # lengths, relative to his shoulders, beyond his movement just before) within the window.
+    impact_head_jolt: float = 0.3
+    impact_window_s: float = 0.25
+    # Movement and positions
+    advance_speed: float = 0.5  # toward (+) / away (-) from the opponent
+    advance_smooth_s: float = 0.3
+    min_run_s: float = 0.4
+    clinch_distance: float = 1.3
+    clinch_min_s: float = 1.5
+    control_distance: float = 1.8
+    control_min_s: float = 1.0
+    posture_stable_s: float = 0.4
+    fall_max_s: float = 1.5  # standing -> down within this time is one fall
+    knockdown_window_s: float = 1.2  # strike before a fall
+    takedown_window_s: float = 2.0  # close contact before a fall
+    sample_hz: float = 10.0  # resolution of the signal timelines sent to the UI
+    # Camera motion from the background
+    camera_width: int = 640
+    camera_features: int = 400
+    camera_min_inliers: int = 25
+
+
+@dataclass(frozen=True)
+class MomentumSettings:
+    """Experimental momentum. Starting design parameters, not validated
+    sport-science weights. Red share = 100 x (m1 + prior) / (m1 + m2 + 2 x prior)."""
+
+    half_life_s: float = 20.0
+    prior: float = 4.0
+    strike_attempt: float = 1.0  # punch or knee
+    kick_attempt: float = 1.3  # a kick is never also counted as a punch
+    contact_bonus: float = 0.3  # "possible contact" on top of the attempt
+    advance_per_s: float = 0.2
+    control_per_s: float = 0.5
+    knockdown: float = 4.0
+    takedown: float = 2.5
+    min_major_confidence: float = 0.5  # weaker major events are shown but add nothing
+
+
+@dataclass(frozen=True)
+class Settings:
+    data_dir: Path
+    api_host: str = "127.0.0.1"
+    api_port: int = 8000
+    device: DevicePreference = "auto"
+    pose_model: str = "yolo26s-pose.pt"
+    models_dir_override: Path | None = None
+    worker_poll_interval_s: float = 1.0
+    worker_heartbeat_interval_s: float = 2.0
+    # Health reports the worker as unavailable after this long without a heartbeat.
+    worker_stale_after_s: float = 10.0
+    # A running job whose heartbeat is older than this is considered abandoned.
+    job_stale_after_s: float = 30.0
+    job_max_attempts: int = 2
+    # Analyses waiting or running at the same time (uploads beyond this are refused).
+    max_active_jobs: int = 20
+    # Uploads need room for the source, the analysis copy and caches.
+    min_free_disk_bytes: int = 2 * 1024**3
+    upload: UploadLimitSettings = field(default_factory=UploadLimitSettings)
+    transcode: TranscodeSettings = field(default_factory=TranscodeSettings)
+    pose: PoseSettings = field(default_factory=PoseSettings)
+    tracking: TrackingSettings = field(default_factory=TrackingSettings)
+    motion: MotionSettings = field(default_factory=MotionSettings)
+    momentum: MomentumSettings = field(default_factory=MomentumSettings)
+
+    @property
+    def db_path(self) -> Path:
+        return self.data_dir / "jobs.sqlite3"
+
+    @property
+    def jobs_dir(self) -> Path:
+        """Per-job working files (live preview frames)."""
+        return self.data_dir / "jobs"
+
+    @property
+    def uploads_dir(self) -> Path:
+        """Original uploads, stored by content hash: uploads/<sha256>/source.<ext>."""
+        return self.data_dir / "uploads"
+
+    @property
+    def cache_dir(self) -> Path:
+        """Reusable results: cache/video/<key>/ and cache/pose/<key>/."""
+        return self.data_dir / "cache"
+
+    @property
+    def models_dir(self) -> Path:
+        return self.models_dir_override or self.data_dir / "models"
+
+    @property
+    def ultralytics_config_dir(self) -> Path:
+        return self.data_dir / "ultralytics"
+
+    @property
+    def pose_model_path(self) -> Path:
+        return self.models_dir / self.pose_model
+
+    def ensure_dirs(self) -> None:
+        for d in (self.data_dir, self.jobs_dir, self.uploads_dir, self.cache_dir,
+                  self.models_dir, self.ultralytics_config_dir):
+            d.mkdir(parents=True, exist_ok=True)
+
+
+def _num(env: os._Environ[str], name: str, default: float, cast=float):
+    raw = env.get(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        return cast(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be a number (got {raw!r})") from None
+
+
+def load_settings() -> Settings:
+    env = os.environ
+    device = env.get("FA_DEVICE", "auto").lower()
+    if device not in ("auto", "cpu", "cuda"):
+        raise ValueError(f"FA_DEVICE must be auto, cpu or cuda (got {device!r})")
+    models_dir = env.get("FA_MODELS_DIR")
+    up = UploadLimitSettings()
+    tc = TranscodeSettings()
+    ps = PoseSettings()
+    return Settings(
+        data_dir=Path(env.get("FA_DATA_DIR", PROJECT_ROOT / "data")).resolve(),
+        api_host=env.get("FA_API_HOST", "127.0.0.1"),
+        api_port=int(env.get("FA_API_PORT", "8000")),
+        device=device,  # type: ignore[arg-type]
+        pose_model=env.get("FA_POSE_MODEL", Settings.pose_model),
+        max_active_jobs=_num(env, "FA_MAX_ACTIVE_JOBS", Settings.max_active_jobs, int),
+        min_free_disk_bytes=int(_num(env, "FA_MIN_FREE_DISK_MB", Settings.min_free_disk_bytes / 1024**2) * 1024**2),
+        models_dir_override=Path(models_dir).resolve() if models_dir else None,
+        upload=UploadLimitSettings(
+            max_bytes=int(_num(env, "FA_MAX_UPLOAD_MB", up.max_bytes / 1024**2) * 1024**2),
+            min_duration_s=_num(env, "FA_MIN_DURATION_S", up.min_duration_s),
+            max_duration_s=_num(env, "FA_MAX_DURATION_S", up.max_duration_s),
+            max_long_side=_num(env, "FA_MAX_LONG_SIDE", up.max_long_side, int),
+            max_short_side=_num(env, "FA_MAX_SHORT_SIDE", up.max_short_side, int),
+            min_short_side=_num(env, "FA_MIN_SHORT_SIDE", up.min_short_side, int),
+        ),
+        transcode=TranscodeSettings(
+            max_short_side=_num(env, "FA_ANALYSIS_MAX_SHORT_SIDE", tc.max_short_side, int),
+            max_fps=_num(env, "FA_ANALYSIS_MAX_FPS", tc.max_fps),
+            crf=tc.crf,
+            preset=tc.preset,
+            audio_bitrate_k=tc.audio_bitrate_k,
+        ),
+        pose=PoseSettings(
+            imgsz=_num(env, "FA_POSE_IMGSZ", ps.imgsz, int),
+            conf=_num(env, "FA_POSE_CONF", ps.conf),
+            iou=ps.iou,
+            max_det=_num(env, "FA_POSE_MAX_DET", ps.max_det, int),
+            batch=_num(env, "FA_POSE_BATCH", ps.batch, int),
+            preview_interval_s=ps.preview_interval_s,
+        ),
+    )
+
+
+def apply_runtime_env(settings: Settings) -> None:
+    """Keep third-party libraries local and safe: Ultralytics settings live in
+    the data dir, its online features (telemetry, auto-downloads, update
+    checks) are off, and checkpoints load with torch weights_only (no
+    arbitrary pickle code). Must run before ultralytics is imported."""
+    os.environ.setdefault("YOLO_CONFIG_DIR", str(settings.ultralytics_config_dir))
+    os.environ.setdefault("YOLO_OFFLINE", "1")
+    os.environ.setdefault("ULTRALYTICS_SAFE_LOAD", "1")

@@ -1,0 +1,307 @@
+{
+ "clip": "topuria-oliveira.mp4",
+ "role": "tuning",
+ "note": "Ayar seti: bu klip kimlik takibi ve olay kuralları ayarlanırken kullanıldı; sonuçlar yeni görüntülerdeki doğruluğu göstermez. Etiketler numaralı kutulu karelerden elle (validation sheet) çıkarıldı; vuruş kareleri ±3 kare yaklaşıktır. Klipte tekrar/ağır çekim ve benzer şort renkleri yoktur.",
+ "identity": [
+  {
+   "frame": 0,
+   "red": 1,
+   "blue": 0,
+   "referee": null,
+   "scenario": "ayakta"
+  },
+  {
+   "frame": 10,
+   "red": 1,
+   "blue": 0,
+   "referee": null,
+   "scenario": "ayakta"
+  },
+  {
+   "frame": 20,
+   "red": 1,
+   "blue": 2,
+   "referee": 0,
+   "scenario": "klinç / önden geçme"
+  },
+  {
+   "frame": 30,
+   "red": 1,
+   "blue": 2,
+   "referee": 0,
+   "scenario": "düşüş"
+  },
+  {
+   "frame": 40,
+   "red": 0,
+   "blue": 1,
+   "referee": 3,
+   "scenario": "yerde"
+  },
+  {
+   "frame": 50,
+   "red": 0,
+   "blue": 3,
+   "referee": null,
+   "scenario": "yerde"
+  },
+  {
+   "frame": 60,
+   "red": 0,
+   "blue": 1,
+   "referee": 2,
+   "scenario": "yerde"
+  },
+  {
+   "frame": 70,
+   "red": 1,
+   "blue": 2,
+   "referee": 0,
+   "scenario": "yerde + hakem giriyor"
+  },
+  {
+   "frame": 80,
+   "red": 0,
+   "blue": 2,
+   "referee": [
+    1,
+    3
+   ],
+   "scenario": "hakem araya giriyor"
+  },
+  {
+   "frame": 90,
+   "red": 1,
+   "blue": -1,
+   "referee": 0,
+   "scenario": "hakem araya giriyor"
+  },
+  {
+   "frame": 100,
+   "red": 0,
+   "blue": 2,
+   "referee": 1,
+   "scenario": "hakem araya giriyor"
+  },
+  {
+   "frame": 110,
+   "red": 0,
+   "blue": -1,
+   "referee": 1,
+   "scenario": "hakem araya giriyor"
+  },
+  {
+   "frame": 120,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "hızlı kamera hareketi"
+  },
+  {
+   "frame": 130,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 140,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 150,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 160,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 170,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 180,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 190,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 200,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 210,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 220,
+   "red": null,
+   "blue": 0,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 230,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 240,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 250,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 260,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 270,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 280,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 290,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 300,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 310,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  },
+  {
+   "frame": 320,
+   "red": 0,
+   "blue": null,
+   "referee": null,
+   "scenario": "kamera değişimi: yakın çekim"
+  }
+ ],
+ "strike_window": [
+  0,
+  110
+ ],
+ "strikes": [
+  {
+   "frame": 8,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "ayakta"
+  },
+  {
+   "frame": 11,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "ayakta"
+  },
+  {
+   "frame": 18,
+   "actor": "blue",
+   "kind": "punch",
+   "scenario": "klinç mesafesi (gövdeye)"
+  },
+  {
+   "frame": 24,
+   "actor": "blue",
+   "kind": "punch",
+   "scenario": "klinç mesafesi (gövdeye)"
+  },
+  {
+   "frame": 27,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "nakavt vuruşu (uzak kol, kısmen örtülü)"
+  },
+  {
+   "frame": 62,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "yerde, üstten"
+  },
+  {
+   "frame": 67,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "yerde, üstten"
+  },
+  {
+   "frame": 71,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "yerde, üstten"
+  },
+  {
+   "frame": 74,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "yerde, üstten"
+  },
+  {
+   "frame": 81,
+   "actor": "red",
+   "kind": "punch",
+   "scenario": "yerde, üstten (hakem girerken)"
+  }
+ ]
+}

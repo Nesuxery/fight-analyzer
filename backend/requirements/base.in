@@ -1,0 +1,12 @@
+# Direct runtime dependencies (exact pins). torch/torchvision are installed
+# separately from the official PyTorch index, see torch-*.txt.
+# Full transitive lock: requirements/lock.txt
+fastapi==0.141.1
+uvicorn==0.54.0
+pydantic==2.13.5
+numpy==2.5.3
+opencv-python==4.14.0.94
+imageio-ffmpeg==0.6.0
+ultralytics==8.4.163
+lap==0.5.13  # linear assignment for Ultralytics trackers (OC-SORT)
+pillow==12.3.0  # text with Turkish characters on the exported MP4

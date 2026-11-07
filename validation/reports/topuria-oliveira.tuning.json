@@ -1,0 +1,148 @@
+{
+ "job_id": "161dbf6370c64d1d9eb1b5849ed717ad",
+ "clip": "topuria-oliveira.mp4",
+ "role": "tuning",
+ "identity": {
+  "by_scenario": {
+   "ayakta": {
+    "doğru kişi": 4
+   },
+   "toplam": {
+    "doğru kişi": 42,
+    "başka kişi": 1,
+    "doğru: kutusu yok, belirsiz": 2,
+    "doğru: görünmüyor": 21
+   },
+   "klinç / önden geçme": {
+    "doğru kişi": 2
+   },
+   "düşüş": {
+    "doğru kişi": 2
+   },
+   "yerde": {
+    "doğru kişi": 6
+   },
+   "yerde + hakem giriyor": {
+    "doğru kişi": 1,
+    "başka kişi": 1
+   },
+   "hakem araya giriyor": {
+    "doğru kişi": 6,
+    "doğru: kutusu yok, belirsiz": 2
+   },
+   "hızlı kamera hareketi": {
+    "doğru kişi": 1,
+    "doğru: görünmüyor": 1
+   },
+   "kamera değişimi: yakın çekim": {
+    "doğru: görünmüyor": 20,
+    "doğru kişi": 20
+   }
+  },
+  "problems": [
+   {
+    "frame": 70,
+    "side": "blue",
+    "result": "başka kişi"
+   }
+  ],
+  "uncertain_s": {
+   "fighter_a": 3.47,
+   "fighter_b": 3.3
+  },
+  "frames": 327,
+  "fps": 30.0
+ },
+ "strikes": {
+  "window": [
+   0,
+   110
+  ],
+  "labelled": 10,
+  "detected": 5,
+  "matched": [
+   {
+    "frame": 8,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "ayakta",
+    "detected_frame": 7,
+    "detected_type": "punch",
+    "possible_contact": true
+   },
+   {
+    "frame": 11,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "ayakta",
+    "detected_frame": 12,
+    "detected_type": "punch",
+    "possible_contact": true
+   },
+   {
+    "frame": 18,
+    "actor": "blue",
+    "kind": "punch",
+    "scenario": "klinç mesafesi (gövdeye)",
+    "detected_frame": 17,
+    "detected_type": "punch",
+    "possible_contact": true
+   },
+   {
+    "frame": 74,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "yerde, üstten",
+    "detected_frame": 77,
+    "detected_type": "punch",
+    "possible_contact": true
+   }
+  ],
+  "missed": [
+   {
+    "frame": 24,
+    "actor": "blue",
+    "kind": "punch",
+    "scenario": "klinç mesafesi (gövdeye)"
+   },
+   {
+    "frame": 27,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "nakavt vuruşu (uzak kol, kısmen örtülü)"
+   },
+   {
+    "frame": 62,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "yerde, üstten"
+   },
+   {
+    "frame": 67,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "yerde, üstten"
+   },
+   {
+    "frame": 71,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "yerde, üstten"
+   },
+   {
+    "frame": 81,
+    "actor": "red",
+    "kind": "punch",
+    "scenario": "yerde, üstten (hakem girerken)"
+   }
+  ],
+  "false_detections": [
+   {
+    "frame": 9,
+    "actor": "blue",
+    "type": "punch",
+    "confidence": 0.507
+   }
+  ]
+ }
+}

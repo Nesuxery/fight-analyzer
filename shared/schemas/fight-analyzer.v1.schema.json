@@ -1,0 +1,4958 @@
+{
+  "$defs": {
+    "AnalysisExport": {
+      "additionalProperties": false,
+      "description": "The JSON file of an export.",
+      "properties": {
+        "counts": {
+          "description": "Whole video, before exclusions.",
+          "items": {
+            "$ref": "#/$defs/FighterEventCounts"
+          },
+          "title": "Counts",
+          "type": "array"
+        },
+        "csv_columns": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Meaning of each column of the CSV file.",
+          "title": "Csv Columns",
+          "type": "object"
+        },
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/FightEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "excluded_event_ids": {
+          "description": "Listed but not counted or scored.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluded Event Ids",
+          "type": "array"
+        },
+        "exclusions": {
+          "items": {
+            "$ref": "#/$defs/ExcludedSegment"
+          },
+          "title": "Exclusions",
+          "type": "array"
+        },
+        "exported_at": {
+          "format": "date-time",
+          "title": "Exported At",
+          "type": "string"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/Fighter"
+          },
+          "title": "Fighters",
+          "type": "array"
+        },
+        "job_id": {
+          "description": "The analysis this was exported from.",
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "momentum_contributions": {
+          "items": {
+            "$ref": "#/$defs/MomentumContribution"
+          },
+          "title": "Momentum Contributions",
+          "type": "array"
+        },
+        "momentum_parameters": {
+          "$ref": "#/$defs/MomentumParameters"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scorecards": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Scorecards"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "AI round scoring (estimate, not official)."
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterSelection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "settings": {
+          "additionalProperties": true,
+          "description": "Pose, tracking, motion and momentum settings used.",
+          "title": "Settings",
+          "type": "object"
+        },
+        "source_keys": {
+          "$ref": "#/$defs/SourceKeys"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "exported_at",
+        "data_origin",
+        "video",
+        "fighters",
+        "selection",
+        "source_keys",
+        "settings",
+        "events",
+        "momentum_parameters",
+        "momentum_contributions",
+        "counts",
+        "exclusions",
+        "excluded_event_ids",
+        "csv_columns",
+        "scorecards"
+      ],
+      "title": "AnalysisExport",
+      "type": "object"
+    },
+    "AnalysisVideo": {
+      "additionalProperties": false,
+      "description": "Constant-frame-rate, browser-playable H.264 copy used by both the\nanalysis engine and the browser.",
+      "properties": {
+        "cache_hit": {
+          "default": false,
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "transcode": {
+          "$ref": "#/$defs/TranscodeInfo"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        }
+      },
+      "required": [
+        "video",
+        "sha256",
+        "size_bytes",
+        "cache_key",
+        "cache_hit",
+        "transcode"
+      ],
+      "title": "AnalysisVideo",
+      "type": "object"
+    },
+    "BoundingBox": {
+      "additionalProperties": false,
+      "properties": {
+        "x1": {
+          "title": "X1",
+          "type": "number"
+        },
+        "x2": {
+          "title": "X2",
+          "type": "number"
+        },
+        "y1": {
+          "title": "Y1",
+          "type": "number"
+        },
+        "y2": {
+          "title": "Y2",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "CheckStatus": {
+      "enum": [
+        "ok",
+        "degraded",
+        "unavailable"
+      ],
+      "title": "CheckStatus",
+      "type": "string"
+    },
+    "ComponentCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        }
+      },
+      "required": [
+        "status",
+        "detail"
+      ],
+      "title": "ComponentCheck",
+      "type": "object"
+    },
+    "ComputeInfo": {
+      "additionalProperties": false,
+      "description": "Inference device chosen by the worker (detected with PyTorch).",
+      "properties": {
+        "cpu_threads": {
+          "minimum": 1,
+          "title": "Cpu Threads",
+          "type": "integer"
+        },
+        "cuda_available": {
+          "title": "Cuda Available",
+          "type": "boolean"
+        },
+        "cuda_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cuda Version"
+        },
+        "device": {
+          "enum": [
+            "cpu",
+            "cuda"
+          ],
+          "title": "Device",
+          "type": "string"
+        },
+        "device_name": {
+          "title": "Device Name",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "requested": {
+          "enum": [
+            "auto",
+            "cpu",
+            "cuda"
+          ],
+          "title": "Requested",
+          "type": "string"
+        },
+        "torch_version": {
+          "title": "Torch Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "device",
+        "device_name",
+        "requested",
+        "cuda_available",
+        "torch_version",
+        "cuda_version",
+        "cpu_threads",
+        "note"
+      ],
+      "title": "ComputeInfo",
+      "type": "object"
+    },
+    "ConfidenceLevel": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "ConfidenceLevel",
+      "type": "string"
+    },
+    "Criterion": {
+      "description": "Unified Rules judging criteria in their order of priority.",
+      "enum": [
+        "effective_striking_grappling",
+        "effective_aggressiveness",
+        "cage_control"
+      ],
+      "title": "Criterion",
+      "type": "string"
+    },
+    "CriterionMargin": {
+      "additionalProperties": false,
+      "properties": {
+        "blue": {
+          "title": "Blue",
+          "type": "number"
+        },
+        "criterion": {
+          "$ref": "#/$defs/Criterion"
+        },
+        "decisive": {
+          "description": "The difference was large enough for this judge.",
+          "title": "Decisive",
+          "type": "boolean"
+        },
+        "red": {
+          "title": "Red",
+          "type": "number"
+        }
+      },
+      "required": [
+        "criterion",
+        "red",
+        "blue",
+        "decisive"
+      ],
+      "title": "CriterionMargin",
+      "type": "object"
+    },
+    "DataOrigin": {
+      "description": "Where analysis values come from. Demo data must never be shown as measured.",
+      "enum": [
+        "measured",
+        "demo"
+      ],
+      "title": "DataOrigin",
+      "type": "string"
+    },
+    "DecisionType": {
+      "enum": [
+        "unanimous",
+        "split",
+        "majority",
+        "unanimous_draw",
+        "majority_draw",
+        "split_draw"
+      ],
+      "title": "DecisionType",
+      "type": "string"
+    },
+    "EdgeSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "edge": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Who had the advantage, if the evidence shows one."
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "edge",
+        "text"
+      ],
+      "title": "EdgeSummary",
+      "type": "object"
+    },
+    "ErrorResponse": {
+      "additionalProperties": false,
+      "description": "Body of every 4xx/5xx response produced by the API itself.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "code",
+        "message"
+      ],
+      "title": "ErrorResponse",
+      "type": "object"
+    },
+    "EventTimeline": {
+      "additionalProperties": false,
+      "properties": {
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/FightEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/Fighter"
+          },
+          "maxItems": 2,
+          "title": "Fighters",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "data_origin",
+        "video",
+        "fighters",
+        "events"
+      ],
+      "title": "EventTimeline",
+      "type": "object"
+    },
+    "EventType": {
+      "description": "Event categories. Adding a member is a minor schema version bump.",
+      "enum": [
+        "punch",
+        "kick",
+        "knee",
+        "clinch",
+        "takedown",
+        "ground_control",
+        "knockdown",
+        "stance_change",
+        "other"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "EventsSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit": {
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "camera_known_share": {
+          "description": "Frames whose camera motion is known.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Camera Known Share",
+          "type": "number"
+        },
+        "events": {
+          "minimum": 0,
+          "title": "Events",
+          "type": "integer"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/FighterEventCounts"
+          },
+          "maxItems": 2,
+          "title": "Fighters",
+          "type": "array"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cache_key",
+        "cache_hit",
+        "method",
+        "events",
+        "camera_known_share",
+        "fighters"
+      ],
+      "title": "EventsSummary",
+      "type": "object"
+    },
+    "ExcludedSegment": {
+      "additionalProperties": false,
+      "description": "Part of the video the user excluded (replays cannot be told apart automatically).\n\nAn excluded part is not fight time: events whose moment (peak frame, else start\nframe) lies in it are listed but neither counted nor scored, time-based points\n(advancing, control) and measured time do not accrue in it, and the momentum\nholds its value through it (decay runs on fight time).",
+      "properties": {
+        "end_frame": {
+          "description": "Last excluded frame (inclusive).",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "reason": {
+          "$ref": "#/$defs/ExclusionReason",
+          "default": "replay"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_frame",
+        "end_frame",
+        "reason",
+        "note"
+      ],
+      "title": "ExcludedSegment",
+      "type": "object"
+    },
+    "ExclusionReason": {
+      "enum": [
+        "replay",
+        "slow_motion",
+        "break",
+        "other"
+      ],
+      "title": "ExclusionReason",
+      "type": "string"
+    },
+    "ExportFile": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "content_type": {
+          "title": "Content Type",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ExportFileKind"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "bytes",
+        "content_type"
+      ],
+      "title": "ExportFile",
+      "type": "object"
+    },
+    "ExportFileKind": {
+      "enum": [
+        "video",
+        "metrics",
+        "bundle"
+      ],
+      "title": "ExportFileKind",
+      "type": "string"
+    },
+    "ExportOptions": {
+      "additionalProperties": false,
+      "description": "What is drawn on the exported video (CSV and JSON always contain everything).",
+      "properties": {
+        "counters": {
+          "default": true,
+          "description": "Attempt counters under the names.",
+          "title": "Counters",
+          "type": "boolean"
+        },
+        "distance": {
+          "default": false,
+          "title": "Distance",
+          "type": "boolean"
+        },
+        "effects": {
+          "default": true,
+          "description": "Strike flashes, possible-contact rings, major-event warnings.",
+          "title": "Effects",
+          "type": "boolean"
+        },
+        "momentum": {
+          "default": true,
+          "description": "Momentum bar with names and shares at the top.",
+          "title": "Momentum",
+          "type": "boolean"
+        },
+        "others": {
+          "default": false,
+          "description": "Other people (referee, spectators) in grey.",
+          "title": "Others",
+          "type": "boolean"
+        },
+        "skeleton": {
+          "default": true,
+          "title": "Skeleton",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "skeleton",
+        "effects",
+        "momentum",
+        "counters",
+        "distance",
+        "others"
+      ],
+      "title": "ExportOptions",
+      "type": "object"
+    },
+    "ExportRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "options": {
+          "$ref": "#/$defs/ExportOptions"
+        }
+      },
+      "required": [
+        "options"
+      ],
+      "title": "ExportRequest",
+      "type": "object"
+    },
+    "ExportSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "minimum": 0,
+          "title": "Events",
+          "type": "integer"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/ExportFile"
+          },
+          "title": "Files",
+          "type": "array"
+        },
+        "final_red_share": {
+          "description": "Displayed share on the last frame.",
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Final Red Share",
+          "type": "number"
+        },
+        "frames": {
+          "minimum": 0,
+          "title": "Frames",
+          "type": "integer"
+        },
+        "has_audio": {
+          "title": "Has Audio",
+          "type": "boolean"
+        },
+        "options": {
+          "$ref": "#/$defs/ExportOptions"
+        },
+        "source_job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Source Job Id",
+          "type": "string"
+        },
+        "source_keys": {
+          "$ref": "#/$defs/SourceKeys"
+        }
+      },
+      "required": [
+        "source_job_id",
+        "options",
+        "source_keys",
+        "frames",
+        "has_audio",
+        "events",
+        "final_red_share",
+        "files"
+      ],
+      "title": "ExportSummary",
+      "type": "object"
+    },
+    "FfmpegInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "env",
+                "path",
+                "imageio-ffmpeg"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "status",
+        "path",
+        "version",
+        "source"
+      ],
+      "title": "FfmpegInfo",
+      "type": "object"
+    },
+    "FightEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fighter performing the action."
+        },
+        "confidence": {
+          "description": "Detector confidence, not ground truth.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "number"
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "limb": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Limb"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImagePoint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Striking joint at the peak."
+        },
+        "measures": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Measured values behind the detection (body units, seconds, cosines).",
+          "title": "Measures",
+          "type": "object"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "peak_frame": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fastest moment of a strike / the fall.",
+          "title": "Peak Frame"
+        },
+        "peak_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Ms"
+        },
+        "possible_contact": {
+          "default": false,
+          "description": "The striking limb overlapped the opponent in 2D; contact is not certain.",
+          "title": "Possible Contact",
+          "type": "boolean"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "number"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fighter receiving the action."
+        },
+        "type": {
+          "$ref": "#/$defs/EventType"
+        }
+      },
+      "required": [
+        "event_id",
+        "type",
+        "actor",
+        "target",
+        "start_frame",
+        "end_frame",
+        "start_ms",
+        "end_ms",
+        "peak_frame",
+        "peak_ms",
+        "limb",
+        "possible_contact",
+        "location",
+        "measures",
+        "confidence",
+        "data_origin",
+        "note"
+      ],
+      "title": "FightEvent",
+      "type": "object"
+    },
+    "Fighter": {
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "description": "Skeleton/overlay colour.",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "title": "Color",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "display_name",
+        "color"
+      ],
+      "title": "Fighter",
+      "type": "object"
+    },
+    "FighterAnchor": {
+      "additionalProperties": false,
+      "description": "A user selection: on `frame_index`, detection ids (as in that frame's\nFrameRecord) of the red and blue corner fighters. `None` means the user\nmarked that fighter as not in the picture on this frame (close-ups).",
+      "properties": {
+        "blue_detection_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blue Detection Id"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "red_detection_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Red Detection Id"
+        }
+      },
+      "required": [
+        "frame_index",
+        "red_detection_id",
+        "blue_detection_id"
+      ],
+      "title": "FighterAnchor",
+      "type": "object"
+    },
+    "FighterEventCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "advance_s": {
+          "minimum": 0,
+          "title": "Advance S",
+          "type": "number"
+        },
+        "control_s": {
+          "minimum": 0,
+          "title": "Control S",
+          "type": "number"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "kick_attempts": {
+          "minimum": 0,
+          "title": "Kick Attempts",
+          "type": "integer"
+        },
+        "measured_s": {
+          "description": "Time with valid measurements of this fighter.",
+          "minimum": 0,
+          "title": "Measured S",
+          "type": "number"
+        },
+        "possible_contacts": {
+          "minimum": 0,
+          "title": "Possible Contacts",
+          "type": "integer"
+        },
+        "possible_knockdowns": {
+          "description": "Knockdowns scored by this fighter.",
+          "minimum": 0,
+          "title": "Possible Knockdowns",
+          "type": "integer"
+        },
+        "possible_takedowns": {
+          "minimum": 0,
+          "title": "Possible Takedowns",
+          "type": "integer"
+        },
+        "retreat_s": {
+          "minimum": 0,
+          "title": "Retreat S",
+          "type": "number"
+        },
+        "strike_attempts": {
+          "description": "Punch and knee attempts.",
+          "minimum": 0,
+          "title": "Strike Attempts",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "strike_attempts",
+        "kick_attempts",
+        "possible_contacts",
+        "possible_knockdowns",
+        "possible_takedowns",
+        "control_s",
+        "advance_s",
+        "retreat_s",
+        "measured_s"
+      ],
+      "title": "FighterEventCounts",
+      "type": "object"
+    },
+    "FighterFrameState": {
+      "additionalProperties": false,
+      "description": "Identity state of one fighter in one frame.",
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "detection_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection in this frame, if any.",
+          "title": "Detection Id"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "state": {
+          "$ref": "#/$defs/TrackState"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "state",
+        "detection_id",
+        "confidence"
+      ],
+      "title": "FighterFrameState",
+      "type": "object"
+    },
+    "FighterId": {
+      "description": "Stable identity of the two fighters chosen by the user.",
+      "enum": [
+        "fighter_a",
+        "fighter_b"
+      ],
+      "title": "FighterId",
+      "type": "string"
+    },
+    "FighterNames": {
+      "additionalProperties": false,
+      "properties": {
+        "blue": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Blue",
+          "type": "string"
+        },
+        "red": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Red",
+          "type": "string"
+        }
+      },
+      "required": [
+        "red",
+        "blue"
+      ],
+      "title": "FighterNames",
+      "type": "object"
+    },
+    "FighterRoundEvidence": {
+      "additionalProperties": false,
+      "description": "What the analysis measured for one fighter in one round (excluded parts left out).",
+      "properties": {
+        "advance_s": {
+          "minimum": 0,
+          "title": "Advance S",
+          "type": "number"
+        },
+        "control_s": {
+          "description": "Estimated top control on the ground.",
+          "minimum": 0,
+          "title": "Control S",
+          "type": "number"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "identity_uncertain_s": {
+          "minimum": 0,
+          "title": "Identity Uncertain S",
+          "type": "number"
+        },
+        "kick_attempts": {
+          "minimum": 0,
+          "title": "Kick Attempts",
+          "type": "integer"
+        },
+        "measured_s": {
+          "description": "Time this fighter could be measured.",
+          "minimum": 0,
+          "title": "Measured S",
+          "type": "number"
+        },
+        "possible_contact_strikes": {
+          "description": "Attempts whose limb overlapped the opponent in 2D.",
+          "minimum": 0,
+          "title": "Possible Contact Strikes",
+          "type": "integer"
+        },
+        "possible_impact_strikes": {
+          "description": "Possible contact followed by the opponent's head snapping (sign of impact, unverified).",
+          "minimum": 0,
+          "title": "Possible Impact Strikes",
+          "type": "integer"
+        },
+        "possible_knockdowns": {
+          "description": "Scored by this fighter, with enough evidence.",
+          "minimum": 0,
+          "title": "Possible Knockdowns",
+          "type": "integer"
+        },
+        "possible_takedowns": {
+          "minimum": 0,
+          "title": "Possible Takedowns",
+          "type": "integer"
+        },
+        "retreat_s": {
+          "minimum": 0,
+          "title": "Retreat S",
+          "type": "number"
+        },
+        "strike_attempts": {
+          "description": "Punch and knee attempts.",
+          "minimum": 0,
+          "title": "Strike Attempts",
+          "type": "integer"
+        },
+        "takedowns_to_control": {
+          "description": "Takedowns followed by top position.",
+          "minimum": 0,
+          "title": "Takedowns To Control",
+          "type": "integer"
+        },
+        "uncertain_events": {
+          "description": "Possible knockdowns/takedowns below the evidence threshold.",
+          "minimum": 0,
+          "title": "Uncertain Events",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "strike_attempts",
+        "kick_attempts",
+        "possible_contact_strikes",
+        "possible_impact_strikes",
+        "possible_knockdowns",
+        "possible_takedowns",
+        "takedowns_to_control",
+        "control_s",
+        "advance_s",
+        "retreat_s",
+        "measured_s",
+        "identity_uncertain_s",
+        "uncertain_events"
+      ],
+      "title": "FighterRoundEvidence",
+      "type": "object"
+    },
+    "FighterSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "anchors": {
+          "items": {
+            "$ref": "#/$defs/FighterAnchor"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Anchors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "anchors"
+      ],
+      "title": "FighterSelection",
+      "type": "object"
+    },
+    "FighterSignals": {
+      "additionalProperties": false,
+      "properties": {
+        "activity": {
+          "description": "Hand and foot motion relative to the body, 0..1.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Activity",
+          "type": "array"
+        },
+        "approach_speed": {
+          "description": "Hip centre toward (+) / away from (-) the opponent, camera motion removed, body units/s.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Approach Speed",
+          "type": "array"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "foot_speed": {
+          "description": "Ankles relative to the hips, body units/s.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Foot Speed",
+          "type": "array"
+        },
+        "hand_speed": {
+          "description": "Wrists relative to the hips, body units/s.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Hand Speed",
+          "type": "array"
+        },
+        "movement": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Movement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Movement",
+          "type": "array"
+        },
+        "posture": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Posture"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Posture",
+          "type": "array"
+        },
+        "valid": {
+          "description": "Fighter verified with usable joints at the sample.",
+          "items": {
+            "type": "boolean"
+          },
+          "title": "Valid",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "valid",
+        "activity",
+        "hand_speed",
+        "foot_speed",
+        "approach_speed",
+        "movement",
+        "posture"
+      ],
+      "title": "FighterSignals",
+      "type": "object"
+    },
+    "FighterTimeline": {
+      "additionalProperties": false,
+      "properties": {
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/$defs/TrackStateRun"
+          },
+          "title": "Runs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "runs"
+      ],
+      "title": "FighterTimeline",
+      "type": "object"
+    },
+    "FighterTrackStats": {
+      "additionalProperties": false,
+      "properties": {
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "longest_uncertain_ms": {
+          "minimum": 0,
+          "title": "Longest Uncertain Ms",
+          "type": "number"
+        },
+        "mean_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Mean Confidence",
+          "type": "number"
+        },
+        "occluded_frames": {
+          "minimum": 0,
+          "title": "Occluded Frames",
+          "type": "integer"
+        },
+        "reacquisitions": {
+          "description": "Identity re-found after loss or a camera cut.",
+          "minimum": 0,
+          "title": "Reacquisitions",
+          "type": "integer"
+        },
+        "track_changes": {
+          "description": "Times the temporary tracker id under this fighter changed.",
+          "minimum": 0,
+          "title": "Track Changes",
+          "type": "integer"
+        },
+        "tracked_frames": {
+          "minimum": 0,
+          "title": "Tracked Frames",
+          "type": "integer"
+        },
+        "uncertain_frames": {
+          "minimum": 0,
+          "title": "Uncertain Frames",
+          "type": "integer"
+        },
+        "uncertain_ms": {
+          "minimum": 0,
+          "title": "Uncertain Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "tracked_frames",
+        "occluded_frames",
+        "uncertain_frames",
+        "uncertain_ms",
+        "longest_uncertain_ms",
+        "reacquisitions",
+        "track_changes",
+        "mean_confidence"
+      ],
+      "title": "FighterTrackStats",
+      "type": "object"
+    },
+    "FinishMethod": {
+      "enum": [
+        "unknown",
+        "decision",
+        "ko",
+        "tko",
+        "submission",
+        "disqualification",
+        "referee_stoppage",
+        "no_contest"
+      ],
+      "title": "FinishMethod",
+      "type": "string"
+    },
+    "FrameRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "detections": {
+          "items": {
+            "$ref": "#/$defs/PersonDetection"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "fighters": {
+          "description": "Identity state per fighter once tracking has run.",
+          "items": {
+            "$ref": "#/$defs/FighterFrameState"
+          },
+          "title": "Fighters",
+          "type": "array"
+        },
+        "frame_index": {
+          "description": "0-based index into the analysis video.",
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "timestamp_ms": {
+          "description": "Presentation time: frame_index / fps.",
+          "minimum": 0,
+          "title": "Timestamp Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "frame_index",
+        "timestamp_ms",
+        "detections",
+        "fighters"
+      ],
+      "title": "FrameRecord",
+      "type": "object"
+    },
+    "HealthResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "v1",
+          "default": "v1",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "app_version": {
+          "title": "App Version",
+          "type": "string"
+        },
+        "database": {
+          "$ref": "#/$defs/ComponentCheck"
+        },
+        "ffmpeg": {
+          "$ref": "#/$defs/FfmpegInfo"
+        },
+        "jobs": {
+          "$ref": "#/$defs/JobCounts"
+        },
+        "pose_model": {
+          "$ref": "#/$defs/PoseModelInfo"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "server_time": {
+          "format": "date-time",
+          "title": "Server Time",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus",
+          "description": "ok when database, worker and FFmpeg are ok; degraded otherwise."
+        },
+        "worker": {
+          "$ref": "#/$defs/WorkerInfo"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "app_version",
+        "api_version",
+        "server_time",
+        "database",
+        "worker",
+        "ffmpeg",
+        "pose_model",
+        "jobs"
+      ],
+      "title": "HealthResponse",
+      "type": "object"
+    },
+    "ImagePoint": {
+      "additionalProperties": false,
+      "description": "A point in analysis-video pixels.",
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "ImagePoint",
+      "type": "object"
+    },
+    "Job": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "description": "How many times a worker started this job.",
+          "minimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "cancel_requested": {
+          "default": false,
+          "title": "Cancel Requested",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "exclusions": {
+          "description": "Parts excluded from the analysis by the user (e.g. replays).",
+          "items": {
+            "$ref": "#/$defs/ExcludedSegment"
+          },
+          "title": "Exclusions",
+          "type": "array"
+        },
+        "fighters": {
+          "description": "Names and colours, red first.",
+          "items": {
+            "$ref": "#/$defs/Fighter"
+          },
+          "title": "Fighters",
+          "type": "array"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "job_type": {
+          "$ref": "#/$defs/JobType"
+        },
+        "match": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MatchSetup"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rounds, ending and deductions entered by the user."
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "outputs": {
+          "$ref": "#/$defs/JobOutputs"
+        },
+        "progress": {
+          "description": "Overall progress, 0..1.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Progress",
+          "type": "number"
+        },
+        "progress_detail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StageProgress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterSelection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceVideo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PipelineStage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stage currently/last running."
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "status": {
+          "$ref": "#/$defs/JobStatus"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "video": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VideoInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Analysis video properties."
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "job_type",
+        "status",
+        "stage",
+        "progress",
+        "progress_detail",
+        "message",
+        "source",
+        "video",
+        "fighters",
+        "selection",
+        "exclusions",
+        "match",
+        "outputs",
+        "error",
+        "attempts",
+        "cancel_requested",
+        "created_at",
+        "updated_at",
+        "started_at",
+        "finished_at"
+      ],
+      "title": "Job",
+      "type": "object"
+    },
+    "JobCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "awaiting_selection": {
+          "default": 0,
+          "title": "Awaiting Selection",
+          "type": "integer"
+        },
+        "cancelled": {
+          "default": 0,
+          "title": "Cancelled",
+          "type": "integer"
+        },
+        "completed": {
+          "default": 0,
+          "title": "Completed",
+          "type": "integer"
+        },
+        "failed": {
+          "default": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "queued": {
+          "default": 0,
+          "title": "Queued",
+          "type": "integer"
+        },
+        "running": {
+          "default": 0,
+          "title": "Running",
+          "type": "integer"
+        },
+        "total": {
+          "default": 0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "queued",
+        "running",
+        "awaiting_selection",
+        "completed",
+        "failed",
+        "cancelled",
+        "total"
+      ],
+      "title": "JobCounts",
+      "type": "object"
+    },
+    "JobError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "description": "Machine-readable error code, e.g. 'stage_not_implemented'.",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PipelineStage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "stage"
+      ],
+      "title": "JobError",
+      "type": "object"
+    },
+    "JobList": {
+      "additionalProperties": false,
+      "properties": {
+        "jobs": {
+          "items": {
+            "$ref": "#/$defs/Job"
+          },
+          "title": "Jobs",
+          "type": "array"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "total": {
+          "description": "Number of jobs in the store (may exceed len(jobs)).",
+          "minimum": 0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "jobs",
+        "total"
+      ],
+      "title": "JobList",
+      "type": "object"
+    },
+    "JobOutputs": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_video": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnalysisVideo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "events": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventsSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "export": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExportSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PoseSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scoring": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScoringSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tracking": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrackingSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tracking_prep": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrackingPrepSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "analysis_video",
+        "pose",
+        "tracking_prep",
+        "tracking",
+        "events",
+        "scoring",
+        "export"
+      ],
+      "title": "JobOutputs",
+      "type": "object"
+    },
+    "JobStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "awaiting_selection",
+        "completed",
+        "failed",
+        "cancelled"
+      ],
+      "title": "JobStatus",
+      "type": "string"
+    },
+    "JobType": {
+      "enum": [
+        "analysis",
+        "export"
+      ],
+      "title": "JobType",
+      "type": "string"
+    },
+    "JudgeProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "judge_id": {
+          "title": "Judge Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "judge_id",
+        "name",
+        "description"
+      ],
+      "title": "JudgeProfile",
+      "type": "object"
+    },
+    "JudgeRoundScore": {
+      "additionalProperties": false,
+      "properties": {
+        "blue": {
+          "maximum": 10,
+          "minimum": 5,
+          "title": "Blue",
+          "type": "integer"
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/CriterionMargin"
+          },
+          "title": "Criteria",
+          "type": "array"
+        },
+        "deciding_criterion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Criterion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deductions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "fighter_id -> points taken this round.",
+          "title": "Deductions",
+          "type": "object"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "red": {
+          "maximum": 10,
+          "minimum": 5,
+          "title": "Red",
+          "type": "integer"
+        },
+        "round": {
+          "title": "Round",
+          "type": "integer"
+        },
+        "scored": {
+          "description": "False: not enough data; the round is left out of the totals.",
+          "title": "Scored",
+          "type": "boolean"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "None: 10-10."
+        }
+      },
+      "required": [
+        "round",
+        "scored",
+        "red",
+        "blue",
+        "winner",
+        "deciding_criterion",
+        "criteria",
+        "deductions",
+        "reasons"
+      ],
+      "title": "JudgeRoundScore",
+      "type": "object"
+    },
+    "JudgeScorecard": {
+      "additionalProperties": false,
+      "properties": {
+        "judge": {
+          "$ref": "#/$defs/JudgeProfile"
+        },
+        "rounds": {
+          "items": {
+            "$ref": "#/$defs/JudgeRoundScore"
+          },
+          "title": "Rounds",
+          "type": "array"
+        },
+        "total_blue": {
+          "title": "Total Blue",
+          "type": "integer"
+        },
+        "total_red": {
+          "title": "Total Red",
+          "type": "integer"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "None: the card is a draw."
+        }
+      },
+      "required": [
+        "judge",
+        "rounds",
+        "total_red",
+        "total_blue",
+        "winner"
+      ],
+      "title": "JudgeScorecard",
+      "type": "object"
+    },
+    "KeyMoment": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "fighter_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "time_s": {
+          "minimum": 0,
+          "title": "Time S",
+          "type": "number"
+        },
+        "type": {
+          "$ref": "#/$defs/EventType"
+        },
+        "uncertain": {
+          "default": true,
+          "title": "Uncertain",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "time_s",
+        "fighter_id",
+        "type",
+        "label",
+        "confidence",
+        "uncertain"
+      ],
+      "title": "KeyMoment",
+      "type": "object"
+    },
+    "Keypoint": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "description": "Model confidence for this joint.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "x": {
+          "description": "Horizontal pixel coordinate.",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Vertical pixel coordinate.",
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "confidence"
+      ],
+      "title": "Keypoint",
+      "type": "object"
+    },
+    "KeypointName": {
+      "description": "COCO-17 keypoints in model output order: index k of every keypoint list\nis the k-th member below (0 = nose ... 16 = right_ankle). This is the\norder predicted by the Ultralytics YOLO pose models (see\nhttps://docs.ultralytics.com/tasks/pose/#keypoint-index-map).",
+      "enum": [
+        "nose",
+        "left_eye",
+        "right_eye",
+        "left_ear",
+        "right_ear",
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_wrist",
+        "right_wrist",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle"
+      ],
+      "title": "KeypointName",
+      "type": "string"
+    },
+    "Limb": {
+      "enum": [
+        "left_hand",
+        "right_hand",
+        "left_foot",
+        "right_foot",
+        "left_knee",
+        "right_knee"
+      ],
+      "title": "Limb",
+      "type": "string"
+    },
+    "MatchEnding": {
+      "additionalProperties": false,
+      "description": "How the bout ended, as entered by the user (official information).",
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/FinishMethod",
+          "default": "unknown"
+        },
+        "round": {
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Round"
+        },
+        "time_s": {
+          "anyOf": [
+            {
+              "maximum": 600,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Time into the final round.",
+          "title": "Time S"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for finishes and disqualifications."
+        }
+      },
+      "required": [
+        "method",
+        "winner",
+        "round",
+        "time_s"
+      ],
+      "title": "MatchEnding",
+      "type": "object"
+    },
+    "MatchSetup": {
+      "additionalProperties": false,
+      "properties": {
+        "deductions": {
+          "items": {
+            "$ref": "#/$defs/PointDeduction"
+          },
+          "maxItems": 20,
+          "title": "Deductions",
+          "type": "array"
+        },
+        "ending": {
+          "$ref": "#/$defs/MatchEnding"
+        },
+        "round_length_s": {
+          "default": 300,
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Round Length S",
+          "type": "number"
+        },
+        "rounds": {
+          "description": "Empty: the whole video is treated as one unmarked round.",
+          "items": {
+            "$ref": "#/$defs/RoundMark"
+          },
+          "maxItems": 5,
+          "title": "Rounds",
+          "type": "array"
+        },
+        "scheduled_rounds": {
+          "default": 3,
+          "description": "3 for most bouts, 5 for title/main events.",
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Scheduled Rounds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "scheduled_rounds",
+        "round_length_s",
+        "rounds",
+        "ending",
+        "deductions"
+      ],
+      "title": "MatchSetup",
+      "type": "object"
+    },
+    "MatchVerdict": {
+      "additionalProperties": false,
+      "properties": {
+        "cards": {
+          "description": "Card totals, e.g. '29-28'.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Cards",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "confidence_level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfidenceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "decision_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DecisionType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "$ref": "#/$defs/FinishMethod"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "source": {
+          "description": "'ai_estimate' or 'user_input'.",
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/VerdictStatus"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "method",
+        "decision_type",
+        "winner",
+        "cards",
+        "summary",
+        "reasons",
+        "source",
+        "confidence",
+        "confidence_level",
+        "notes"
+      ],
+      "title": "MatchVerdict",
+      "type": "object"
+    },
+    "ModelInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "'cpu' or 'cuda:0'.",
+          "title": "Device"
+        },
+        "framework_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. ultralytics version.",
+          "title": "Framework Version"
+        },
+        "name": {
+          "description": "Model file name, e.g. 'yolo26s-pose.pt'.",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Official download location.",
+          "title": "Source Url"
+        },
+        "weights_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weights Sha256"
+        }
+      },
+      "required": [
+        "name",
+        "framework_version",
+        "device",
+        "weights_sha256",
+        "source_url"
+      ],
+      "title": "ModelInfo",
+      "type": "object"
+    },
+    "MomentumContribution": {
+      "additionalProperties": false,
+      "description": "One entry of the momentum ledger: where points came from.",
+      "properties": {
+        "contribution_id": {
+          "minLength": 1,
+          "title": "Contribution Id",
+          "type": "string"
+        },
+        "end_ms": {
+          "description": "Equals start_ms for one-off points.",
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "number"
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Event the points come from, if any.",
+          "title": "Event Id"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "points": {
+          "description": "Points before decay (weight x quantity).",
+          "minimum": 0,
+          "title": "Points",
+          "type": "number"
+        },
+        "quantity": {
+          "description": "1 per attempt/event, seconds for time-based sources.",
+          "minimum": 0,
+          "title": "Quantity",
+          "type": "number"
+        },
+        "source": {
+          "$ref": "#/$defs/MomentumSource"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "contribution_id",
+        "fighter_id",
+        "source",
+        "event_id",
+        "start_ms",
+        "end_ms",
+        "quantity",
+        "points"
+      ],
+      "title": "MomentumContribution",
+      "type": "object"
+    },
+    "MomentumParameters": {
+      "additionalProperties": false,
+      "description": "Starting design parameters of the experimental model (not validated weights).",
+      "properties": {
+        "advance_per_s": {
+          "minimum": 0,
+          "title": "Advance Per S",
+          "type": "number"
+        },
+        "contact_bonus": {
+          "minimum": 0,
+          "title": "Contact Bonus",
+          "type": "number"
+        },
+        "control_per_s": {
+          "minimum": 0,
+          "title": "Control Per S",
+          "type": "number"
+        },
+        "half_life_s": {
+          "exclusiveMinimum": 0,
+          "title": "Half Life S",
+          "type": "number"
+        },
+        "kick_attempt": {
+          "minimum": 0,
+          "title": "Kick Attempt",
+          "type": "number"
+        },
+        "knockdown": {
+          "minimum": 0,
+          "title": "Knockdown",
+          "type": "number"
+        },
+        "min_major_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Major Confidence",
+          "type": "number"
+        },
+        "prior": {
+          "description": "Added to both sides; 4 gives 50/50 without data.",
+          "minimum": 0,
+          "title": "Prior",
+          "type": "number"
+        },
+        "strike_attempt": {
+          "minimum": 0,
+          "title": "Strike Attempt",
+          "type": "number"
+        },
+        "takedown": {
+          "minimum": 0,
+          "title": "Takedown",
+          "type": "number"
+        }
+      },
+      "required": [
+        "half_life_s",
+        "prior",
+        "strike_attempt",
+        "kick_attempt",
+        "contact_bonus",
+        "advance_per_s",
+        "control_per_s",
+        "knockdown",
+        "takedown",
+        "min_major_confidence"
+      ],
+      "title": "MomentumParameters",
+      "type": "object"
+    },
+    "MomentumSource": {
+      "enum": [
+        "strike_attempt",
+        "kick_attempt",
+        "contact_bonus",
+        "advance",
+        "control",
+        "knockdown",
+        "takedown"
+      ],
+      "title": "MomentumSource",
+      "type": "string"
+    },
+    "MomentumTimeline": {
+      "additionalProperties": false,
+      "description": "Red share(t) = 100 x (m_red + prior) / (m_red + m_blue + 2 x prior); blue = 100 - red.\nm(t) = sum of ledger points, each halved every half_life_s seconds after it was earned.",
+      "properties": {
+        "contributions": {
+          "items": {
+            "$ref": "#/$defs/MomentumContribution"
+          },
+          "title": "Contributions",
+          "type": "array"
+        },
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "exclusions": {
+          "description": "Excluded parts the ledger was computed with (already applied).",
+          "items": {
+            "$ref": "#/$defs/ExcludedSegment"
+          },
+          "title": "Exclusions",
+          "type": "array"
+        },
+        "experimental": {
+          "default": true,
+          "description": "Experimental index, not a win probability.",
+          "title": "Experimental",
+          "type": "boolean"
+        },
+        "insufficient": {
+          "description": "A fighter could not be measured at the sample.",
+          "items": {
+            "type": "boolean"
+          },
+          "title": "Insufficient",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "m_blue": {
+          "items": {
+            "type": "number"
+          },
+          "title": "M Blue",
+          "type": "array"
+        },
+        "m_red": {
+          "items": {
+            "type": "number"
+          },
+          "title": "M Red",
+          "type": "array"
+        },
+        "parameters": {
+          "$ref": "#/$defs/MomentumParameters"
+        },
+        "red_share": {
+          "description": "0..100; the blue share is 100 minus this.",
+          "items": {
+            "type": "number"
+          },
+          "title": "Red Share",
+          "type": "array"
+        },
+        "sample_hz": {
+          "exclusiveMinimum": 0,
+          "title": "Sample Hz",
+          "type": "number"
+        },
+        "sample_ms": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Sample Ms",
+          "type": "array"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "data_origin",
+        "experimental",
+        "parameters",
+        "sample_hz",
+        "sample_ms",
+        "red_share",
+        "m_red",
+        "m_blue",
+        "insufficient",
+        "contributions",
+        "exclusions"
+      ],
+      "title": "MomentumTimeline",
+      "type": "object"
+    },
+    "MotionTimeline": {
+      "additionalProperties": false,
+      "properties": {
+        "camera_known": {
+          "description": "Camera motion could be estimated from the background.",
+          "items": {
+            "type": "boolean"
+          },
+          "title": "Camera Known",
+          "type": "array"
+        },
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "distance": {
+          "description": "Distance between the fighters' hip centres, body units.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Distance",
+          "type": "array"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/FighterSignals"
+          },
+          "maxItems": 2,
+          "title": "Fighters",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "sample_hz": {
+          "exclusiveMinimum": 0,
+          "title": "Sample Hz",
+          "type": "number"
+        },
+        "sample_ms": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Sample Ms",
+          "type": "array"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "data_origin",
+        "sample_hz",
+        "sample_ms",
+        "camera_known",
+        "distance",
+        "fighters"
+      ],
+      "title": "MotionTimeline",
+      "type": "object"
+    },
+    "Movement": {
+      "enum": [
+        "advancing",
+        "retreating",
+        "neutral"
+      ],
+      "title": "Movement",
+      "type": "string"
+    },
+    "PersonDetection": {
+      "additionalProperties": false,
+      "properties": {
+        "bbox": {
+          "$ref": "#/$defs/BoundingBox"
+        },
+        "confidence": {
+          "description": "Person detection confidence.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "detection_id": {
+          "description": "Index of this detection within its frame.",
+          "minimum": 0,
+          "title": "Detection Id",
+          "type": "integer"
+        },
+        "fighter_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Resolved fighter identity, null for referee/others/unknown."
+        },
+        "keypoints": {
+          "description": "Joints in KeypointName order.",
+          "items": {
+            "$ref": "#/$defs/Keypoint"
+          },
+          "maxItems": 17,
+          "minItems": 17,
+          "title": "Keypoints",
+          "type": "array"
+        },
+        "track_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Raw tracker id; may change after occlusions.",
+          "title": "Track Id"
+        }
+      },
+      "required": [
+        "detection_id",
+        "track_id",
+        "fighter_id",
+        "bbox",
+        "confidence",
+        "keypoints"
+      ],
+      "title": "PersonDetection",
+      "type": "object"
+    },
+    "PipelineStage": {
+      "description": "Analysis stages in execution order.",
+      "enum": [
+        "video_prep",
+        "pose",
+        "tracking_prep",
+        "tracking",
+        "events",
+        "scoring",
+        "export"
+      ],
+      "title": "PipelineStage",
+      "type": "string"
+    },
+    "PointDeduction": {
+      "additionalProperties": false,
+      "description": "A point taken by the referee (fouls cannot be detected from video: user input).",
+      "properties": {
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "points": {
+          "maximum": 2,
+          "minimum": 1,
+          "title": "Points",
+          "type": "integer"
+        },
+        "round": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Round",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "round",
+        "fighter_id",
+        "points",
+        "note"
+      ],
+      "title": "PointDeduction",
+      "type": "object"
+    },
+    "PoseAnalysisSettings": {
+      "additionalProperties": false,
+      "description": "Inference settings; part of the pose cache key.",
+      "properties": {
+        "conf": {
+          "description": "Minimum person detection confidence.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "frame_step": {
+          "default": 1,
+          "description": "1 = every frame is analysed.",
+          "minimum": 1,
+          "title": "Frame Step",
+          "type": "integer"
+        },
+        "imgsz": {
+          "description": "Model input size in pixels.",
+          "exclusiveMinimum": 0,
+          "title": "Imgsz",
+          "type": "integer"
+        },
+        "iou": {
+          "description": "NMS IoU threshold (ignored by NMS-free models).",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Iou",
+          "type": "number"
+        },
+        "max_det": {
+          "description": "Maximum people per frame.",
+          "exclusiveMinimum": 0,
+          "title": "Max Det",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "imgsz",
+        "conf",
+        "iou",
+        "max_det",
+        "frame_step"
+      ],
+      "title": "PoseAnalysisSettings",
+      "type": "object"
+    },
+    "PoseArrayInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "dtype": {
+          "title": "Dtype",
+          "type": "string"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "shape": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Shape",
+          "type": "array"
+        }
+      },
+      "required": [
+        "file",
+        "dtype",
+        "shape",
+        "sha256"
+      ],
+      "title": "PoseArrayInfo",
+      "type": "object"
+    },
+    "PoseCacheManifest": {
+      "additionalProperties": false,
+      "description": "manifest.json of a pose cache entry. Per-frame data lives next to it in\nNumPy .npy files (loaded with allow_pickle=False):\nframe_index[F] int32, timestamp_ms[F] float64, det_offsets[F+1] int64\n(detections of frame i are rows det_offsets[i]:det_offsets[i+1]),\nboxes[N,4] float32 (x1,y1,x2,y2), box_conf[N] float32,\nkeypoints[N,17,3] float32 (x, y, confidence in KeypointName order).",
+      "properties": {
+        "arrays": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PoseArrayInfo"
+          },
+          "title": "Arrays",
+          "type": "object"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "detection_count": {
+          "minimum": 0,
+          "title": "Detection Count",
+          "type": "integer"
+        },
+        "frame_count": {
+          "minimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        },
+        "key_inputs": {
+          "additionalProperties": true,
+          "title": "Key Inputs",
+          "type": "object"
+        },
+        "keypoint_names": {
+          "items": {
+            "$ref": "#/$defs/KeypointName"
+          },
+          "title": "Keypoint Names",
+          "type": "array"
+        },
+        "max_persons": {
+          "minimum": 0,
+          "title": "Max Persons",
+          "type": "integer"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelInfo"
+        },
+        "processing_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processing S"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/PoseAnalysisSettings"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        },
+        "video_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Video Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "cache_key",
+        "key_inputs",
+        "created_at",
+        "keypoint_names",
+        "video",
+        "video_sha256",
+        "model",
+        "settings",
+        "frame_count",
+        "detection_count",
+        "max_persons",
+        "processing_s",
+        "arrays"
+      ],
+      "title": "PoseCacheManifest",
+      "type": "object"
+    },
+    "PoseChunk": {
+      "additionalProperties": false,
+      "description": "A window of consecutive frames served to the UI.",
+      "properties": {
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "frames": {
+          "items": {
+            "$ref": "#/$defs/FrameRecord"
+          },
+          "title": "Frames",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "keypoint_names": {
+          "items": {
+            "$ref": "#/$defs/KeypointName"
+          },
+          "title": "Keypoint Names",
+          "type": "array"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "data_origin",
+        "keypoint_names",
+        "video",
+        "start_frame",
+        "frames"
+      ],
+      "title": "PoseChunk",
+      "type": "object"
+    },
+    "PoseModelInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "present": {
+          "description": "Whether the weights file exists locally.",
+          "title": "Present",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "present"
+      ],
+      "title": "PoseModelInfo",
+      "type": "object"
+    },
+    "PosePreview": {
+      "additionalProperties": false,
+      "description": "Latest processed frame while pose extraction runs (sent at low rate).",
+      "properties": {
+        "frame": {
+          "$ref": "#/$defs/FrameRecord"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seq": {
+          "description": "Increments with every new preview.",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "width": {
+          "description": "Analysis frame width the coordinates refer to.",
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "seq",
+        "frame",
+        "width",
+        "height"
+      ],
+      "title": "PosePreview",
+      "type": "object"
+    },
+    "PoseSequence": {
+      "additionalProperties": false,
+      "description": "Pose output of one job (export format).",
+      "properties": {
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "frames": {
+          "items": {
+            "$ref": "#/$defs/FrameRecord"
+          },
+          "title": "Frames",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "keypoint_names": {
+          "items": {
+            "$ref": "#/$defs/KeypointName"
+          },
+          "title": "Keypoint Names",
+          "type": "array"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelInfo"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "skeleton": {
+          "$ref": "#/$defs/SkeletonFormat",
+          "default": "coco17"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "data_origin",
+        "skeleton",
+        "keypoint_names",
+        "video",
+        "model",
+        "frames"
+      ],
+      "title": "PoseSequence",
+      "type": "object"
+    },
+    "PoseSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit": {
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "detection_count": {
+          "minimum": 0,
+          "title": "Detection Count",
+          "type": "integer"
+        },
+        "frame_count": {
+          "minimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        },
+        "max_persons": {
+          "description": "Most people detected in a single frame.",
+          "minimum": 0,
+          "title": "Max Persons",
+          "type": "integer"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelInfo"
+        },
+        "processing_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inference wall time.",
+          "title": "Processing S"
+        },
+        "settings": {
+          "$ref": "#/$defs/PoseAnalysisSettings"
+        }
+      },
+      "required": [
+        "cache_key",
+        "cache_hit",
+        "frame_count",
+        "detection_count",
+        "max_persons",
+        "model",
+        "settings",
+        "processing_s"
+      ],
+      "title": "PoseSummary",
+      "type": "object"
+    },
+    "Posture": {
+      "enum": [
+        "standing",
+        "grounded",
+        "transition"
+      ],
+      "title": "Posture",
+      "type": "string"
+    },
+    "ProgressUnit": {
+      "enum": [
+        "frames",
+        "seconds",
+        "bytes"
+      ],
+      "title": "ProgressUnit",
+      "type": "string"
+    },
+    "ReviewPoint": {
+      "additionalProperties": false,
+      "description": "Moment worth checking by eye (identity re-found with a small margin,\na tracker swap that was overridden, ...).",
+      "properties": {
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "reacquired_low_margin | swap_corrected | after_cut",
+          "title": "Kind",
+          "type": "string"
+        },
+        "margin": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Margin"
+        }
+      },
+      "required": [
+        "frame_index",
+        "fighter_id",
+        "kind",
+        "margin"
+      ],
+      "title": "ReviewPoint",
+      "type": "object"
+    },
+    "RoundAssessment": {
+      "additionalProperties": false,
+      "description": "Evidence and confidence of one round; the same for all judges.",
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "confidence_level": {
+          "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "confidence_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Confidence Notes",
+          "type": "array"
+        },
+        "damage": {
+          "$ref": "#/$defs/EdgeSummary"
+        },
+        "end_frame": {
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "end_s": {
+          "title": "End S",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/FighterRoundEvidence"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "grappling": {
+          "$ref": "#/$defs/EdgeSummary"
+        },
+        "key_moments": {
+          "items": {
+            "$ref": "#/$defs/KeyMoment"
+          },
+          "title": "Key Moments",
+          "type": "array"
+        },
+        "marked": {
+          "description": "False: no rounds were marked and the whole video stands in for round 1.",
+          "title": "Marked",
+          "type": "boolean"
+        },
+        "not_measured": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Not Measured",
+          "type": "array"
+        },
+        "number": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Number",
+          "type": "integer"
+        },
+        "partial": {
+          "description": "Shorter than the scheduled round length.",
+          "title": "Partial",
+          "type": "boolean"
+        },
+        "recorded_s": {
+          "description": "Fight time in the recording (excluded parts removed).",
+          "title": "Recorded S",
+          "type": "number"
+        },
+        "scorable": {
+          "description": "Enough measured fight time to score the round.",
+          "title": "Scorable",
+          "type": "boolean"
+        },
+        "start_frame": {
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "start_s": {
+          "title": "Start S",
+          "type": "number"
+        },
+        "unscorable_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unscorable Reason"
+        }
+      },
+      "required": [
+        "number",
+        "marked",
+        "start_frame",
+        "end_frame",
+        "start_s",
+        "end_s",
+        "recorded_s",
+        "partial",
+        "scorable",
+        "unscorable_reason",
+        "evidence",
+        "key_moments",
+        "damage",
+        "grappling",
+        "not_measured",
+        "confidence",
+        "confidence_level",
+        "confidence_notes"
+      ],
+      "title": "RoundAssessment",
+      "type": "object"
+    },
+    "RoundMark": {
+      "additionalProperties": false,
+      "description": "A round in the analysis video, marked by the user.",
+      "properties": {
+        "end_frame": {
+          "description": "Last frame of the round (inclusive).",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "number": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Number",
+          "type": "integer"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "number",
+        "start_frame",
+        "end_frame"
+      ],
+      "title": "RoundMark",
+      "type": "object"
+    },
+    "RoundSummary": {
+      "additionalProperties": false,
+      "description": "Round across the three judges.",
+      "properties": {
+        "blue": {
+          "title": "Blue",
+          "type": "integer"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "confidence_level": {
+          "$ref": "#/$defs/ConfidenceLevel"
+        },
+        "judges_agree": {
+          "description": "Judges that gave this winner (or 10-10).",
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Judges Agree",
+          "type": "integer"
+        },
+        "number": {
+          "title": "Number",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "red": {
+          "description": "Most common red score among the judges.",
+          "title": "Red",
+          "type": "integer"
+        },
+        "scored": {
+          "title": "Scored",
+          "type": "boolean"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "number",
+        "scored",
+        "red",
+        "blue",
+        "winner",
+        "judges_agree",
+        "reason",
+        "confidence",
+        "confidence_level"
+      ],
+      "title": "RoundSummary",
+      "type": "object"
+    },
+    "Scorecards": {
+      "additionalProperties": false,
+      "properties": {
+        "ai_estimate": {
+          "default": true,
+          "description": "Always true: not an official result.",
+          "title": "Ai Estimate",
+          "type": "boolean"
+        },
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "disclaimer": {
+          "default": "AI tahmini: 2B video analizinden üretilmiştir; resmi hakem kararı ya da resmi maç sonucu değildir.",
+          "title": "Disclaimer",
+          "type": "string"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/Fighter"
+          },
+          "title": "Fighters",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "judges": {
+          "items": {
+            "$ref": "#/$defs/JudgeScorecard"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Judges",
+          "type": "array"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "round_summaries": {
+          "items": {
+            "$ref": "#/$defs/RoundSummary"
+          },
+          "title": "Round Summaries",
+          "type": "array"
+        },
+        "rounds": {
+          "items": {
+            "$ref": "#/$defs/RoundAssessment"
+          },
+          "title": "Rounds",
+          "type": "array"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "setup": {
+          "$ref": "#/$defs/MatchSetup"
+        },
+        "verdict": {
+          "$ref": "#/$defs/MatchVerdict"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "data_origin",
+        "ai_estimate",
+        "disclaimer",
+        "method",
+        "fighters",
+        "setup",
+        "rounds",
+        "round_summaries",
+        "judges",
+        "verdict",
+        "warnings"
+      ],
+      "title": "Scorecards",
+      "type": "object"
+    },
+    "ScoringSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit": {
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "contributions": {
+          "minimum": 0,
+          "title": "Contributions",
+          "type": "integer"
+        },
+        "exclusions": {
+          "items": {
+            "$ref": "#/$defs/ExcludedSegment"
+          },
+          "title": "Exclusions",
+          "type": "array"
+        },
+        "final_red_share": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Final Red Share",
+          "type": "number"
+        },
+        "parameters": {
+          "$ref": "#/$defs/MomentumParameters"
+        }
+      },
+      "required": [
+        "cache_key",
+        "cache_hit",
+        "parameters",
+        "exclusions",
+        "contributions",
+        "final_red_share"
+      ],
+      "title": "ScoringSummary",
+      "type": "object"
+    },
+    "SegmentExclusions": {
+      "additionalProperties": false,
+      "description": "Request body: the complete list of excluded parts (replaces the previous one).",
+      "properties": {
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/ExcludedSegment"
+          },
+          "maxItems": 100,
+          "title": "Segments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "title": "SegmentExclusions",
+      "type": "object"
+    },
+    "SelectionCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "detections": {
+          "items": {
+            "$ref": "#/$defs/PersonDetection"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "score": {
+          "description": "How well both fighters are visible and separated.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "shot_index": {
+          "minimum": 0,
+          "title": "Shot Index",
+          "type": "integer"
+        },
+        "timestamp_ms": {
+          "minimum": 0,
+          "title": "Timestamp Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "frame_index",
+        "timestamp_ms",
+        "shot_index",
+        "score",
+        "detections"
+      ],
+      "title": "SelectionCandidate",
+      "type": "object"
+    },
+    "SelectionCandidates": {
+      "additionalProperties": false,
+      "properties": {
+        "frames": {
+          "items": {
+            "$ref": "#/$defs/SelectionCandidate"
+          },
+          "title": "Frames",
+          "type": "array"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoInfo"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "video",
+        "frames"
+      ],
+      "title": "SelectionCandidates",
+      "type": "object"
+    },
+    "ShotInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "index",
+        "start_frame",
+        "end_frame"
+      ],
+      "title": "ShotInfo",
+      "type": "object"
+    },
+    "SkeletonFormat": {
+      "enum": [
+        "coco17"
+      ],
+      "title": "SkeletonFormat",
+      "type": "string"
+    },
+    "SourceKeys": {
+      "additionalProperties": false,
+      "description": "Cache entries the export was made from (the same ones the browser reads).",
+      "properties": {
+        "events": {
+          "title": "Events",
+          "type": "string"
+        },
+        "pose": {
+          "title": "Pose",
+          "type": "string"
+        },
+        "scoring": {
+          "title": "Scoring",
+          "type": "string"
+        },
+        "tracking": {
+          "title": "Tracking",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pose",
+        "tracking",
+        "events",
+        "scoring"
+      ],
+      "title": "SourceKeys",
+      "type": "object"
+    },
+    "SourceVideo": {
+      "additionalProperties": false,
+      "description": "The file the user uploaded, as probed by FFmpeg.",
+      "properties": {
+        "codec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Codec"
+        },
+        "container": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Container"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "number"
+        },
+        "filename": {
+          "maxLength": 255,
+          "title": "Filename",
+          "type": "string"
+        },
+        "fps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Average frame rate reported by FFmpeg.",
+          "title": "Fps"
+        },
+        "has_audio": {
+          "default": false,
+          "title": "Has Audio",
+          "type": "boolean"
+        },
+        "height": {
+          "description": "Displayed height (rotation applied).",
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "rotation_deg": {
+          "default": 0,
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "title": "Rotation Deg",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "width": {
+          "description": "Displayed width (rotation applied).",
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "filename",
+        "size_bytes",
+        "sha256",
+        "container",
+        "codec",
+        "width",
+        "height",
+        "fps",
+        "duration_ms",
+        "rotation_deg",
+        "has_audio"
+      ],
+      "title": "SourceVideo",
+      "type": "object"
+    },
+    "StageProgress": {
+      "additionalProperties": false,
+      "description": "Measured progress of the current stage.",
+      "properties": {
+        "done": {
+          "description": "Units processed so far (e.g. frames).",
+          "minimum": 0,
+          "title": "Done",
+          "type": "number"
+        },
+        "eta_s": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Estimated seconds left; null until enough measurements.",
+          "title": "Eta S"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "preview_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Latest preview number.",
+          "title": "Preview Seq"
+        },
+        "rate_per_s": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Measured units per second.",
+          "title": "Rate Per S"
+        },
+        "stage": {
+          "$ref": "#/$defs/PipelineStage"
+        },
+        "total": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total"
+        },
+        "unit": {
+          "$ref": "#/$defs/ProgressUnit"
+        }
+      },
+      "required": [
+        "stage",
+        "unit",
+        "done",
+        "total",
+        "rate_per_s",
+        "eta_s",
+        "preview_seq",
+        "note"
+      ],
+      "title": "StageProgress",
+      "type": "object"
+    },
+    "TrackState": {
+      "enum": [
+        "tracked",
+        "occluded",
+        "uncertain"
+      ],
+      "title": "TrackState",
+      "type": "string"
+    },
+    "TrackStateRun": {
+      "additionalProperties": false,
+      "properties": {
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "state": {
+          "$ref": "#/$defs/TrackState"
+        }
+      },
+      "required": [
+        "start_frame",
+        "end_frame",
+        "state"
+      ],
+      "title": "TrackStateRun",
+      "type": "object"
+    },
+    "TrackingPrepSummary": {
+      "additionalProperties": false,
+      "description": "Selection-independent preparation (cuts, tracklets, appearance).",
+      "properties": {
+        "cache_hit": {
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "candidates": {
+          "minimum": 0,
+          "title": "Candidates",
+          "type": "integer"
+        },
+        "cuts": {
+          "description": "Frames where a new camera shot starts.",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Cuts",
+          "type": "array"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "tracker": {
+          "description": "Short-term tracker used inside shots.",
+          "title": "Tracker",
+          "type": "string"
+        },
+        "tracklets": {
+          "minimum": 0,
+          "title": "Tracklets",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cache_key",
+        "cache_hit",
+        "shots",
+        "cuts",
+        "tracklets",
+        "candidates",
+        "tracker"
+      ],
+      "title": "TrackingPrepSummary",
+      "type": "object"
+    },
+    "TrackingSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_conflicts": {
+          "minimum": 0,
+          "title": "Anchor Conflicts",
+          "type": "integer"
+        },
+        "anchors": {
+          "items": {
+            "$ref": "#/$defs/FighterAnchor"
+          },
+          "title": "Anchors",
+          "type": "array"
+        },
+        "cache_hit": {
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/FighterTrackStats"
+          },
+          "title": "Fighters",
+          "type": "array"
+        },
+        "identity_switches": {
+          "description": "Times a fighter's identity moved directly onto a track another person held.",
+          "minimum": 0,
+          "title": "Identity Switches",
+          "type": "integer"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "review_points": {
+          "items": {
+            "$ref": "#/$defs/ReviewPoint"
+          },
+          "title": "Review Points",
+          "type": "array"
+        },
+        "shots": {
+          "items": {
+            "$ref": "#/$defs/ShotInfo"
+          },
+          "title": "Shots",
+          "type": "array"
+        },
+        "swap_corrections": {
+          "description": "Tracker continuations rejected because appearance pointed to someone else.",
+          "minimum": 0,
+          "title": "Swap Corrections",
+          "type": "integer"
+        },
+        "uncertain_segments": {
+          "items": {
+            "$ref": "#/$defs/UncertainSegment"
+          },
+          "title": "Uncertain Segments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cache_key",
+        "cache_hit",
+        "method",
+        "anchors",
+        "shots",
+        "fighters",
+        "identity_switches",
+        "swap_corrections",
+        "anchor_conflicts",
+        "uncertain_segments",
+        "review_points"
+      ],
+      "title": "TrackingSummary",
+      "type": "object"
+    },
+    "TrackingTimeline": {
+      "additionalProperties": false,
+      "description": "Run-length encoded identity states for the whole video (for the UI timeline).",
+      "properties": {
+        "cuts": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Cuts",
+          "type": "array"
+        },
+        "fighters": {
+          "items": {
+            "$ref": "#/$defs/FighterTimeline"
+          },
+          "title": "Fighters",
+          "type": "array"
+        },
+        "fps": {
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "frame_count": {
+          "minimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "frame_count",
+        "fps",
+        "cuts",
+        "fighters"
+      ],
+      "title": "TrackingTimeline",
+      "type": "object"
+    },
+    "TranscodeInfo": {
+      "additionalProperties": false,
+      "description": "Settings used to produce the analysis copy (part of its cache key).",
+      "properties": {
+        "audio_bitrate_k": {
+          "title": "Audio Bitrate K",
+          "type": "integer"
+        },
+        "crf": {
+          "title": "Crf",
+          "type": "integer"
+        },
+        "ffmpeg_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ffmpeg Version"
+        },
+        "max_fps": {
+          "title": "Max Fps",
+          "type": "number"
+        },
+        "max_short_side": {
+          "title": "Max Short Side",
+          "type": "integer"
+        },
+        "preset": {
+          "title": "Preset",
+          "type": "string"
+        },
+        "version": {
+          "description": "Bumped whenever the FFmpeg recipe changes.",
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "max_short_side",
+        "max_fps",
+        "crf",
+        "preset",
+        "audio_bitrate_k",
+        "ffmpeg_version"
+      ],
+      "title": "TranscodeInfo",
+      "type": "object"
+    },
+    "UncertainReason": {
+      "enum": [
+        "camera_cut",
+        "overlap",
+        "lost",
+        "ambiguous",
+        "anchor_conflict"
+      ],
+      "title": "UncertainReason",
+      "type": "string"
+    },
+    "UncertainSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "fighter_id": {
+          "$ref": "#/$defs/FighterId"
+        },
+        "reason": {
+          "$ref": "#/$defs/UncertainReason"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fighter_id",
+        "start_frame",
+        "end_frame",
+        "reason"
+      ],
+      "title": "UncertainSegment",
+      "type": "object"
+    },
+    "UploadLimits": {
+      "additionalProperties": false,
+      "description": "Server-side upload limits (also checked by the UI before uploading).",
+      "properties": {
+        "extensions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Extensions",
+          "type": "array"
+        },
+        "max_bytes": {
+          "exclusiveMinimum": 0,
+          "title": "Max Bytes",
+          "type": "integer"
+        },
+        "max_duration_s": {
+          "exclusiveMinimum": 0,
+          "title": "Max Duration S",
+          "type": "number"
+        },
+        "max_long_side": {
+          "exclusiveMinimum": 0,
+          "title": "Max Long Side",
+          "type": "integer"
+        },
+        "max_short_side": {
+          "exclusiveMinimum": 0,
+          "title": "Max Short Side",
+          "type": "integer"
+        },
+        "min_duration_s": {
+          "minimum": 0,
+          "title": "Min Duration S",
+          "type": "number"
+        },
+        "min_short_side": {
+          "exclusiveMinimum": 0,
+          "title": "Min Short Side",
+          "type": "integer"
+        },
+        "schema_version": {
+          "default": "1.6.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "max_bytes",
+        "min_duration_s",
+        "max_duration_s",
+        "max_long_side",
+        "max_short_side",
+        "min_short_side",
+        "extensions"
+      ],
+      "title": "UploadLimits",
+      "type": "object"
+    },
+    "VerdictStatus": {
+      "enum": [
+        "decision",
+        "finish",
+        "no_contest",
+        "not_computed"
+      ],
+      "title": "VerdictStatus",
+      "type": "string"
+    },
+    "VideoInfo": {
+      "additionalProperties": false,
+      "description": "Properties of the prepared (analysis) video that all frame indices and\npixel coordinates refer to. Width/height are the displayed size, i.e.\nafter applying the container rotation.",
+      "properties": {
+        "codec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Video codec name, e.g. 'h264'.",
+          "title": "Codec"
+        },
+        "duration_ms": {
+          "description": "Duration in milliseconds.",
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "number"
+        },
+        "fps": {
+          "description": "Frames per second (exact = fps_num / fps_den).",
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "fps_den": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Constant frame rate denominator.",
+          "title": "Fps Den"
+        },
+        "fps_num": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Constant frame rate numerator.",
+          "title": "Fps Num"
+        },
+        "frame_count": {
+          "description": "Number of decodable frames.",
+          "minimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        },
+        "has_audio": {
+          "default": false,
+          "title": "Has Audio",
+          "type": "boolean"
+        },
+        "height": {
+          "description": "Frame height in pixels.",
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "rotation_deg": {
+          "default": 0,
+          "description": "Rotation that was applied to reach width/height.",
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "title": "Rotation Deg",
+          "type": "integer"
+        },
+        "width": {
+          "description": "Frame width in pixels.",
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "frame_count",
+        "duration_ms",
+        "codec",
+        "rotation_deg",
+        "fps_num",
+        "fps_den",
+        "has_audio"
+      ],
+      "title": "VideoInfo",
+      "type": "object"
+    },
+    "WorkerInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "compute": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ComputeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "last_heartbeat": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Heartbeat"
+        },
+        "pid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pid"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        },
+        "worker_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worker Id"
+        }
+      },
+      "required": [
+        "status",
+        "worker_id",
+        "pid",
+        "last_heartbeat",
+        "compute"
+      ],
+      "title": "WorkerInfo",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "MMA Fight Analyzer data contracts, schema version 1.6.0.",
+  "properties": {
+    "AnalysisExport": {
+      "$ref": "#/$defs/AnalysisExport"
+    },
+    "ErrorResponse": {
+      "$ref": "#/$defs/ErrorResponse"
+    },
+    "EventTimeline": {
+      "$ref": "#/$defs/EventTimeline"
+    },
+    "ExportRequest": {
+      "$ref": "#/$defs/ExportRequest"
+    },
+    "FighterNames": {
+      "$ref": "#/$defs/FighterNames"
+    },
+    "FighterSelection": {
+      "$ref": "#/$defs/FighterSelection"
+    },
+    "HealthResponse": {
+      "$ref": "#/$defs/HealthResponse"
+    },
+    "Job": {
+      "$ref": "#/$defs/Job"
+    },
+    "JobList": {
+      "$ref": "#/$defs/JobList"
+    },
+    "MatchSetup": {
+      "$ref": "#/$defs/MatchSetup"
+    },
+    "MomentumTimeline": {
+      "$ref": "#/$defs/MomentumTimeline"
+    },
+    "MotionTimeline": {
+      "$ref": "#/$defs/MotionTimeline"
+    },
+    "PoseCacheManifest": {
+      "$ref": "#/$defs/PoseCacheManifest"
+    },
+    "PoseChunk": {
+      "$ref": "#/$defs/PoseChunk"
+    },
+    "PosePreview": {
+      "$ref": "#/$defs/PosePreview"
+    },
+    "PoseSequence": {
+      "$ref": "#/$defs/PoseSequence"
+    },
+    "Scorecards": {
+      "$ref": "#/$defs/Scorecards"
+    },
+    "SegmentExclusions": {
+      "$ref": "#/$defs/SegmentExclusions"
+    },
+    "SelectionCandidates": {
+      "$ref": "#/$defs/SelectionCandidates"
+    },
+    "TrackingTimeline": {
+      "$ref": "#/$defs/TrackingTimeline"
+    },
+    "UploadLimits": {
+      "$ref": "#/$defs/UploadLimits"
+    }
+  },
+  "title": "FightAnalyzerContracts",
+  "type": "object",
+  "x-keypoint-order": [
+    "nose",
+    "left_eye",
+    "right_eye",
+    "left_ear",
+    "right_ear",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle"
+  ],
+  "x-schema-version": "1.6.0"
+}

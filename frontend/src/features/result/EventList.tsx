@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DemoTag, StateView } from "../../components/ui";
+import { DemoTag, EmptyState } from "../../ui";
 import type { EventType } from "../../contracts/generated";
 import { EVENT_LABELS } from "../../labels";
 import type { Side, TimelineEvent } from "../../model/analysis";
@@ -93,9 +93,9 @@ export function EventList({ events, clock, time, names, demo, selectedId = null,
         </div>
       </header>
       {events.length === 0 ? (
-        <StateView tone="empty" title="Olay yok" compact>
+        <EmptyState tone="empty" title="Olay yok" compact>
           {emptyText ?? "Olay tespiti sonuçları geldiğinde burada zaman sırasıyla listelenir."}
-        </StateView>
+        </EmptyState>
       ) : shown.length === 0 ? (
         <p className="events__none">Bu filtrede olay yok.</p>
       ) : (

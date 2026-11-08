@@ -2,8 +2,8 @@ import { useRef, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { ApiError, api, uploadVideo } from "../../api/client";
 import { navigate } from "../../app/router";
-import { IconFilm, IconUpload } from "../../components/icons";
-import { ProgressBar } from "../../components/ui";
+import { IconFilm, IconUpload } from "../../ui/icons";
+import { Progress } from "../../ui";
 import type { UploadLimits } from "../../contracts/generated";
 import { usePolling } from "../../hooks/usePolling";
 import { formatBytes, formatNumber } from "../../labels";
@@ -82,7 +82,7 @@ export function DropZone() {
   if (state.kind === "idle" || state.kind === "rejected") {
     body = (
       <>
-        <IconUpload size={34} className="dropzone__icon" />
+        <IconUpload size={20} className="dropzone__icon" />
         <p className="dropzone__lead">Videoyu buraya sürükleyip bırakın</p>
         <p className="dropzone__hint">
           MP4, MOV, MKV, WEBM, AVI
@@ -99,7 +99,7 @@ export function DropZone() {
     const problem = state.kind === "ready" ? limitProblem(file, meta, limits) : null;
     body = (
       <div className="filecard">
-        <IconFilm size={30} className="filecard__icon" />
+        <IconFilm size={20} className="filecard__icon" />
         <div className="filecard__info">
           <p className="filecard__name" title={file.name}>{file.name}</p>
           <dl className="filecard__meta">
@@ -133,7 +133,7 @@ export function DropZone() {
         {problem && <p className="filecard__problem" role="alert">{problem}</p>}
         {state.kind === "uploading" && (
           <div className="filecard__upload">
-            <ProgressBar value={file.size ? state.loaded / file.size : null} label="Yükleme ilerlemesi" />
+            <Progress value={file.size ? state.loaded / file.size : null} label="Yükleme ilerlemesi" />
             <span className="num">
               {formatBytes(state.loaded)} / {formatBytes(file.size)} · %{Math.round((state.loaded / (file.size || 1)) * 100)}
               {state.loaded >= file.size && " · sunucu doğruluyor…"}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { navigate } from "../../app/router";
-import { StateView } from "../../components/ui";
+import { EmptyState } from "../../ui";
 import { demoEvents, demoMomentum, demoMomentumSeries, demoStats } from "../../demo/analysis";
 import { useDemo } from "../../demo/DemoContext";
 import type { DemoState } from "../../demo/DemoContext";
@@ -76,12 +76,12 @@ function JobResult({ jobId }: { jobId: string }) {
   }
   if (stale || (running && data?.selection)) {
     return (
-      <StateView tone="loading" title="Sonuçlar yeniden hesaplanıyor…"
+      <EmptyState tone="loading" title="Sonuçlar yeniden hesaplanıyor…"
                  action={<a className="btn btn--ghost" href={`#/analyses/${jobId}/processing`}>İşlem ekranını aç</a>}>
         {data?.message ?? "Taraflar, seçim ya da dışlanan bölümler değişti."} Pozlar yeniden çıkarılmaz;
         etkilenen sonuçlar önbellekten birlikte yeniden üretilir, eski sonuç güncelmiş gibi gösterilmez.
         {data && <> (%{Math.round(data.progress * 100)})</>}
-      </StateView>
+      </EmptyState>
     );
   }
   return <JobResultEmpty jobId={jobId} job={job} />;
@@ -93,27 +93,27 @@ function JobResultEmpty({ jobId, job }: { jobId: string; job: ReturnType<typeof 
 
   let message: ReactNode;
   if (job.loading) {
-    message = <StateView tone="loading" title="Analiz bilgisi yükleniyor…" compact />;
+    message = <EmptyState tone="loading" title="Analiz bilgisi yükleniyor…" compact />;
   } else if (job.notFound) {
     message = (
-      <StateView tone="error" title="Analiz bulunamadı" compact
+      <EmptyState tone="error" title="Analiz bulunamadı" compact
                  action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>} />
     );
   } else if (!job.data) {
-    message = <StateView tone="error" title="Analiz durumu alınamadı" compact>API'ye ulaşılamıyor; yeniden deneniyor.</StateView>;
+    message = <EmptyState tone="error" title="Analiz durumu alınamadı" compact>API'ye ulaşılamıyor; yeniden deneniyor.</EmptyState>;
   } else if (job.data.status !== "completed") {
     message = (
-      <StateView tone="empty" title="Sonuç henüz yok" compact
+      <EmptyState tone="empty" title="Sonuç henüz yok" compact
                  action={<a className="btn btn--ghost" href={`#/analyses/${jobId}/processing`}>İşlem ekranını aç</a>}>
         Bu analizin durumu: <strong>{JOB_STATUS_LABELS[job.data.status]}</strong>. Sonuçlar analiz
         tamamlandığında burada görünür.
-      </StateView>
+      </EmptyState>
     );
   } else {
     message = (
-      <StateView tone="empty" title="Sonuç verisi okunamıyor" compact>
+      <EmptyState tone="empty" title="Sonuç verisi okunamıyor" compact>
         Analiz tamamlandı ancak sonuç dosyalarını okuma bu sürümde henüz yok.
-      </StateView>
+      </EmptyState>
     );
   }
   return <ResultView data={null} clock={clock} actions={{}} empty={message} />;

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, urls } from "../../api/client";
 import { navigate } from "../../app/router";
 import type { SelectParams } from "../../app/router";
-import { StateView } from "../../components/ui";
+import { EmptyState } from "../../ui";
 import type { FighterAnchor, Job, PersonDetection, SelectionCandidates } from "../../contracts/generated";
 import { useJob } from "../../hooks/useJob";
 import { formatNumber } from "../../labels";
@@ -90,34 +90,34 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   const existing = data?.selection?.anchors ?? [];
   const sortedCands = useMemo(() => (cands?.frames ?? []).map((f) => f.frame_index).sort((a, b) => a - b), [cands]);
 
-  if (job.loading) return <StateView tone="loading" title="Analiz bilgisi yükleniyor…" />;
+  if (job.loading) return <EmptyState tone="loading" title="Analiz bilgisi yükleniyor…" />;
   if (job.notFound) {
-    return <StateView tone="error" title="Analiz bulunamadı" action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>} />;
+    return <EmptyState tone="error" title="Analiz bulunamadı" action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>} />;
   }
-  if (!data) return <StateView tone="error" title="Analiz durumu alınamadı">API'ye ulaşılamıyor; yeniden deneniyor.</StateView>;
+  if (!data) return <EmptyState tone="error" title="Analiz durumu alınamadı">API'ye ulaşılamıyor; yeniden deneniyor.</EmptyState>;
   if (data.status === "queued" || data.status === "running") {
     return (
-      <StateView tone="loading" title="Analiz işleniyor"
+      <EmptyState tone="loading" title="Analiz işleniyor"
                  action={<a className="btn btn--ghost" href={`#/analyses/${jobId}/processing`}>İşlem ekranını aç</a>}>
         Seçim, poz tespiti ve takip hazırlığı bittiğinde yapılabilir.
-      </StateView>
+      </EmptyState>
     );
   }
   if (!data.outputs.pose || !video) {
-    return <StateView tone="empty" title="Seçim için poz verisi yok">Bu analizde poz tespiti tamamlanmamış.</StateView>;
+    return <EmptyState tone="empty" title="Seçim için poz verisi yok">Bu analizde poz tespiti tamamlanmamış.</EmptyState>;
   }
   if (!prepKey) {
     return (
-      <StateView tone="empty" title="Aday kareler hazırlanmamış"
+      <EmptyState tone="empty" title="Aday kareler hazırlanmamış"
                  action={<button type="button" className="btn btn--primary"
                                  onClick={() => api.retry(jobId).then(() => navigate({ mode: "analysis", screen: "processing", jobId }))}>
                    Aday kareleri hazırla</button>}>
         Bu analiz, takip hazırlığı eklenmeden önce yapılmış. Önbellekteki pozlar kullanılarak hızlıca hazırlanabilir.
-      </StateView>
+      </EmptyState>
     );
   }
-  if (candError) return <StateView tone="error" title="Aday kareler alınamadı">{candError}</StateView>;
-  if (!cands || current === null) return <StateView tone="loading" title="Aday kareler yükleniyor…" />;
+  if (candError) return <EmptyState tone="error" title="Aday kareler alınamadı">{candError}</EmptyState>;
+  if (!cands || current === null) return <EmptyState tone="loading" title="Aday kareler yükleniyor…" />;
 
   const lastFrame = video.frame_count - 1;
   const goTo = (f: number) => {

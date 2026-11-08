@@ -1,7 +1,7 @@
 import { api } from "../../api/client";
 import { navigate } from "../../app/router";
-import { IconUpload } from "../../components/icons";
-import { DemoTag, ProgressBar, StateView } from "../../components/ui";
+import { IconUpload } from "../../ui/icons";
+import { DemoTag, EmptyState, Progress } from "../../ui";
 import type { Job } from "../../contracts/generated";
 import { DEMO_POST_SELECTION_S, DEMO_PRE_SELECTION_S, useDemo } from "../../demo/DemoContext";
 import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME } from "../../demo/script";
@@ -36,7 +36,7 @@ function DemoDropZone() {
   const { start } = useDemo();
   return (
     <div className="dropzone dropzone--demo">
-      <IconUpload size={34} className="dropzone__icon" />
+      <IconUpload size={20} className="dropzone__icon" />
       <p className="dropzone__lead">Demo modunda dosya yüklenmez</p>
       <p className="dropzone__hint">
         Sentetik bir örnek sahneyle işlem, seçim ve sonuç ekranlarının tamamını inceleyin.
@@ -63,17 +63,17 @@ function History() {
   }
   if (!jobs.data) {
     return (
-      <StateView tone="error" title="Geçmiş analizler alınamadı" compact>
+      <EmptyState tone="error" title="Geçmiş analizler alınamadı" compact>
         API'ye ulaşılamıyor. Uygulamayı <code>start.cmd</code> ile başlattığınızdan emin olun;
         bağlantı otomatik olarak yeniden denenecek.
-      </StateView>
+      </EmptyState>
     );
   }
   if (jobs.data.jobs.length === 0) {
     return (
-      <StateView tone="empty" title="Henüz analiz yok" compact>
+      <EmptyState tone="empty" title="Henüz analiz yok" compact>
         Analiz ettiğiniz maçlar burada listelenir ve yeniden işlemeden açılabilir.
-      </StateView>
+      </EmptyState>
     );
   }
   return (
@@ -106,8 +106,8 @@ function HistoryRow({ job }: { job: Job }) {
           {job.status === "failed" && job.error ? (ERROR_LABELS[job.error.code] ?? job.error.message) : ""}
         </span>
         <span className="history__progress">
-          <ProgressBar value={job.progress} label="İlerleme"
-                       tone={job.status === "failed" ? "error" : "default"} />
+          <Progress value={job.progress} label="İlerleme"
+                       tone={job.status === "failed" ? "danger" : "default"} />
         </span>
         <span className={`badge badge--${job.status}`}>{JOB_STATUS_LABELS[job.status]}</span>
       </button>
@@ -137,7 +137,7 @@ function DemoHistory() {
             </span>
           </span>
           <span className="history__stage">{running ? "Demo işleniyor" : ""}</span>
-          <span className="history__progress"><ProgressBar value={progress} label="İlerleme" /></span>
+          <span className="history__progress"><Progress value={progress} label="İlerleme" /></span>
           <span className={`badge badge--${running ? "running" : "completed"}`}>
             {running ? "İşleniyor" : "Tamamlandı"}
           </span>

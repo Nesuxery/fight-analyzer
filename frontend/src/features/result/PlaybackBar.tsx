@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IconBack, IconForward, IconFrameNext, IconFramePrev, IconPause, IconPlay } from "../../components/icons";
+import { IconBack, IconForward, IconFrameNext, IconFramePrev, IconPause, IconPlay } from "../../ui/icons";
 import type { Clock, ClockSnapshot } from "../../player/clock";
 import { formatClock } from "../../player/clock";
 import type { Layers } from "../../player/draw";

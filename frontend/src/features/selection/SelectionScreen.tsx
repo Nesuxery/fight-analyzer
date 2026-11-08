@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { navigate } from "../../app/router";
 import type { SelectParams } from "../../app/router";
-import { DemoTag } from "../../components/ui";
+import { DemoTag } from "../../ui";
 import { useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
 import { CANDIDATE_TIMES, detectionsAt } from "../../demo/scene";

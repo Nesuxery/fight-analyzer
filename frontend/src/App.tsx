@@ -1,11 +1,12 @@
 import { AppShell } from "./app/AppShell";
 import { useRoute } from "./app/router";
-import { StateView } from "./components/ui";
 import { DemoProvider } from "./demo/DemoContext";
 import { ProcessingScreen } from "./features/processing/ProcessingScreen";
 import { ResultScreen } from "./features/result/ResultScreen";
 import { SelectionScreen } from "./features/selection/SelectionScreen";
 import { UploadScreen } from "./features/upload/UploadScreen";
+import { COMMON_LABELS } from "./labels";
+import { ButtonLink, EmptyState, ToastProvider } from "./ui";
 
 export function App() {
   const route = useRoute();
@@ -13,10 +14,10 @@ export function App() {
   let screen;
   if (route.mode === "notFound") {
     screen = (
-      <StateView tone="error" title="Sayfa bulunamadı"
-                 action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>}>
-        <span className="mono">{route.path}</span> adresinde bir ekran yok.
-      </StateView>
+      <EmptyState tone="error" title={COMMON_LABELS.notFoundTitle}
+                  action={<ButtonLink href="#/">{COMMON_LABELS.backToUpload}</ButtonLink>}>
+        <span className="mono">{route.path}</span> {COMMON_LABELS.notFoundText}
+      </EmptyState>
     );
   } else {
     const demo = route.mode === "demo";
@@ -41,8 +42,10 @@ export function App() {
   }
 
   return (
-    <DemoProvider>
-      <AppShell route={route}>{screen}</AppShell>
-    </DemoProvider>
+    <ToastProvider>
+      <DemoProvider>
+        <AppShell route={route}>{screen}</AppShell>
+      </DemoProvider>
+    </ToastProvider>
   );
 }

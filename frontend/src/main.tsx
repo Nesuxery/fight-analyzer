@@ -7,6 +7,7 @@ import "@fontsource-variable/inter-tight/wght.css";
 import "./styles/tokens.css";
 import "./styles/overlay-tokens.css";
 import "./styles/base.css";
+import "./ui/ui.css";
 import "./styles/screens.css";
 import "./styles/result.css";
 import { App } from "./App";

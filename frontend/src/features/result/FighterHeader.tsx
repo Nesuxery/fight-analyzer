@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { IconDownload, IconEdit, IconSwap, IconTarget } from "../../components/icons";
-import { DemoTag } from "../../components/ui";
+import { IconDownload, IconEdit, IconSwap, IconTarget } from "../../ui/icons";
+import { DemoTag } from "../../ui";
 import type { Side } from "../../model/analysis";
 import { SIDE_LABEL } from "../../labels";
 import type { FighterActions } from "./types";

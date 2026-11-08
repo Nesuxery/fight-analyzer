@@ -2,29 +2,7 @@
    they share. Every value comes from tokens.css (overlay-tokens.css for marks
    drawn over the picture). */
 
-/* ---------- panels ---------- */
-.card {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-}
-
-.card__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: 48px;
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--border);
-}
-
-.card__aside {
-  color: var(--text-3);
-  font-size: var(--fs-13);
-}
-
+/* ---------- panels (Card itself: ui/ui.css) ---------- */
 .section-head {
   display: flex;
   align-items: baseline;
@@ -70,7 +48,8 @@
   font-weight: var(--fw-semibold);
 }
 
-.stage .state__title {
+.stage .state__title,
+.stage .state__icon {
   color: var(--stage-text);
 }
 
@@ -277,11 +256,7 @@
 .history__row--skeleton {
   background: var(--surface-muted);
   cursor: default;
-  animation: skeleton-pulse 1.2s var(--ease) infinite;
-}
-
-@keyframes skeleton-pulse {
-  50% { opacity: 0.45; }
+  animation: ui-pulse 1.2s var(--ease) infinite;
 }
 
 .history__name {
@@ -694,14 +669,6 @@
   color: var(--danger);
 }
 
-.alert__detail {
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--text-2);
-  font-size: var(--fs-12);
-  word-break: break-word;
-}
-
 /* ---------- selection on real video ---------- */
 .select__steps {
   display: inline-flex;
@@ -763,17 +730,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.linkbtn {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-1);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .pickflow__absent {

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { api } from "../api/client";
-import { StatusBar } from "../components/StatusBar";
-import { DemoBanner } from "../components/ui";
+import { StatusBar } from "./StatusBar";
+import { DemoBanner } from "../ui";
 import { usePolling } from "../hooks/usePolling";
 import { href } from "./router";
 import type { Route, Screen } from "./router";

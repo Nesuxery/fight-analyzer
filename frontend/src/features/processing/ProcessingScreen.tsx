@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { PipelineStage } from "../../contracts/generated";
 import { navigate } from "../../app/router";
-import { IconAlert, IconCheck, IconTarget } from "../../components/icons";
-import { DemoTag, ProgressBar, StateView } from "../../components/ui";
+import { IconAlert, IconCheck, IconTarget } from "../../ui/icons";
+import { DemoTag, EmptyState, Progress } from "../../ui";
 import { useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
 import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME } from "../../demo/script";
@@ -40,10 +40,10 @@ function DemoProcessing() {
 
   if (view.phase === "notStarted") {
     return (
-      <StateView tone="empty" title="Demo analizi henüz başlatılmadı"
+      <EmptyState tone="empty" title="Demo analizi henüz başlatılmadı"
                  action={<button type="button" className="btn btn--primary" onClick={start}>Demo analizini başlat</button>}>
         Örnek sahne üzerinde işlem adımlarının nasıl ilerlediğini izleyin.
-      </StateView>
+      </EmptyState>
     );
   }
 
@@ -83,20 +83,20 @@ function DemoProcessing() {
 
 function JobProcessing({ jobId }: { jobId: string }) {
   const job = useJob(jobId, 1000);
-  if (job.loading) return <StateView tone="loading" title="Analiz bilgisi yükleniyor…" />;
+  if (job.loading) return <EmptyState tone="loading" title="Analiz bilgisi yükleniyor…" />;
   if (job.notFound) {
     return (
-      <StateView tone="error" title="Analiz bulunamadı"
+      <EmptyState tone="error" title="Analiz bulunamadı"
                  action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>}>
         <span className="mono">{jobId}</span> kimlikli bir analiz kaydı yok.
-      </StateView>
+      </EmptyState>
     );
   }
   if (!job.data) {
     return (
-      <StateView tone="error" title="Analiz durumu alınamadı">
+      <EmptyState tone="error" title="Analiz durumu alınamadı">
         API'ye ulaşılamıyor; bağlantı otomatik olarak yeniden denenecek.
-      </StateView>
+      </EmptyState>
     );
   }
   const data = job.data;
@@ -122,7 +122,7 @@ function JobProcessing({ jobId }: { jobId: string }) {
           : data.status === "failed" ? "Analiz tamamlanamadı." : "Önizleme yok.";
     preview = (
       <div className="stage stage--empty" style={{ aspectRatio: aspect }}>
-        <StateView tone={data.status === "running" || data.status === "queued" ? "loading" : "empty"}
+        <EmptyState tone={data.status === "running" || data.status === "queued" ? "loading" : "empty"}
                    title={text} compact />
       </div>
     );
@@ -259,7 +259,7 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
         {stale && <p className="inline-warn">Bağlantı kesildi; son bilinen durum gösteriliyor.</p>}
         <div className="proc__overall">
           <span className="display display--num">{pct}<small>%</small></span>
-          <ProgressBar value={view.overall} label="Toplam ilerleme" tone={view.phase === "failed" ? "error" : "default"} />
+          <Progress value={view.overall} label="Toplam ilerleme" tone={view.phase === "failed" ? "danger" : "default"} />
         </div>
         {view.phase === "failed" && view.errorText && (
           <div className="alert" role="alert">
@@ -290,7 +290,7 @@ function StepRow({ step, index }: { step: StepView; index: number }) {
   return (
     <li className={`vsteps__item is-${step.status}`}>
       <span className="vsteps__marker" aria-hidden="true">
-        {step.status === "done" ? <IconCheck size={14} /> : step.status === "error" ? "!" : index + 1}
+        {step.status === "done" ? <IconCheck size={16} /> : step.status === "error" ? "!" : index + 1}
       </span>
       <div className="vsteps__body">
         <div className="vsteps__row">
@@ -299,7 +299,7 @@ function StepRow({ step, index }: { step: StepView; index: number }) {
             {step.status === "active" && step.progress !== null ? `${Math.round(step.progress * 100)}%` : STATUS_TEXT[step.status]}
           </span>
         </div>
-        {step.status === "active" && step.progress !== null && <ProgressBar value={step.progress} label={step.label} />}
+        {step.status === "active" && step.progress !== null && <Progress value={step.progress} label={step.label} />}
         {step.detail && <p className="vsteps__detail">{step.detail}</p>}
       </div>
     </li>

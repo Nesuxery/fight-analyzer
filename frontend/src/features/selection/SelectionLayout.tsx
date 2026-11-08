@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IconCheck, IconChevronLeft, IconChevronRight } from "../../components/icons";
+import { IconCheck, IconChevronLeft, IconChevronRight } from "../../ui/icons";
 import { NOT_IN_VIEW } from "../../model/analysis";
 import type { Assignment, Detection, Side } from "../../model/analysis";
 import { SIDE_LABEL } from "../../labels";
@@ -93,7 +93,7 @@ export function SelectionLayout(p: LayoutProps) {
             const active = next === side;
             return (
               <li key={side} className={`pickflow__item pickflow__item--${side}${active ? " is-active" : ""}${chosen ? " is-done" : ""}`}>
-                <span className="pickflow__num">{chosen ? <IconCheck size={14} /> : i + 1}</span>
+                <span className="pickflow__num">{chosen ? <IconCheck size={16} /> : i + 1}</span>
                 <div>
                   <p className="pickflow__title">{SIDE_LABEL[side]} köşe</p>
                   <p className="pickflow__text">

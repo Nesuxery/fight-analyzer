@@ -11,7 +11,46 @@ export const OVERLAY_LABELS = {
 } as const;
 
 export const DEMO_LABELS = {
+  tag: "DEMO",
+  banner: "Tasarım önizlemesi: tüm görüntü, istatistik ve olaylar örnektir; gerçek analiz değildir.",
   watermark: "DEMO · SENTETİK SAHNE",
+} as const;
+
+export const COMMON_LABELS = {
+  notFoundTitle: "Sayfa bulunamadı",
+  notFoundText: "adresinde bir ekran yok.",
+  backToUpload: "Yükleme ekranına dön",
+} as const;
+
+/** System status panel in the top bar (API health). */
+export const SYSTEM_LABELS = {
+  region: "Sistem durumu",
+  api: "API",
+  apiConnecting: "Bağlanıyor…",
+  apiUnreachable: "Ulaşılamıyor",
+  apiRunning: "Çalışıyor",
+  database: "Veritabanı",
+  ready: "Hazır",
+  error: "Hata",
+  worker: "Analiz işçisi",
+  notRunning: "Çalışmıyor",
+  device: "İşlem birimi",
+  unknown: "Bilinmiyor",
+  ffmpeg: "FFmpeg",
+  notFound: "Bulunamadı",
+  model: "Poz modeli",
+  modelReady: "hazır",
+  modelMissing: "indirilmedi",
+  schema: "Şema",
+  schemaBuiltWith: (version: string) => `Arayüz şema v${version} ile derlendi`,
+} as const;
+
+/** Texts of the shared ui/ components. */
+export const UI_LABELS = {
+  notifications: "Bildirimler",
+  closeNotification: "Bildirimi kapat",
+  uncertain: "belirsiz",
+  noValue: "—",
 } as const;
 
 // Record<Union, string> makes the compiler flag any status/stage/event type

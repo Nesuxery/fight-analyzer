@@ -1,6 +1,8 @@
-/** Canvas drawing primitives for the video stage overlays. */
+/** Canvas drawing primitives for the demo scene and its overlays. Colours come from
+ * tokens.css (scene, stage) and shared/overlay-style.json (skeletons, effects). */
+import { OVERLAY_STYLE } from "../contracts/overlayStyle";
 import type { Point, Pose } from "../demo/scene";
-import { COLORS } from "../theme";
+import { cssToken, withAlpha } from "../styles/tokens";
 
 /** COCO-17 limb connections. */
 export const COCO_EDGES: readonly [number, number][] = [
@@ -86,7 +88,7 @@ export function drawStrike(ctx: CanvasRenderingContext2D, tip: Point, k: number,
                            significant: boolean) {
   const peak = Math.max(0, 1 - Math.abs(k - 0.55) / 0.45);
   if (peak <= 0) return;
-  const c = significant ? COLORS.amber : color;
+  const c = significant ? OVERLAY_STYLE.colors.amber : color;
   ctx.save();
   ctx.strokeStyle = c;
   ctx.globalAlpha = peak;
@@ -105,8 +107,9 @@ export function drawStrike(ctx: CanvasRenderingContext2D, tip: Point, k: number,
 }
 
 export function drawDistance(ctx: CanvasRenderingContext2D, a: Point, b: Point, label: string) {
+  const text = cssToken("--stage-text");
   ctx.save();
-  ctx.strokeStyle = COLORS.text;
+  ctx.strokeStyle = text;
   ctx.globalAlpha = 0.85;
   ctx.lineWidth = 2;
   ctx.setLineDash([8, 6]);
@@ -115,12 +118,12 @@ export function drawDistance(ctx: CanvasRenderingContext2D, a: Point, b: Point, 
   for (const p of [a, b]) line(ctx, [p[0], p[1] - 9], [p[0], p[1] + 9]);
   const mx = (a[0] + b[0]) / 2;
   const my = Math.min(a[1], b[1]) - 16;
-  ctx.font = "600 20px Bahnschrift, 'Segoe UI', sans-serif";
+  ctx.font = `600 20px ${cssToken("--font-sans")}`;
   const w = ctx.measureText(label).width + 16;
   ctx.globalAlpha = 1;
-  ctx.fillStyle = "rgba(6, 10, 19, 0.85)";
+  ctx.fillStyle = cssToken("--stage-scrim");
   ctx.fillRect(mx - w / 2, my - 15, w, 26);
-  ctx.fillStyle = COLORS.text;
+  ctx.fillStyle = text;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, mx, my - 2);
@@ -136,16 +139,7 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number
     backdrop.width = w;
     backdrop.height = h;
     const g = backdrop.getContext("2d")!;
-    const bg = g.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, "#04070e");
-    bg.addColorStop(0.55, "#0a1120");
-    bg.addColorStop(1, "#0d1628");
-    g.fillStyle = bg;
-    g.fillRect(0, 0, w, h);
-    const spot = g.createRadialGradient(w / 2, h * 0.25, 20, w / 2, h * 0.4, w * 0.6);
-    spot.addColorStop(0, "rgba(120, 150, 210, 0.16)");
-    spot.addColorStop(1, "rgba(0, 0, 0, 0)");
-    g.fillStyle = spot;
+    g.fillStyle = cssToken("--scene-backdrop");
     g.fillRect(0, 0, w, h);
     // octagon floor in perspective
     const cx = w / 2;
@@ -161,13 +155,13 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number
       else g.lineTo(x, y);
     }
     g.closePath();
-    g.fillStyle = "#0f1a2e";
+    g.fillStyle = cssToken("--scene-floor");
     g.fill();
-    g.strokeStyle = "#22314f";
+    g.strokeStyle = cssToken("--scene-floor-edge");
     g.lineWidth = 3;
     g.stroke();
     // fence posts and mesh hint
-    g.strokeStyle = "rgba(60, 80, 120, 0.35)";
+    g.strokeStyle = cssToken("--scene-fence");
     g.lineWidth = 2;
     for (let i = 0; i < 8; i++) {
       const a = Math.PI / 8 + (i * Math.PI) / 4;
@@ -175,10 +169,10 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number
       const y = cy + Math.sin(a) * ry;
       if (Math.sin(a) < 0) line(g, [x, y], [x, y - h * 0.42]);
     }
-    g.strokeStyle = "rgba(60, 80, 120, 0.12)";
+    g.strokeStyle = cssToken("--scene-mesh");
     for (let y = h * 0.22; y < h * 0.66; y += 14) line(g, [0, y], [w, y]);
     // centre logo ring
-    g.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    g.strokeStyle = cssToken("--scene-logo");
     g.lineWidth = 6;
     g.beginPath();
     g.ellipse(cx, cy, rx * 0.28, ry * 0.42, 0, 0, Math.PI * 2);
@@ -189,12 +183,12 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number
 
 export function drawWatermark(ctx: CanvasRenderingContext2D, text: string) {
   ctx.save();
-  ctx.font = "700 22px Bahnschrift, 'Segoe UI', sans-serif";
+  ctx.font = `600 22px ${cssToken("--font-sans")}`;
   ctx.textBaseline = "top";
   const w = ctx.measureText(text).width + 20;
-  ctx.fillStyle = "rgba(255, 176, 32, 0.92)";
+  ctx.fillStyle = withAlpha(OVERLAY_STYLE.colors.amber, 0.92);
   ctx.fillRect(18, 18, w, 32);
-  ctx.fillStyle = "#1a1203";
+  ctx.fillStyle = cssToken("--text-1");
   ctx.fillText(text, 28, 23);
   ctx.restore();
 }

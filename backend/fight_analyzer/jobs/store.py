@@ -29,6 +29,7 @@ from fight_analyzer.contracts import (
 )
 from fight_analyzer.contracts.common import utcnow
 from fight_analyzer.contracts.fighters import swap_fighter_ids
+from fight_analyzer.export.style import corner_hex_colors
 
 # Each entry upgrades the schema by one version (PRAGMA user_version).
 MIGRATIONS: tuple[str, ...] = (
@@ -441,7 +442,9 @@ class JobStore:
 
 
 DEFAULT_NAMES = {"red": "Dövüşçü 1", "blue": "Dövüşçü 2"}
-CORNER_COLORS = {"red": "#ff2e4d", "blue": "#19d6f0"}
+# The video-layer corner colours of shared/overlay-style.json (one source for the
+# browser overlay, the MP4 export and the `Fighter.color` field).
+CORNER_COLORS = corner_hex_colors()
 
 
 def _fighters(params: dict[str, Any]) -> list[dict[str, str]]:

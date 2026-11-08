@@ -1,7 +1,9 @@
+import { OVERLAY_STYLE } from "../contracts/overlayStyle";
+import { DEMO_LABELS } from "../labels";
 import type { Assignment, PersonId } from "../model/analysis";
 import { drawBackdrop, drawBody, drawDistance, drawSkeleton, drawStrike, drawWatermark } from "../player/draw";
 import type { Layers } from "../player/draw";
-import { COLORS, SIDE_COLOR } from "../theme";
+import { cssToken } from "../styles/tokens";
 import { sideOf } from "./analysis";
 import { hipDistanceM, sceneAt } from "./scene";
 import { DEMO_FRAME, LEFT, REFEREE, RIGHT } from "./script";
@@ -13,22 +15,29 @@ export interface DemoRenderOptions {
   assignment: Assignment | null;
 }
 
-const BODY_STYLE: Record<PersonId, { skin: string; shorts: string }> = {
-  [LEFT]: { skin: "#3b4459", shorts: "#5c1a2a" },
-  [RIGHT]: { skin: "#434b5d", shorts: "#11404f" },
-  [REFEREE]: { skin: "#2a3245", shorts: "#1a2030" },
+/** Synthetic "footage" colours of each person (tokens.css, --scene-*). */
+const BODY_TOKENS: Record<PersonId, { skin: `--${string}`; shorts: `--${string}` }> = {
+  [LEFT]: { skin: "--scene-left-skin", shorts: "--scene-left-shorts" },
+  [RIGHT]: { skin: "--scene-right-skin", shorts: "--scene-right-shorts" },
+  [REFEREE]: { skin: "--scene-referee-skin", shorts: "--scene-referee-shorts" },
+};
+
+const bodyStyle = (id: PersonId) => {
+  const t = BODY_TOKENS[id]!;
+  return { skin: cssToken(t.skin), shorts: cssToken(t.shorts) };
 };
 
 export function renderDemo(ctx: CanvasRenderingContext2D, t: number, opts: DemoRenderOptions) {
   const { width, height } = DEMO_FRAME;
   drawBackdrop(ctx, width, height);
   const scene = sceneAt(t);
-  for (const id of [REFEREE, LEFT, RIGHT]) drawBody(ctx, scene.poses[id]!, BODY_STYLE[id]!);
+  for (const id of [REFEREE, LEFT, RIGHT]) drawBody(ctx, scene.poses[id]!, bodyStyle(id));
 
+  const neutral = cssToken("--stage-text");
   const colorOf = (id: PersonId): string | null => {
-    if (!opts.assignment) return COLORS.neutral;
+    if (!opts.assignment) return neutral;
     const side = sideOf(id, opts.assignment);
-    return side ? SIDE_COLOR[side] : null;
+    return side ? OVERLAY_STYLE.colors[side] : null;
   };
 
   if (opts.layers.distance) {
@@ -47,8 +56,8 @@ export function renderDemo(ctx: CanvasRenderingContext2D, t: number, opts: DemoR
   if (opts.layers.strikes) {
     for (const s of scene.strikes) {
       const color = s.event.actor ? colorOf(s.event.actor) : null;
-      drawStrike(ctx, s.tip, s.progress, color ?? COLORS.neutral, s.event.significant);
+      drawStrike(ctx, s.tip, s.progress, color ?? neutral, s.event.significant);
     }
   }
-  drawWatermark(ctx, "DEMO · SENTETİK SAHNE");
+  drawWatermark(ctx, DEMO_LABELS.watermark);
 }

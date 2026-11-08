@@ -1,0 +1,124 @@
+/*
+ * Design tokens: the only place in the UI with raw colour values.
+ *
+ * Components use these semantic names and never a colour code of their own
+ * (tests/no-hardcoded-colors.test.ts). A dark theme can later redefine the
+ * same names in a :root[data-theme="dark"] block without touching components.
+ * Video overlay colours (skeletons, strike effects) are shared with the MP4
+ * export, so they live in shared/overlay-style.json and reach CSS through the
+ * generated overlay-tokens.css. Canvas code reads these values through
+ * styles/tokens.ts.
+ */
+:root {
+  color-scheme: light;
+
+  /* surfaces and text */
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-muted: #f1f1ee;
+  --border: #e6e6e1;
+  /* inputs and the drop zone: at least 3:1 against --surface and --bg */
+  --border-strong: #8f8f8a;
+  --text-1: #111111;
+  --text-2: #52524c;
+  --text-3: #6e6e68;
+  /* text on --text-1, --red and --blue fills */
+  --text-on-fill: #ffffff;
+
+  /* corners: colour only ever means a corner or a state */
+  --red: #c62b3b;
+  --red-soft: #fbeef0;
+  --blue: #2457c5;
+  --blue-soft: #edf2fc;
+
+  /* states */
+  --success: #1f7a4d;
+  --success-soft: #eaf4ee;
+  --warning: #9a6100;
+  --warning-soft: #fbf3e4;
+  /* errors: always shown with an icon and text, never alone, so it is not read as the red corner */
+  --danger: #b42318;
+  --danger-soft: #fcedec;
+
+  /* the video stage stays dark on the light page */
+  --stage: #0b0b0c;
+  --stage-text: #f5f5f2;
+  --stage-text-2: #b9b9b3;
+  --stage-scrim: rgba(11, 11, 12, 0.72);
+  --stage-line: rgba(245, 245, 242, 0.72);
+
+  /* floating layers (menus, dialogs, toasts) */
+  --scrim: rgba(17, 17, 17, 0.32);
+  --shadow-float: 0 8px 24px rgba(17, 17, 17, 0.08);
+
+  /* synthetic demo footage, drawn on canvas (player/draw.ts, demo/render.ts) */
+  --scene-backdrop: #0d1015;
+  --scene-floor: #161b24;
+  --scene-floor-edge: #2b3240;
+  --scene-fence: rgba(118, 126, 140, 0.35);
+  --scene-mesh: rgba(118, 126, 140, 0.12);
+  --scene-logo: rgba(245, 245, 242, 0.05);
+  --scene-left-skin: #3d4352;
+  --scene-left-shorts: #5c1a24;
+  --scene-right-skin: #454a57;
+  --scene-right-shorts: #1a2f5c;
+  --scene-referee-skin: #2c313c;
+  --scene-referee-shorts: #1c2029;
+
+  /* typography: Inter for the interface, Inter Tight for headings and score numbers.
+     Both ship with the app (@fontsource-variable), no font is loaded from the internet. */
+  --font-sans: "Inter Variable", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: "Inter Tight Variable", "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --fs-label: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-32: 32px;
+  --fs-44: 44px;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --lh-body: 1.5;
+  --lh-tight: 1.2;
+  --tracking-label: 0.06em;
+
+  /* spacing: 4 px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* shape */
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-stage: 16px;
+  --radius-pill: 999px;
+  --control-h: 36px;
+  --control-h-sm: 28px;
+
+  /* motion: opacity and transform only; none with prefers-reduced-motion */
+  --motion-fast: 160ms;
+  --motion: 200ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* focus: 2 px --text-1 with a 2 px offset (light text on the video stage) */
+  --focus-ring: var(--text-1);
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* page */
+  --page-max: 1440px;
+  /* result screen only, until its layout is rebuilt (Bölüm 5) */
+  --page-max-wide: 1640px;
+  --page-gutter: 24px;
+  --topbar-h: 56px;
+}

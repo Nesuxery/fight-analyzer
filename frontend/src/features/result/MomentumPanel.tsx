@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 import type { FightEvent, MomentumContribution, MomentumParameters } from "../../contracts/generated";
-import { EVENT_LABELS, formatNumber } from "../../labels";
+import { EVENT_LABELS, SIDE_LABEL, formatNumber } from "../../labels";
 import type { Side } from "../../model/analysis";
 import { SOURCE_LABELS, breakdown, eventEffect, eventMoment, redShare, totals } from "../../model/measured";
 import type { Intervals } from "../../model/measured";
 import { formatClock } from "../../player/clock";
-import { SIDE_LABEL } from "../../theme";
 
 const pts = (v: number) => formatNumber(v, v >= 10 ? 1 : 2);
 

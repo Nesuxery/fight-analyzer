@@ -16,7 +16,7 @@ export interface PersonStyle {
 /** Joints below this confidence are not drawn (they are still stored). */
 export const MIN_JOINT_CONFIDENCE = 0.3;
 
-const NEUTRAL: PersonStyle = { color: "#f1f5fd" };
+const NEUTRAL: PersonStyle = { color: "var(--stage-text)" };
 
 /**
  * Detections drawn over a frame of `width`×`height` pixels. The viewBox

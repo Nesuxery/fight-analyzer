@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { IconCheck, IconChevronLeft, IconChevronRight } from "../../components/icons";
 import { NOT_IN_VIEW } from "../../model/analysis";
 import type { Assignment, Detection, Side } from "../../model/analysis";
-import { SIDE_LABEL } from "../../theme";
+import { SIDE_LABEL } from "../../labels";
 
 interface LayoutProps {
   title: ReactNode;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { IconDownload, IconEdit, IconSwap, IconTarget } from "../../components/icons";
 import { DemoTag } from "../../components/ui";
 import type { Side } from "../../model/analysis";
-import { SIDE_LABEL } from "../../theme";
+import { SIDE_LABEL } from "../../labels";
 import type { FighterActions } from "./types";
 
 const MAX_NAME = 40;

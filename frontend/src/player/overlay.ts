@@ -13,6 +13,8 @@
  * whose identity is verified get a fighter colour.
  */
 import { OVERLAY_STYLE } from "../contracts/overlayStyle";
+import { OVERLAY_LABELS } from "../labels";
+import { cssToken, withAlpha } from "../styles/tokens";
 import type { Fit } from "./geometry";
 
 /** Same threshold as the motion analysis (MotionSettings.kp_min_conf). */
@@ -90,11 +92,11 @@ function torsoLength(k: OverlayPoint[]): number | null {
 
 function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string, px: number,
                align: CanvasTextAlign = "center") {
-  ctx.font = `700 ${12 * px}px Bahnschrift, "Segoe UI", sans-serif`;
+  ctx.font = `600 ${12 * px}px ${cssToken("--font-sans")}`;
   ctx.textAlign = align;
   ctx.textBaseline = "bottom";
   ctx.lineWidth = 3 * px;
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+  ctx.strokeStyle = withAlpha(OVERLAY_COLORS.outline, 0.8);
   ctx.strokeText(text, x, y);
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
@@ -115,7 +117,7 @@ function drawPerson(ctx: CanvasRenderingContext2D, person: OverlayPerson, px: nu
   ctx.lineJoin = "round";
   ctx.setLineDash(person.state === "occluded" ? [7 * px, 5 * px] : []);
   if (fighter) {
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.55)"; // contrast on bright canvas
+    ctx.strokeStyle = withAlpha(OVERLAY_COLORS.outline, 0.55); // contrast on bright canvas
     ctx.lineWidth = 5.5 * px;
     ctx.stroke(path);
     ctx.shadowColor = `${color}99`; // modest glow (shadowBlur is in device pixels)
@@ -136,7 +138,7 @@ function drawPerson(ctx: CanvasRenderingContext2D, person: OverlayPerson, px: nu
       ctx.fillStyle = color;
       ctx.fill();
       ctx.lineWidth = 1.2 * px;
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.strokeStyle = withAlpha(OVERLAY_COLORS.outline, 0.7);
       ctx.stroke();
     }
     // Head ring when the face is visible: centred on the face points, sized from
@@ -174,7 +176,7 @@ function tint(hex: string, k: number): string {
 }
 
 function drawFlash(ctx: CanvasRenderingContext2D, f: OverlayFlash, px: number) {
-  const color = tint(f.side ? OVERLAY_COLORS[f.side] : "#ffffff", 0.45);
+  const color = tint(f.side ? OVERLAY_COLORS[f.side] : OVERLAY_COLORS.light, 0.45);
   ctx.save();
   ctx.globalAlpha = 0.75 * f.strength;
   ctx.strokeStyle = color;
@@ -216,7 +218,9 @@ function drawRing(ctx: CanvasRenderingContext2D, r: OverlayRing, px: number) {
   ctx.lineWidth = 2.5 * px;
   ctx.strokeStyle = OVERLAY_COLORS.amber;
   ctx.stroke();
-  if (r.labelled) label(ctx, "olası temas", r.x + radius + 6 * px, r.y - radius, OVERLAY_COLORS.amber, px, "left");
+  if (r.labelled) {
+    label(ctx, OVERLAY_LABELS.possibleContact, r.x + radius + 6 * px, r.y - radius, OVERLAY_COLORS.amber, px, "left");
+  }
   ctx.restore();
 }
 
@@ -224,7 +228,7 @@ function drawDistance(ctx: CanvasRenderingContext2D, d: OverlayDistance, px: num
   ctx.save();
   ctx.setLineDash([8 * px, 6 * px]);
   ctx.lineWidth = 2 * px;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.strokeStyle = withAlpha(OVERLAY_COLORS.light, 0.85);
   ctx.beginPath();
   ctx.moveTo(d.a.x, d.a.y);
   ctx.lineTo(d.b.x, d.b.y);
@@ -233,12 +237,13 @@ function drawDistance(ctx: CanvasRenderingContext2D, d: OverlayDistance, px: num
   for (const p of [d.a, d.b]) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, 4 * px, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = OVERLAY_COLORS.light;
     ctx.fill();
   }
   if (d.value !== null) {
-    const text = `${d.value.toLocaleString("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} gövde boyu`;
-    label(ctx, text, (d.a.x + d.b.x) / 2, (d.a.y + d.b.y) / 2 - 8 * px, "#ffffff", px);
+    const text = OVERLAY_LABELS.distance(
+      d.value.toLocaleString("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 }));
+    label(ctx, text, (d.a.x + d.b.x) / 2, (d.a.y + d.b.y) / 2 - 8 * px, OVERLAY_COLORS.light, px);
   }
   ctx.restore();
 }

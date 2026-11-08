@@ -1,6 +1,7 @@
-// Generate src/contracts/generated.ts from the backend JSON Schema and
-// src/contracts/overlayStyle.ts from shared/overlay-style.json (the overlay
-// colours and effect timings the MP4 export uses too).
+// Generate src/contracts/generated.ts from the backend JSON Schema, and
+// src/contracts/overlayStyle.ts plus src/styles/overlay-tokens.css from
+// shared/overlay-style.json (the overlay colours and effect timings the MP4
+// export uses too; the CSS custom properties serve DOM elements drawn over the video).
 //   npm run gen:types      write the files
 //   npm run check:types    exit 1 if a file is out of date
 import { readFile, writeFile } from "node:fs/promises";
@@ -15,6 +16,7 @@ const outPath = path.resolve(here, "../src/contracts/generated.ts");
 const styleFile = "shared/overlay-style.json";
 const stylePath = path.resolve(here, "../..", styleFile);
 const styleOutPath = path.resolve(here, "../src/contracts/overlayStyle.ts");
+const styleCssOutPath = path.resolve(here, "../src/styles/overlay-tokens.css");
 
 const schema = JSON.parse(await readFile(schemaPath, "utf8"));
 
@@ -55,7 +57,16 @@ const styleTs = [
   "",
 ].join("\n");
 
-const outputs = [[outPath, ts], [styleOutPath, styleTs]];
+const styleCss = [
+  `/* Generated from ${styleFile} by \`npm run gen:types\`. Do not edit by hand. */`,
+  "/* Video overlay colours for DOM elements drawn over the picture (same values as the canvas and MP4 export). */",
+  ":root {",
+  ...Object.entries(style.colors).map(([name, value]) => `  --overlay-${name}: ${value};`),
+  "}",
+  "",
+].join("\n");
+
+const outputs = [[outPath, ts], [styleOutPath, styleTs], [styleCssOutPath, styleCss]];
 if (process.argv.includes("--check")) {
   let stale = false;
   for (const [file, content] of outputs) {
@@ -69,5 +80,5 @@ if (process.argv.includes("--check")) {
   console.log("generated files are up to date");
 } else {
   for (const [file, content] of outputs) await writeFile(file, content, "utf8");
-  console.log(`wrote generated.ts (schema ${version}) and overlayStyle.ts`);
+  console.log(`wrote generated.ts (schema ${version}), overlayStyle.ts and overlay-tokens.css`);
 }

@@ -1,12 +1,14 @@
 {
-  "description": "Analysis overlay style shared by the browser (frontend/src/player/overlay.ts) and the MP4 export (backend/fight_analyzer/export/render.py), so both show the same effects at the same video times. Times are seconds of video time relative to the event moment (peak), never wall-clock time.",
+  "description": "Analysis overlay style shared by the browser (frontend/src/player/overlay.ts) and the MP4 export (backend/fight_analyzer/export/render.py), so both show the same effects at the same video times. Times are seconds of video time relative to the event moment (peak), never wall-clock time. Colours are the vivid video-layer versions of the interface corner colours (frontend/src/styles/tokens.css); outline and light are the black contour and white marks used for contrast on the picture.",
   "kp_min_conf": 0.5,
   "colors": {
     "red": "#ff2e4d",
-    "blue": "#19d6f0",
-    "other": "#9aa6bd",
+    "blue": "#3d8bff",
+    "other": "#a8a8a2",
     "amber": "#ffb020",
-    "warning": "#ffd21f"
+    "warning": "#ffd21f",
+    "outline": "#000000",
+    "light": "#ffffff"
   },
   "strike_flash": { "before_s": 0.06, "after_s": 0.3 },
   "contact_ring": { "after_s": 0.35, "radius_px": 9 },

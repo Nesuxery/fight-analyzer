@@ -88,7 +88,7 @@ export function AppShell({ route, children }: { route: Route; children: ReactNod
         </div>
       </header>
       {demo && <DemoBanner />}
-      <main className="shell__main">{children}</main>
+      <main className={`shell__main${current === "result" ? " shell__main--wide" : ""}`}>{children}</main>
     </div>
   );
 }

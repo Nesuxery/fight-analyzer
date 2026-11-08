@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { DemoTag } from "../../components/ui";
 import type { Side, StatsView } from "../../model/analysis";
 import { formatClock } from "../../player/clock";
-import { SIDE_LABEL } from "../../theme";
+import { SIDE_LABEL } from "../../labels";
 
 const dash = "—";
 

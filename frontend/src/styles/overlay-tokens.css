@@ -1,0 +1,11 @@
+/* Generated from shared/overlay-style.json by `npm run gen:types`. Do not edit by hand. */
+/* Video overlay colours for DOM elements drawn over the picture (same values as the canvas and MP4 export). */
+:root {
+  --overlay-red: #ff2e4d;
+  --overlay-blue: #3d8bff;
+  --overlay-other: #a8a8a2;
+  --overlay-amber: #ffb020;
+  --overlay-warning: #ffd21f;
+  --overlay-outline: #000000;
+  --overlay-light: #ffffff;
+}

@@ -34,6 +34,12 @@ class OverlayStyle:
     limbs: dict[str, tuple[int, ...]]
 
 
+def corner_hex_colors(path: Path = STYLE_PATH) -> dict[str, str]:
+    """Corner colours as "#rrggbb" (the `Fighter.color` value in jobs and exports)."""
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return {side: raw["colors"][side] for side in ("red", "blue")}
+
+
 @lru_cache(maxsize=1)
 def load_style(path: Path = STYLE_PATH) -> OverlayStyle:
     raw = json.loads(path.read_text(encoding="utf-8"))

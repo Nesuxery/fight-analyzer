@@ -1,4 +1,18 @@
 import type { EventType, Job, JobStatus, PipelineStage } from "./contracts/generated";
+import type { Side } from "./model/analysis";
+
+/** Corner names ("Kırmızı köşe", "Mavi köşe" in full). */
+export const SIDE_LABEL: Record<Side, string> = { red: "Kırmızı", blue: "Mavi" };
+
+/** Texts drawn on the video overlay (browser canvas). */
+export const OVERLAY_LABELS = {
+  possibleContact: "olası temas",
+  distance: (torsoLengths: string) => `${torsoLengths} gövde boyu`,
+} as const;
+
+export const DEMO_LABELS = {
+  watermark: "DEMO · SENTETİK SAHNE",
+} as const;
 
 // Record<Union, string> makes the compiler flag any status/stage/event type
 // added to the backend contract without a Turkish label.

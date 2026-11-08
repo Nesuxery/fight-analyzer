@@ -1,17 +1,16 @@
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
-import { StatusBar } from "./StatusBar";
-import { DemoBanner } from "../ui";
 import { usePolling } from "../hooks/usePolling";
+import { SHELL_LABELS as L } from "../labels";
+import { DemoBanner, SegmentedControl, Stepper } from "../ui";
+import type { StepItem } from "../ui";
+import { IconOctagon } from "../ui/icons";
 import { href } from "./router";
 import type { Route, Screen } from "./router";
+import { StatusBar } from "./StatusBar";
 
-const STEPS: { screen: Screen; label: string }[] = [
-  { screen: "upload", label: "Yükleme" },
-  { screen: "processing", label: "İşlem" },
-  { screen: "select", label: "Seçim" },
-  { screen: "result", label: "Sonuç" },
-];
+const SCREENS: readonly Screen[] = ["upload", "processing", "select", "result"];
 
 function stepHref(route: Route, screen: Screen): string | null {
   if (route.mode === "demo") return href({ mode: "demo", screen });
@@ -20,20 +19,40 @@ function stepHref(route: Route, screen: Screen): string | null {
   return route.screen === "upload" ? null : href({ mode: "analysis", screen, jobId: route.jobId });
 }
 
+/** "Sistem hazır" with a status dot; the details open in a floating panel (Esc or a click outside closes it). */
 function SystemStatus() {
   const health = usePolling(api.health, 10000);
+  const ref = useRef<HTMLDetailsElement>(null);
   const state = health.loading ? "pending" : health.error ? "bad"
     : health.data?.status === "ok" ? "ok" : "warn";
-  const text = { pending: "Bağlanıyor", bad: "API'ye ulaşılamıyor", ok: "Sistem hazır",
-                 warn: "Sistemde sorun var" }[state];
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const details = ref.current;
+      if (e.key !== "Escape" || !details?.open) return;
+      details.open = false;
+      details.querySelector("summary")?.focus();
+    };
+    const onPointer = (e: PointerEvent) => {
+      const details = ref.current;
+      if (details?.open && !details.contains(e.target as Node)) details.open = false;
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, []);
+
   return (
-    <details className="sys">
+    <details ref={ref} className="sys">
       <summary className={`sys__summary sys__summary--${state}`}>
         <span className="sys__dot" aria-hidden="true" />
-        <span className="sys__text">{text}</span>
+        <span className="sys__text">{L.system[state]}</span>
       </summary>
       <div className="sys__panel">
-        <p className="sys__title">Sistem durumu</p>
+        <p className="sys__title">{L.systemTitle}</p>
         <StatusBar health={health} />
       </div>
     </details>
@@ -43,47 +62,22 @@ function SystemStatus() {
 export function AppShell({ route, children }: { route: Route; children: ReactNode }) {
   const demo = route.mode === "demo";
   const current = route.mode === "notFound" ? null : route.screen;
+  const steps: StepItem[] = SCREENS.map((screen) => ({
+    id: screen, label: L.steps[screen], href: stepHref(route, screen), disabledReason: L.stepDisabled,
+  }));
   return (
     <div className="shell">
       <header className="topbar">
-        <a className="brand" href={demo ? "#/demo" : "#/"}>
-          <img className="brand__mark" src="/octagon.svg" alt="" width={28} height={28} />
-          <span className="brand__name">FIGHT ANALYZER</span>
+        <a className="brand" href={demo ? "#/demo" : "#/"} aria-label={L.home}>
+          <IconOctagon className="brand__mark" />
+          <span className="brand__name">{L.brand}</span>
         </a>
-
-        <nav className="steps" aria-label="Ekranlar">
-          <ol>
-            {STEPS.map((step, i) => {
-              const target = stepHref(route, step.screen);
-              const active = current === step.screen;
-              const content = (
-                <>
-                  <span className="steps__num">{i + 1}</span>
-                  <span className="steps__label">{step.label}</span>
-                </>
-              );
-              return (
-                <li key={step.screen}>
-                  {target ? (
-                    <a className={`steps__item${active ? " is-active" : ""}`} href={target}
-                       aria-current={active ? "page" : undefined}>{content}</a>
-                  ) : (
-                    <span className="steps__item is-disabled" aria-disabled="true"
-                          title="Önce bir analiz seçin veya video yükleyin">{content}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-
+        <Stepper label={L.stepsLabel} steps={steps} current={current} />
         <div className="topbar__end">
-          <div className="mode" role="group" aria-label="Mod">
-            <a className={`mode__btn${demo ? "" : " is-active"}`} href="#/"
-               aria-current={demo ? undefined : "true"}>Analiz</a>
-            <a className={`mode__btn mode__btn--demo${demo ? " is-active" : ""}`} href="#/demo"
-               aria-current={demo ? "true" : undefined}>Demo</a>
-          </div>
+          <SegmentedControl label={L.modeLabel} value={demo ? "demo" : "analysis"} options={[
+            { value: "analysis", label: L.modeAnalysis, href: "#/" },
+            { value: "demo", label: L.modeDemo, href: "#/demo" },
+          ]} />
           <SystemStatus />
         </div>
       </header>

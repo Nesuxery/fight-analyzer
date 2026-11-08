@@ -1,4 +1,5 @@
 /** Client-side checks on a chosen video file. Nothing leaves the computer. */
+import { UPLOAD_LABELS as L } from "../../labels";
 
 export const ACCEPTED_EXTENSIONS = ["mp4", "mov", "m4v", "mkv", "webm", "avi"] as const;
 export const ACCEPT_ATTR = ["video/*", ...ACCEPTED_EXTENSIONS.map((e) => `.${e}`)].join(",");
@@ -15,10 +16,10 @@ export function validateVideoFile(file: File): string | null {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const extOk = (ACCEPTED_EXTENSIONS as readonly string[]).includes(ext);
   if (!extOk && !file.type.startsWith("video/")) {
-    return `“${file.name}” bir video dosyası gibi görünmüyor. Desteklenen biçimler: ${ACCEPTED_EXTENSIONS.join(", ").toUpperCase()}.`;
+    return L.notVideo(file.name, ACCEPTED_EXTENSIONS.join(", ").toLocaleUpperCase("tr-TR"));
   }
-  if (file.size === 0) return "Dosya boş görünüyor.";
-  if (file.size > MAX_FILE_BYTES) return "Dosya 20 GB sınırını aşıyor.";
+  if (file.size === 0) return L.emptyFile;
+  if (file.size > MAX_FILE_BYTES) return L.overMax;
   return null;
 }
 

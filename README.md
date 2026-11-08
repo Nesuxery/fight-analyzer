@@ -133,9 +133,9 @@ data/                   çalışma verisi (git dışı):
 
 | Ekran | Adres (Analiz / Demo) | İçerik |
 |---|---|---|
-| 1 Yükleme | `#/` · `#/demo` | Sürükle-bırak alanı, dosya seçme, yerel dosya doğrulama (tür, boyut, süre, çözünürlük tarayıcıda okunur), geçmiş analizler |
-| 2 İşlem | `#/analyses/<id>/processing` · `#/demo/processing` | Solda işlenen kare önizlemesi; sağda video hazırlama, poz tespiti, dövüşçü seçimi, hareket analizi, sonuç hazırlama adımları |
-| 3 Seçim | `#/analyses/<id>/select[?frame=N&keep=1]` · `#/demo/select` | Analiz videosunun karesi üzerinde tıklanabilir kişi kutuları; önce kırmızı, sonra mavi köşe; aday kareler ve ±1/±10 kare adımları; dövüşçü adları; düzeltmede önceki seçimleri koruma ve "Bu karede görünmüyor" |
+| 1 Yükleme | `#/` · `#/demo` | Sürükle-bırak alanı, dosya seçme, yerel dosya doğrulama (tür, boyut, süre, çözünürlük tarayıcıda okunur), geçmiş analizler (16:9 önizleme karesi, tarih · çözünürlük · süre, durum rozeti) |
+| 2 İşlem | `#/analyses/<id>/processing` · `#/demo/processing` | Solda işlenen kare önizlemesi; sağda dikey aşama listesi (durum ikonu, ilerleme), toplam ilerleme, o anki aşamanın tahmini kalan süresi ve onay penceresiyle "İptal" |
+| 3 Seçim | `#/analyses/<id>/select[?frame=N&keep=1]` · `#/demo/select` | Analiz videosunun karesi üzerinde tıklanabilir kişi kutuları ve altında her kişinin büyük kırpılmış karesi (klavyeyle seçim de buradan); önce kırmızı, sonra mavi köşe; seçili aday köşe renginde çerçeve ve köşe rozeti alır; dövüşçü adları köşe satırlarında yerinde düzenlenir; aday kareler ve ±1/±10 kare adımları; düzeltmede önceki seçimleri koruma ve "Bu karede görünmüyor" |
 | 4 Sonuç | `#/analyses/<id>/result` · `#/demo/result` | Üstte isimler ve deneysel momentum çubuğu ("kazanma olasılığı değildir"); ortada video ve kare kare eşleşen Canvas katmanı (iskeletler, olay efektleri, mesafe); iki yanda o ana kadarki ölçümler ve kimlik takibi özeti; videonun hemen altında oynatma ve kompakt zaman çizelgesi (momentum eğrisi, olay işaretleri, oynatma çizgisi); altta "Olaylar ve momentum", "Kimlik takibi" (takip şeritleri + kayıt) ve "Dışa aktar" sekmeleri |
 
 - **Demo modu** (üst çubukta "Demo"): kalıcı DEMO şeridi, sahnede "DEMO · SENTETİK
@@ -153,10 +153,20 @@ data/                   çalışma verisi (git dışı):
 - **Klavye (Sonuç)**: Boşluk oynat/duraklat · ←/→ 1 sn (Shift ile 5 sn) ·
   `,` / `.` bir kare · S iskelet · E olay efektleri · D mesafe ·
   O diğer kişiler · F tam ekran (gerçek analiz; videoya çift tıklama da).
-- **Görsel dil**: siyaha yakın lacivert zemin, ince çerçeveler; kırmızı köşe
-  `#ff2e4d`, mavi köşe camgöbeği `#19d6f0`, olası büyük olaylar kehribar
-  `#ffb020`. Başlıklar ve rakamlar Windows'un yerleşik **Bahnschrift** fontuyla
-  (dar genişlik, tablo rakamları); harici font servisi kullanılmaz.
+- **Görsel dil (v2, Bölüm 1)**: aydınlık ve sade arayüz; tek kaynak
+  `frontend/src/styles/tokens.css` (renk, yazı, boşluk, köşe yarıçapı, gölge,
+  hareket). Renk yalnızca köşeleri (kırmızı `#c62b3b`, mavi `#2457c5`) ve
+  durumları (başarı, uyarı, hata) anlatır; ayrım 1 px çizgiyle yapılır, gölge
+  yalnızca yüzen katmanlarda. Arayüz **Inter**, başlıklar ve skor rakamları
+  **Inter Tight** (yerel `@fontsource-variable` paketleri; internetten font
+  yüklenmez); tüm sayılarda eşit genişlikli rakamlar. Video sahnesi koyu ve
+  yuvarlak köşeli kalır; üzerindeki iskelet ve efektler canlı tonlardadır
+  (kırmızı `#ff2e4d`, mavi `#3d8bff`, diğer kişiler gri; `shared/overlay-style.json`,
+  MP4 dışa aktarmayla ortak). Ortak bileşenler `frontend/src/ui/`; bir test
+  token dosyaları dışında renk kodu kalmadığını, bir test de metin
+  kontrastının WCAG AA'yı geçtiğini denetler.
+- **Sayfa genişliği**: en fazla 1440 px ve 24 px kenar boşluğu; sonuç ekranı
+  düzeni Bölüm 5'te yenilenene kadar 1640 px.
 - **Duyarlı yerleşim**: ≥1100 px'de üç sütun (panel · video ve altında zaman
   çizelgesi · panel); daha dar ekranda video ve zaman çizelgesi üstte, paneller
   altta iki sütun; telefonda tek sütun.
@@ -207,7 +217,9 @@ için `FA_POSE_MODEL=yolo26n-pose.pt`.
 **API uç noktaları:** `GET /jobs` (yalnızca analizler) · `POST /jobs` (yükleme) ·
 `POST /jobs/{id}/cancel` (analiz ya da dışa aktarma) ·
 `GET /jobs/{id}/video` (Range destekli analiz kopyası) · `GET /jobs/{id}/preview`
-ve `/preview.jpg?seq=` · `GET /jobs/{id}/poses?start=&count=` (en fazla 600 kare)
+ve `/preview.jpg?seq=` · `GET /jobs/{id}/thumbnail.jpg` (geçmiş listesi için 320 px
+kare: seçim yapılan kare, yoksa videonun %10'u; iş klasöründe önbelleğe alınır)
+· `GET /jobs/{id}/poses?start=&count=` (en fazla 600 kare)
 · `GET /upload-limits` · `GET /jobs/{id}/candidates` (aday kareler) ·
 `POST /jobs/{id}/selection` (seçim noktaları; takibi yeniden çalıştırır) ·
 `PUT /jobs/{id}/names` · `POST /jobs/{id}/retry` · `GET /jobs/{id}/tracking/timeline` ·
@@ -231,7 +243,8 @@ kullanması engellenir).
 
 Poz çıkarımından sonra iş `awaiting_selection` durumunda bekler. Seçim ekranında
 kullanıcı aday karelerde önce **kırmızı**, sonra **mavi** köşedeki dövüşçünün
-kutusuna tıklar. Aynı kişi iki tarafa seçilemez, kutuya yeniden tıklamak seçimi
+kutusuna ya da karenin altındaki büyük kırpılmış karesine tıklar (kareler
+klavyeyle de seçilir). Aynı kişi iki tarafa seçilemez, yeniden tıklamak seçimi
 kaldırır, "Seçimi sıfırla" ikisini de temizler, ±1/±10 kare adımlarıyla aday
 olmayan karelere de gidilebilir. Onaydan sonra kimlik takibi çalışır ve sonuç
 ekranı açılır.
@@ -469,7 +482,7 @@ Kare adımları ve atlamalar karenin ortasına gider, böylece kesin o kareye d�
 kaplar ve aynı oran/boşluk hesabını kullanır (`player/geometry.ts`). Tuvalin
 arka belleği kutu boyutu × cihaz piksel oranıdır ve pencere boyutu, tam ekran ya
 da piksel yoğunluğu değişince yeniden ölçülür; tam ekran video + tuvali birlikte
-kapsar. Kırmızı ve camgöbeği iskeletlerde eklem noktaları, uzuv çizgileri, yüz
+kapsar. Kırmızı ve mavi iskeletlerde eklem noktaları, uzuv çizgileri, yüz
 noktaları görünüyorsa kafa çevresi halkası ve isim; altında koyu kontür ve ölçülü
 bir parlama vardır. **Uydurma yok:** güveni 0,5'in altındaki eklem ve ona bağlı
 uzuv çizilmez; kimliği doğrulanmamış kişi dövüşçü rengiyle çizilmez (istenirse

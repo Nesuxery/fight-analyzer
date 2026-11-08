@@ -52,12 +52,18 @@ ekranında ("Sistem hazır" düğmesi) yazar. Ölçülen hızlar için bölüm 6
    WEBM, M4V; en fazla 8 GB ve 60 dakika, en çok 3840×2160). Dosya önce
    tarayıcıda, sonra sunucuda FFmpeg ile doğrulanır.
 2. **İşlem:** Video analiz kopyasına dönüştürülür ve her karede tüm kişilerin
-   pozu çıkarılır. İlerleme, hız ve kalan süre görünür; iş iptal edilebilir ve
-   başarısız/iptal edilmiş iş "Analizi yeniden başlat" ile sürdürülebilir (önbellekteki
-   adımlar tekrar yapılmaz).
+   pozu çıkarılır. Aşamalar alt alta durum ikonu ve ilerlemeyle görünür; altında
+   toplam ilerleme ve o anki aşamanın tahmini kalan süresi yazar. "İptal" bir
+   onay penceresi açar; başarısız/iptal edilmiş iş "Analizi yeniden başlat" ile
+   sürdürülebilir (önbellekteki adımlar tekrar yapılmaz).
 3. **Dövüşçü seçimi:** Önerilen bir karede önce kırmızı, sonra mavi köşedeki
-   dövüşçüye tıklayın. Kamera değişiminden sonra kimlik karışırsa o karede
-   düzeltme seçimi ekleyin ("Bu karede görünmüyor" da seçilebilir).
+   dövüşçüye tıklayın: karedeki kutuya ya da altındaki "Bu karedeki kişiler"
+   listesinde kişinin büyük karesine (klavyede Tab ile karelere gelip Boşluk).
+   Seçilen kare köşe renginde çerçeve ve rozet alır. Dövüşçü adlarını sağdaki
+   köşe satırlarında adın üstüne tıklayarak değiştirin (Enter kaydeder, Esc
+   vazgeçer); adlar seçimle birlikte kaydedilir. Kamera değişiminden sonra
+   kimlik karışırsa o karede düzeltme seçimi ekleyin ("Bu karede görünmüyor"
+   da seçilebilir).
 4. **Sonuç:** Üstte deneysel momentum, iki yanda istatistikler, ortada video ve
    iskeletler, altta zaman çizelgesi bulunur. Olay listesinde bir olaya
    tıklayınca video olaydan 1 sn önceye gider. Kısayollar: Boşluk oynat/duraklat,

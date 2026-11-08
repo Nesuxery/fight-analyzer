@@ -1,16 +1,18 @@
 import { useCallback, useMemo, useState } from "react";
 import { navigate } from "../../app/router";
 import type { SelectParams } from "../../app/router";
-import { DemoTag } from "../../ui";
 import { useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
 import { CANDIDATE_TIMES, detectionsAt } from "../../demo/scene";
 import { DEMO_FRAME, REFEREE } from "../../demo/script";
+import { SELECTION_LABELS as L } from "../../labels";
 import type { Assignment } from "../../model/analysis";
 import { formatClock } from "../../player/clock";
 import { VideoStage } from "../../player/VideoStage";
+import { DemoTag } from "../../ui";
 import { JobSelection } from "./JobSelection";
 import { SelectionLayout } from "./SelectionLayout";
+import type { CropSource } from "./SelectionLayout";
 
 const NO_LAYERS = { skeleton: false, strikes: false, distance: false };
 
@@ -19,7 +21,7 @@ export function SelectionScreen({ demo, jobId, params }: { demo: boolean; jobId?
 }
 
 function DemoSelection() {
-  const { confirmSelection } = useDemo();
+  const { state, confirmSelection, rename } = useDemo();
   const [candidate, setCandidate] = useState(0);
   const [picks, setPicks] = useState<Assignment>({ red: null, blue: null });
   const [problem, setProblem] = useState<string | null>(null);
@@ -29,10 +31,19 @@ function DemoSelection() {
     (ctx: CanvasRenderingContext2D, time: number) => renderDemo(ctx, time, { layers: NO_LAYERS, assignment: null }),
     [],
   );
+  // The synthetic frame, drawn once per candidate: the tiles are cut from it.
+  const source = useMemo<CropSource>(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = DEMO_FRAME.width;
+    canvas.height = DEMO_FRAME.height;
+    const ctx = canvas.getContext("2d");
+    if (ctx) renderDemo(ctx, t, { layers: NO_LAYERS, assignment: null });
+    return { version: t, draw: (c, r, size) => c.drawImage(canvas, r.x, r.y, r.size, r.size, 0, 0, size, size) };
+  }, [t]);
 
   const confirm = () => {
     if (picks.red === REFEREE || picks.blue === REFEREE) {
-      setProblem("Bu demo sahnesinde seçtiğiniz kişilerden biri hakem. Demo sonuçları yalnızca iki dövüşçü için üretilir; lütfen dövüşçüleri seçin.");
+      setProblem(L.refereePicked);
       return;
     }
     confirmSelection(picks);
@@ -41,7 +52,7 @@ function DemoSelection() {
 
   return (
     <SelectionLayout
-      title={<>Dövüşçüleri seçin <DemoTag small /></>}
+      title={<>{L.title} <DemoTag small /></>}
       picks={picks}
       onPick={(next) => {
         setProblem(null);
@@ -49,10 +60,13 @@ function DemoSelection() {
       }}
       detections={detections}
       frame={DEMO_FRAME}
+      source={source}
+      names={state.names}
+      onRename={rename}
       stage={(boxes) => (
-        <VideoStage frame={DEMO_FRAME} getTime={() => t} draw={draw} label="Aday kare (demo)">{boxes}</VideoStage>
+        <VideoStage frame={DEMO_FRAME} getTime={() => t} draw={draw} label={L.demoStage}>{boxes}</VideoStage>
       )}
-      candidateLabel={`Aday kare ${candidate + 1} / ${CANDIDATE_TIMES.length} · ${formatClock(t, true)}`}
+      candidateLabel={L.candidateOf(candidate + 1, CANDIDATE_TIMES.length, formatClock(t, true))}
       onPrev={candidate > 0 ? () => setCandidate(candidate - 1) : undefined}
       onNext={candidate < CANDIDATE_TIMES.length - 1 ? () => setCandidate(candidate + 1) : undefined}
       onConfirm={confirm}

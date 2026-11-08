@@ -127,6 +127,9 @@ export const urls = {
   video: (jobId: string) => `${BASE}/jobs/${encodeURIComponent(jobId)}/video`,
   previewImage: (jobId: string, seq: number) =>
     `${BASE}/jobs/${encodeURIComponent(jobId)}/preview.jpg?seq=${seq}`,
+  /** Small 16:9 frame for the history list; `version` changes with the analysis copy and the selection. */
+  thumbnail: (jobId: string, version: string) =>
+    `${BASE}/jobs/${encodeURIComponent(jobId)}/thumbnail.jpg?v=${encodeURIComponent(version)}`,
   exportFile: (exportId: string, kind: ExportFileKind) =>
     `${BASE}/jobs/${encodeURIComponent(exportId)}/files/${kind}`,
 };

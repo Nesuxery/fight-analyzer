@@ -1,25 +1,30 @@
-import { useCallback, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useId, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { api } from "../../api/client";
-import type { PipelineStage } from "../../contracts/generated";
 import { navigate } from "../../app/router";
-import { IconAlert, IconCheck, IconTarget } from "../../ui/icons";
-import { DemoTag, EmptyState, Progress } from "../../ui";
 import { useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
 import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME } from "../../demo/script";
 import { useJob } from "../../hooks/useJob";
 import { useNow } from "../../hooks/useNow";
-import { ERROR_LABELS, JOB_STATUS_LABELS, formatBytes, formatDateTime, formatNumber } from "../../labels";
+import {
+  COMMON_LABELS, ERROR_LABELS, HISTORY_LABELS, JOB_STATUS_LABELS, PROCESSING_LABELS as L,
+  formatBytes, formatDateTime, formatDuration, formatNumber,
+} from "../../labels";
 import { formatClock } from "../../player/clock";
 import { VideoStage } from "../../player/VideoStage";
+import { Button, ButtonLink, Card, CardHeader, DemoTag, Dialog, EmptyState, Progress, cx, useToast } from "../../ui";
+import { IconAlert, IconCheck, IconCircle, IconSpinner, IconStop, IconTarget } from "../../ui/icons";
+import type { IconProps } from "../../ui/icons";
 import { PosePreviewPanel } from "./PosePreviewPanel";
 import { PoseReview } from "./PoseReview";
 import { demoProcess, jobProcess } from "./steps";
-import type { ProcessView, StepView } from "./steps";
+import type { ProcessView, StepStatus, StepView } from "./steps";
 
 const NO_LAYERS = { skeleton: false, strikes: false, distance: false };
 const SKELETON_ONLY = { skeleton: true, strikes: false, distance: false };
+
+const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function ProcessingScreen({ demo, jobId }: { demo: boolean; jobId?: string }) {
   return demo ? <DemoProcessing /> : <JobProcessing jobId={jobId!} />;
@@ -40,9 +45,9 @@ function DemoProcessing() {
 
   if (view.phase === "notStarted") {
     return (
-      <EmptyState tone="empty" title="Demo analizi henüz başlatılmadı"
-                 action={<button type="button" className="btn btn--primary" onClick={start}>Demo analizini başlat</button>}>
-        Örnek sahne üzerinde işlem adımlarının nasıl ilerlediğini izleyin.
+      <EmptyState tone="empty" title={L.demoNotStartedTitle}
+                  action={<Button variant="primary" onClick={start}>{L.demoStart}</Button>}>
+        {L.demoNotStartedText}
       </EmptyState>
     );
   }
@@ -50,31 +55,29 @@ function DemoProcessing() {
   return (
     <ProcessLayout
       view={view}
-      title={<>Örnek maç <DemoTag small /></>}
+      title={<>{HISTORY_LABELS.demoName} <DemoTag small /></>}
       meta={[
-        ["Kaynak", "Sentetik demo sahnesi"],
-        ["Video", `${DEMO_FRAME.width}×${DEMO_FRAME.height} · ${DEMO_FPS} fps`],
-        ["Süre", formatClock(DEMO_DURATION_S)],
+        [L.meta.source, L.demoSource],
+        [L.meta.video, `${DEMO_FRAME.width}×${DEMO_FRAME.height} · ${DEMO_FPS} fps`],
+        [L.meta.duration, formatClock(DEMO_DURATION_S)],
       ]}
       preview={
-        <VideoStage frame={DEMO_FRAME} getTime={() => previewT} draw={draw} label="İşlenen kare önizlemesi (demo)">
-          {view.steps[0]!.status === "active" && <div className="stage__veil">Video hazırlanıyor…</div>}
+        <VideoStage frame={DEMO_FRAME} getTime={() => previewT} draw={draw} label={L.demoPreview}>
+          {view.steps[0]!.status === "active" && <div className="stage__veil">{L.preparing}</div>}
         </VideoStage>
       }
-      frameLabel={`Kare ${frame.toLocaleString("tr-TR")} / ${(DEMO_DURATION_S * DEMO_FPS).toLocaleString("tr-TR")}`}
+      frameLabel={L.frameOf(frame.toLocaleString("tr-TR"), (DEMO_DURATION_S * DEMO_FPS).toLocaleString("tr-TR"))}
       actions={
         <>
           {view.phase === "awaitingSelection" && (
-            <button type="button" className="btn btn--primary" onClick={() => navigate({ mode: "demo", screen: "select" })}>
-              <IconTarget /> Dövüşçüleri seç
-            </button>
+            <Button variant="primary" icon={<IconTarget />} onClick={() => navigate({ mode: "demo", screen: "select" })}>
+              {L.selectFighters}
+            </Button>
           )}
           {view.phase === "done" && (
-            <button type="button" className="btn btn--primary" onClick={() => navigate({ mode: "demo", screen: "result" })}>
-              Sonuçları aç
-            </button>
+            <Button variant="primary" onClick={() => navigate({ mode: "demo", screen: "result" })}>{L.openResults}</Button>
           )}
-          <button type="button" className="btn btn--ghost" onClick={start}>Demo'yu baştan başlat</button>
+          <Button variant="ghost" onClick={start}>{L.demoRestart}</Button>
         </>
       }
     />
@@ -83,22 +86,18 @@ function DemoProcessing() {
 
 function JobProcessing({ jobId }: { jobId: string }) {
   const job = useJob(jobId, 1000);
-  if (job.loading) return <EmptyState tone="loading" title="Analiz bilgisi yükleniyor…" />;
+  const toast = useToast();
+  if (job.loading) return <EmptyState tone="loading" title={L.loading} />;
   if (job.notFound) {
     return (
-      <EmptyState tone="error" title="Analiz bulunamadı"
-                 action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>}>
-        <span className="mono">{jobId}</span> kimlikli bir analiz kaydı yok.
+      <EmptyState tone="error" title={L.notFoundTitle}
+                  action={<ButtonLink href="#/">{COMMON_LABELS.backToUpload}</ButtonLink>}>
+        <span className="mono">{jobId}</span> {L.notFoundText}
       </EmptyState>
     );
   }
-  if (!job.data) {
-    return (
-      <EmptyState tone="error" title="Analiz durumu alınamadı">
-        API'ye ulaşılamıyor; bağlantı otomatik olarak yeniden denenecek.
-      </EmptyState>
-    );
-  }
+  if (!job.data) return <EmptyState tone="error" title={L.unreachableTitle}>{L.unreachableText}</EmptyState>;
+
   const data = job.data;
   const view = jobProcess(data);
   const src = data.source;
@@ -107,130 +106,129 @@ function JobProcessing({ jobId }: { jobId: string }) {
   const video = av?.video ?? data.video;
   const detail = data.progress_detail;
   const aspect = video ? `${video.width} / ${video.height}` : src ? `${src.width} / ${src.height}` : "16 / 9";
+  const retry = () => {
+    api.retry(jobId).catch((e: unknown) => toast({ tone: "danger", message: L.restartFailed(messageOf(e)) }));
+  };
 
   let preview: ReactNode;
-  let previewTitle = "İşlenen kare";
+  let previewTitle: string = L.previewTitle;
   if (data.status === "awaiting_selection" && av && pose) {
-    previewTitle = "Poz önizleme · tüm kişiler";
+    previewTitle = L.previewPoses;
     preview = <PoseReview jobId={jobId} video={av.video} />;
   } else if (data.status === "running" && detail?.stage === "pose" && detail.preview_seq) {
     preview = <PosePreviewPanel jobId={jobId} seq={detail.preview_seq} fallbackAspect={aspect} />;
   } else {
-    const text = data.status === "queued" ? "Analiz sırada bekliyor."
-      : data.status === "running" ? RUNNING_TEXT[data.stage ?? "video_prep"]
-        : data.status === "cancelled" ? "Analiz iptal edildi."
-          : data.status === "failed" ? "Analiz tamamlanamadı." : "Önizleme yok.";
+    const text = data.status === "queued" ? L.queuedPreview
+      : data.status === "running" ? L.running[data.stage ?? "video_prep"]
+        : data.status === "cancelled" ? L.cancelledPreview
+          : data.status === "failed" ? L.failedPreview : L.noPreview;
     preview = (
       <div className="stage stage--empty" style={{ aspectRatio: aspect }}>
-        <EmptyState tone={data.status === "running" || data.status === "queued" ? "loading" : "empty"}
-                   title={text} compact />
+        <EmptyState tone={data.status === "running" || data.status === "queued" ? "loading" : "empty"} title={text} compact />
       </div>
     );
   }
 
-  const meta: [string, string][] = [["Durum", JOB_STATUS_LABELS[data.status]]];
+  const meta: [string, string][] = [[L.meta.status, JOB_STATUS_LABELS[data.status]]];
   if (src) {
-    meta.push(["Kaynak", `${formatBytes(src.size_bytes)} · ${formatDateTime(data.created_at)}`]);
-    meta.push(["Kaynak video", `${src.width}×${src.height}` +
+    meta.push([L.meta.source, `${formatBytes(src.size_bytes)} · ${formatDateTime(data.created_at)}`]);
+    meta.push([L.meta.sourceVideo, `${src.width}×${src.height}` +
       (src.fps ? ` · ${formatNumber(src.fps, 2)} fps` : "") + ` · ${formatClock(src.duration_ms / 1000, true)}` +
-      (src.rotation_deg ? ` · ${src.rotation_deg}° döndürüldü` : "") + (src.has_audio ? " · sesli" : " · sessiz")]);
+      (src.rotation_deg ? L.rotated(src.rotation_deg) : "") + (src.has_audio ? L.withAudio : L.silent)]);
   }
   if (av) {
     const v = av.video;
-    meta.push(["Analiz kopyası", `${v.width}×${v.height} · ${v.fps_num}/${v.fps_den} fps sabit · ` +
-      `${formatNumber(v.frame_count)} kare · ${formatBytes(av.size_bytes)}`]);
+    meta.push([L.meta.analysisCopy, `${v.width}×${v.height} · ${L.constantFps(v.fps_num, v.fps_den)} · ` +
+      `${L.frames(formatNumber(v.frame_count))} · ${formatBytes(av.size_bytes)}`]);
   }
   if (pose) {
-    meta.push(["Model", `${pose.model.name} · ${pose.model.device ?? "?"} · ${pose.settings.imgsz} px`]);
+    meta.push([L.meta.model, `${pose.model.name} · ${pose.model.device ?? "?"} · ${pose.settings.imgsz} px`]);
   }
 
   const cancellable = data.status === "queued" || data.status === "running" || data.status === "awaiting_selection";
   return (
     <ProcessLayout
       view={view}
-      title={<span title={src?.filename}>{src?.filename ?? `Analiz ${data.job_id.slice(0, 8)}`}</span>}
+      title={<span title={src?.filename}>{src?.filename ?? L.untitled(data.job_id.slice(0, 8))}</span>}
       stale={Boolean(job.error)}
       meta={meta}
       preview={preview}
       previewTitle={previewTitle}
       errorDetail={data.error && ERROR_LABELS[data.error.code] ? data.error.message : null}
-      frameLabel={video ? `${formatNumber(video.frame_count)} kare` : "—"}
+      frameLabel={video ? L.frames(formatNumber(video.frame_count)) : "—"}
       actions={
         <>
           {view.phase === "done" && (
-            <button type="button" className="btn btn--primary"
-                    onClick={() => navigate({ mode: "analysis", screen: "result", jobId })}>Sonuçları aç</button>
+            <Button variant="primary" onClick={() => navigate({ mode: "analysis", screen: "result", jobId })}>
+              {L.openResults}
+            </Button>
           )}
           {view.phase === "awaitingSelection" && data.outputs.tracking_prep && (
-            <button type="button" className="btn btn--primary"
+            <Button variant="primary" icon={<IconTarget />}
                     onClick={() => navigate({ mode: "analysis", screen: "select", jobId })}>
-              <IconTarget /> Dövüşçüleri seç
-            </button>
+              {L.selectFighters}
+            </Button>
           )}
           {view.phase === "awaitingSelection" && !data.outputs.tracking_prep && (
-            <button type="button" className="btn btn--primary"
-                    onClick={() => void api.retry(jobId)}>
-              Aday kareleri hazırla
-            </button>
+            <Button variant="primary" onClick={retry}>{L.prepareCandidates}</Button>
           )}
           {view.phase === "done" && data.outputs.tracking && (
-            <button type="button" className="btn btn--ghost"
-                    onClick={() => navigate({ mode: "analysis", screen: "select", jobId })}>
-              <IconTarget /> Yeniden seç
-            </button>
+            <Button icon={<IconTarget />} onClick={() => navigate({ mode: "analysis", screen: "select", jobId })}>
+              {L.reselect}
+            </Button>
           )}
           {(data.status === "failed" || data.status === "cancelled") && (
-            <button type="button" className="btn btn--primary"
-                    onClick={() => void api.retry(jobId).catch(() => undefined)}>
-              Analizi yeniden başlat
-            </button>
+            <Button variant="primary" onClick={retry}>{L.restart}</Button>
           )}
           {cancellable && <CancelButton jobId={jobId} />}
-          <a className="btn btn--ghost" href="#/">{cancellable ? "Yükleme ekranı" : "Yeni video yükle"}</a>
+          <ButtonLink variant="ghost" href="#/">{cancellable ? L.uploadScreen : L.newUpload}</ButtonLink>
         </>
       }
     />
   );
 }
 
-/** Shown while no preview frame exists for the running stage. */
-const RUNNING_TEXT: Record<PipelineStage, string> = {
-  video_prep: "Video analiz kopyasına dönüştürülüyor…",
-  pose: "Poz modeli hazırlanıyor…",
-  tracking_prep: "Kamera kesimleri ve iz parçaları hazırlanıyor…",
-  tracking: "Dövüşçü kimlikleri video boyunca eşleniyor…",
-  events: "Hareketler ve olaylar ölçülüyor…",
-  scoring: "Deneysel momentum hesaplanıyor…",
-  export: "Dışa aktarılıyor…",
-};
-
+/** "İptal" asks first in a dialog; the job can be started again later. */
 function CancelButton({ jobId }: { jobId: string }) {
-  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!confirming) {
-    return <button type="button" className="btn btn--ghost" onClick={() => setConfirming(true)}>İptal et</button>;
-  }
+  const toast = useToast();
+  const close = () => {
+    if (busy) return;
+    setOpen(false);
+    setError(null);
+  };
+  const confirm = () => {
+    setBusy(true);
+    setError(null);
+    api.cancel(jobId).then(
+      () => {
+        setOpen(false);
+        toast({ message: L.cancelled });
+      },
+      (e: unknown) => setError(messageOf(e)),
+    ).finally(() => setBusy(false));
+  };
   return (
-    <span className="confirm" role="group" aria-label="İptali onayla">
-      <span>Analiz iptal edilsin mi?</span>
-      <button type="button" className="btn btn--danger btn--sm" disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                api.cancel(jobId).then(() => setConfirming(false),
-                  (err: unknown) => setError(err instanceof Error ? err.message : String(err)))
-                  .finally(() => setBusy(false));
-              }}>
-        Evet, iptal et
-      </button>
-      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirming(false)}>Vazgeç</button>
-      {error && <span className="confirm__error">{error}</span>}
-    </span>
+    <>
+      <Button onClick={() => setOpen(true)}>{L.cancel}</Button>
+      <Dialog open={open} onClose={close} title={L.cancelTitle}
+              actions={
+                <>
+                  <Button onClick={close} disabled={busy}>{L.cancelKeep}</Button>
+                  <Button variant="primary" onClick={confirm} disabled={busy}>{L.cancelConfirm}</Button>
+                </>
+              }>
+        <p>{L.cancelBody}</p>
+        {error && <p className="dialog__error" role="alert">{error}</p>}
+      </Dialog>
+    </>
   );
 }
 
 function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale = false,
-                        previewTitle = "İşlenen kare", errorDetail = null }: {
+                        previewTitle = L.previewTitle, errorDetail = null }: {
   view: ProcessView;
   title: ReactNode;
   meta: [string, string][];
@@ -241,65 +239,83 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
   previewTitle?: string;
   errorDetail?: string | null;
 }) {
+  const previewId = useId();
   const pct = Math.round(view.overall * 100);
+  const showEta = view.phase === "running";
   return (
     <div className="proc">
-      <section className="card proc__preview" aria-label="İşlenen kare">
-        <header className="card__head">
-          <h2 className="display display--sm">{previewTitle}</h2>
-          <span className="num card__aside">{frameLabel}</span>
-        </header>
+      <section className="proc__preview" aria-labelledby={previewId}>
+        <div className="proc__previewhead">
+          <h2 id={previewId} className="section-title">{previewTitle}</h2>
+          <span className="proc__frame num">{frameLabel}</span>
+        </div>
         {preview}
       </section>
 
-      <aside className="card proc__side" aria-label="Analiz aşamaları">
-        <header className="card__head">
-          <h2 className="display display--sm">{title}</h2>
-        </header>
-        {stale && <p className="inline-warn">Bağlantı kesildi; son bilinen durum gösteriliyor.</p>}
-        <div className="proc__overall">
-          <span className="display display--num">{pct}<small>%</small></span>
-          <Progress value={view.overall} label="Toplam ilerleme" tone={view.phase === "failed" ? "danger" : "default"} />
-        </div>
-        {view.phase === "failed" && view.errorText && (
-          <div className="alert" role="alert">
-            <IconAlert />
-            <span>{view.errorText}{errorDetail && <small className="alert__detail">{errorDetail}</small>}</span>
+      <Card tag="aside" className="proc__panel" aria-label={L.stepsLabel}>
+        <CardHeader title={title} />
+        <div className="proc__body">
+          {stale && <p className="inline-warn">{L.stale}</p>}
+          {view.phase === "failed" && view.errorText && (
+            <div className="alert" role="alert">
+              <IconAlert />
+              <span>{view.errorText}{errorDetail && <small className="alert__detail">{errorDetail}</small>}</span>
+            </div>
+          )}
+          {view.phase === "queued" && <p className="proc__note">{L.queued}</p>}
+          <ol className="vsteps">
+            {view.steps.map((s) => <StepRow key={s.id} step={s} />)}
+          </ol>
+          <div className="proc__overall">
+            <div className="proc__overallhead">
+              <span className="label">{L.overall}</span>
+              <span className="proc__pct num"><small>%</small>{pct}</span>
+            </div>
+            <Progress value={view.overall} label={L.overall} tone={view.phase === "failed" ? "danger" : "default"} />
+            {showEta && (
+              <p className="proc__eta">
+                <span className="label">{L.eta}</span>
+                <span className="proc__etavalue num">
+                  {view.etaS !== null ? `~${formatDuration(view.etaS)}` : L.etaUnknown}
+                </span>
+                {view.etaS !== null && view.etaStep && <span className="proc__etanote">{L.etaStage(view.etaStep)}</span>}
+              </p>
+            )}
           </div>
-        )}
-        {view.phase === "queued" && <p className="proc__note">Analiz sırada; işçi boşaldığında başlayacak.</p>}
-        <ol className="vsteps">
-          {view.steps.map((s, i) => <StepRow key={s.id} step={s} index={i} />)}
-        </ol>
-        <div className="proc__actions">{actions}</div>
-        <dl className="kv">
-          {meta.map(([k, v]) => (
-            <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
-          ))}
-        </dl>
-      </aside>
+          <div className="proc__actions">{actions}</div>
+          <dl className="kv" aria-label={L.videoInfo}>
+            {meta.map(([k, v]) => (
+              <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+            ))}
+          </dl>
+        </div>
+      </Card>
     </div>
   );
 }
 
-const STATUS_TEXT = {
-  waiting: "Bekliyor", active: "Sürüyor", done: "Tamamlandı", error: "Hata", stopped: "İptal edildi", action: "Sizi bekliyor",
-} as const;
+const STEP_ICON: Record<StepStatus, ComponentType<IconProps>> = {
+  waiting: IconCircle,
+  active: IconSpinner,
+  done: IconCheck,
+  error: IconAlert,
+  stopped: IconStop,
+  action: IconTarget,
+};
 
-function StepRow({ step, index }: { step: StepView; index: number }) {
+/** One stage: status icon, name, status or percentage, its own progress and details. */
+function StepRow({ step }: { step: StepView }) {
+  const Icon = STEP_ICON[step.status];
+  const pct = step.status === "active" && step.progress !== null ? Math.round(step.progress * 100) : null;
   return (
     <li className={`vsteps__item is-${step.status}`}>
-      <span className="vsteps__marker" aria-hidden="true">
-        {step.status === "done" ? <IconCheck size={16} /> : step.status === "error" ? "!" : index + 1}
-      </span>
+      <Icon className={cx("vsteps__icon", step.status === "active" && "icon-spin")} />
       <div className="vsteps__body">
         <div className="vsteps__row">
           <span className="vsteps__label">{step.label}</span>
-          <span className="vsteps__status">
-            {step.status === "active" && step.progress !== null ? `${Math.round(step.progress * 100)}%` : STATUS_TEXT[step.status]}
-          </span>
+          <span className="vsteps__status num">{pct !== null ? `%${pct}` : L.status[step.status]}</span>
         </div>
-        {step.status === "active" && step.progress !== null && <Progress value={step.progress} label={step.label} />}
+        {pct !== null && <Progress value={step.progress} label={step.label} />}
         {step.detail && <p className="vsteps__detail">{step.detail}</p>}
       </div>
     </li>

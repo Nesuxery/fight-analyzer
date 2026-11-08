@@ -168,94 +168,10 @@ code,
   white-space: nowrap;
 }
 
-.steps {
-  flex: 1;
-  min-width: 0;
-  align-self: stretch;
-}
-
-.steps ol {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-1);
-  height: 100%;
-}
-
-.steps li {
-  display: flex;
-}
-
-.steps__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-3);
-  border-bottom: 2px solid transparent;
-  color: var(--text-3);
-  font-size: var(--fs-13);
-  font-weight: var(--fw-medium);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-a.steps__item:hover {
-  color: var(--text-1);
-}
-
-.steps__item.is-active {
-  border-bottom-color: var(--text-1);
-  color: var(--text-1);
-}
-
-.steps__item.is-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.steps__num {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  font-size: var(--fs-12);
-  font-variant-numeric: tabular-nums;
-}
-
-.steps__item.is-active .steps__num {
-  border-color: var(--text-1);
-  background: var(--text-1);
-  color: var(--text-on-fill);
-}
-
 .topbar__end {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-}
-
-.mode {
-  display: flex;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--surface-muted);
-}
-
-.mode__btn {
-  padding: var(--space-1) var(--space-3);
-  border-radius: calc(var(--radius-control) - 2px);
-  color: var(--text-2);
-  font-size: var(--fs-13);
-  font-weight: var(--fw-medium);
-  text-decoration: none;
-}
-
-.mode__btn.is-active {
-  background: var(--surface);
-  color: var(--text-1);
-  box-shadow: inset 0 0 0 1px var(--border);
 }
 
 /* system status: summary in the top bar, details in a floating panel */
@@ -380,11 +296,6 @@ a.steps__item:hover {
   max-width: calc(var(--page-max-wide) + 2 * var(--page-gutter));
 }
 
-@media (max-width: 1000px) {
-  .steps__label { display: none; }
-  .steps__item.is-active .steps__label { display: inline; }
-}
-
 @media (max-width: 860px) {
   .brand__name { display: none; }
 }
@@ -396,9 +307,7 @@ a.steps__item:hover {
     padding: var(--space-2) var(--space-3);
     row-gap: var(--space-2);
   }
-  .steps,
   .stepper { order: 3; flex-basis: 100%; }
-  .steps ol,
   .stepper__list { justify-content: space-between; }
   .topbar__end { margin-left: auto; }
   .sys__text { display: none; }

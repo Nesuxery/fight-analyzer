@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 8 Kasım 2026 (v2 başlangıcı, taraf değiştirme düzeltmesi). Ayrıntılı
+Son güncelleme: 8 Kasım 2026 (v2 Bölüm 1: aydınlık tasarım sistemi). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -83,6 +83,22 @@ CLAUDE.md geçerlidir.
 - Puan kararı yalnızca planlanan raundların hepsi işaretli ve puanlanabilirse;
   raunt için ≥30 sn kayıt ve dövüşçü başına ≥15 sn ölçüm gerekir.
 - Güven en fazla "orta" (bağımsız doğrulama yok).
+
+### Arayüz ve tasarım sistemi (v2 Bölüm 1)
+- Renk, yazı, boşluk, yarıçap, gölge ve hareket değerlerinin tek kaynağı
+  `frontend/src/styles/tokens.css`; bileşenlerde renk kodu yok (test denetler).
+  Koyu tema ileride aynı adları `:root[data-theme="dark"]` altında yeniden
+  tanımlayarak eklenebilir.
+- Tablodan farklı iki onaylı karar: `--border-strong` `#8f8f8a` (giriş alanı ve
+  sürükle-bırak çerçevesi beyaz üstünde 3:1'i geçsin diye), hatalar için ayrı
+  `--danger` (köşe kırmızısıyla karışmasın diye her zaman ikon ve metinle).
+- Video katmanı arayüz köşe renklerinin canlı tonları: kırmızı `#ff2e4d`, mavi
+  `#3d8bff` (önceki camgöbeği `#19d6f0` arayüz mavisiyle aynı aileden değildi),
+  diğer kişiler nötr gri. Tarayıcı, MP4 ve `Fighter.color` aynı JSON'u okur.
+- Fontlar yerel paket (Inter, Inter Tight); internetten font yüklenmez.
+- Sayfa en fazla 1440 px; sonuç ekranı Bölüm 5'e kadar 1640 px. Sonuç ekranına
+  bu bölümde yalnızca renk ve yazı uygulandı; bileşen metinleri Bölüm 5'te
+  `labels.ts`'e taşınacak.
 
 ### Yerel güvenlik
 - Yol sınırlama (`fsutil.inside`), en fazla 20 aktif analiz, analiz başına tek

@@ -32,6 +32,7 @@ from fight_analyzer.contracts import (
 )
 from fight_analyzer.contracts.common import JOB_ID_PATTERN
 from fight_analyzer.media.analysis_video import video_path
+from fight_analyzer.media.thumbnail import ensure_thumbnail, thumbnail_frame
 from fight_analyzer import judging
 from fight_analyzer.motion import exclusions as excl
 from fight_analyzer.motion import store as motion_store
@@ -109,6 +110,23 @@ def analysis_video(store: StoreDep, settings: SettingsDep, job_id: JobId) -> Fil
     if not path.is_file():
         raise ApiProblem(410, "video_missing", "Analiz videosu önbellekte bulunamadı.")
     return FileResponse(path, media_type="video/mp4")
+
+
+@router.get("/{job_id}/thumbnail.jpg", response_class=FileResponse)
+def job_thumbnail(store: StoreDep, settings: SettingsDep, job_id: JobId) -> FileResponse:
+    """Small preview frame of the analysis copy for the history list."""
+    job = _job(store, job_id)
+    av = job.outputs.analysis_video
+    video = video_path(settings.cache_dir, av.cache_key) if av else None
+    if av is None or video is None or not video.is_file():
+        raise ApiProblem(404, "thumbnail_unavailable", "Bu analiz için önizleme görüntüsü yok.")
+    anchors = job.selection.anchors if job.selection else []
+    frame = thumbnail_frame(av.video.frame_count, anchors[0].frame_index if anchors else None)
+    path = ensure_thumbnail(settings.jobs_dir / job_id, video, av.cache_key, frame)
+    if path is None:
+        raise ApiProblem(404, "thumbnail_unavailable", "Önizleme karesi okunamadı.")
+    # revalidated each time: a new selection changes the frame
+    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
 
 
 @router.get("/{job_id}/preview", response_model=PosePreview)

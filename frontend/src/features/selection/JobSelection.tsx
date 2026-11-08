@@ -2,27 +2,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, urls } from "../../api/client";
 import { navigate } from "../../app/router";
 import type { SelectParams } from "../../app/router";
-import { EmptyState } from "../../ui";
 import type { FighterAnchor, Job, PersonDetection, SelectionCandidates } from "../../contracts/generated";
 import { useJob } from "../../hooks/useJob";
-import { formatNumber } from "../../labels";
+import { COMMON_LABELS, SELECTION_LABELS as L, formatNumber } from "../../labels";
 import { NOT_IN_VIEW } from "../../model/analysis";
-import type { Assignment, Detection } from "../../model/analysis";
+import type { Assignment, Detection, Side } from "../../model/analysis";
 import { formatClock } from "../../player/clock";
+import { Button, ButtonLink, EmptyState } from "../../ui";
 import { SelectionLayout } from "./SelectionLayout";
+import type { CropSource } from "./SelectionLayout";
 
 const toDetection = (d: PersonDetection): Detection => ({
   personId: String(d.detection_id), x1: d.bbox.x1, y1: d.bbox.y1, x2: d.bbox.x2, y2: d.bbox.y2,
   confidence: d.confidence,
 });
 
-/** Same defaults the API uses until names are set. */
-const DEFAULT_NAMES = { red: "Dövüşçü 1", blue: "Dövüşçü 2" };
-
-function savedNames(job: Job): { red: string; blue: string } {
+function savedNames(job: Job): Record<Side, string> {
   const red = job.fighters.find((f) => f.fighter_id === "fighter_a")?.display_name;
   const blue = job.fighters.find((f) => f.fighter_id === "fighter_b")?.display_name;
-  return { red: red ?? DEFAULT_NAMES.red, blue: blue ?? DEFAULT_NAMES.blue };
+  // same defaults the API uses until names are set
+  return { red: red ?? L.defaultNames.red, blue: blue ?? L.defaultNames.blue };
 }
 
 /**
@@ -30,6 +29,7 @@ function savedNames(job: Job): { red: string; blue: string } {
  * video. Candidate frames come from the tracking preparation; any other frame
  * can be reached with the frame steps (used for "fix at this frame"). With
  * `keep`, earlier selections stay and this one is added as a correction.
+ * Names are edited in the corner rows and saved with the selection.
  */
 export function JobSelection({ jobId, params }: { jobId: string; params?: SelectParams }) {
   const job = useJob(jobId, 2000);
@@ -39,9 +39,11 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   const [dets, setDets] = useState<{ frame: number; list: PersonDetection[] } | null>(null);
   const [picks, setPicks] = useState<Assignment>({ red: null, blue: null });
   const [keep, setKeep] = useState(params?.keep ?? false);
-  const [names, setNames] = useState<{ red: string; blue: string } | null>(null);
+  const [names, setNames] = useState<Record<Side, string> | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Frame the <video> is showing (after the seek finished): the tiles are cut from it. */
+  const [shown, setShown] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const data = job.data;
   const prepKey = data?.outputs.tracking_prep?.cache_key;
@@ -78,10 +80,26 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   useEffect(() => {
     const el = videoRef.current;
     if (!el || current === null || !video) return;
-    const seek = () => { el.currentTime = (current + 0.5) / video.fps; };
+    const target = current;
+    const onSeeked = () => setShown(target);
+    const seek = () => { el.currentTime = (target + 0.5) / video.fps; };
+    el.addEventListener("seeked", onSeeked);
     if (el.readyState >= 1) seek();
     else el.addEventListener("loadedmetadata", seek, { once: true });
+    return () => {
+      el.removeEventListener("seeked", onSeeked);
+      el.removeEventListener("loadedmetadata", seek);
+    };
   }, [current, video]);
+
+  const source = useMemo<CropSource | null>(() => {
+    const el = videoRef.current;
+    if (shown === null || shown !== current || !el) return null;
+    return {
+      version: shown,
+      draw: (ctx, r, size) => ctx.drawImage(el, r.x, r.y, r.size, r.size, 0, 0, size, size),
+    };
+  }, [shown, current]);
 
   useEffect(() => {
     if (!names && data) setNames(savedNames(data));
@@ -90,34 +108,38 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   const existing = data?.selection?.anchors ?? [];
   const sortedCands = useMemo(() => (cands?.frames ?? []).map((f) => f.frame_index).sort((a, b) => a - b), [cands]);
 
-  if (job.loading) return <EmptyState tone="loading" title="Analiz bilgisi yükleniyor…" />;
+  if (job.loading) return <EmptyState tone="loading" title={L.loading} />;
   if (job.notFound) {
-    return <EmptyState tone="error" title="Analiz bulunamadı" action={<a className="btn btn--ghost" href="#/">Yükleme ekranına dön</a>} />;
+    return <EmptyState tone="error" title={L.notFound}
+                       action={<ButtonLink href="#/">{COMMON_LABELS.backToUpload}</ButtonLink>} />;
   }
-  if (!data) return <EmptyState tone="error" title="Analiz durumu alınamadı">API'ye ulaşılamıyor; yeniden deneniyor.</EmptyState>;
+  if (!data) return <EmptyState tone="error" title={L.unreachableTitle}>{L.unreachableText}</EmptyState>;
   if (data.status === "queued" || data.status === "running") {
     return (
-      <EmptyState tone="loading" title="Analiz işleniyor"
-                 action={<a className="btn btn--ghost" href={`#/analyses/${jobId}/processing`}>İşlem ekranını aç</a>}>
-        Seçim, poz tespiti ve takip hazırlığı bittiğinde yapılabilir.
+      <EmptyState tone="loading" title={L.processingTitle}
+                  action={<ButtonLink href={`#/analyses/${jobId}/processing`}>{L.openProcessing}</ButtonLink>}>
+        {L.processingText}
       </EmptyState>
     );
   }
   if (!data.outputs.pose || !video) {
-    return <EmptyState tone="empty" title="Seçim için poz verisi yok">Bu analizde poz tespiti tamamlanmamış.</EmptyState>;
+    return <EmptyState tone="empty" title={L.noPosesTitle}>{L.noPosesText}</EmptyState>;
   }
   if (!prepKey) {
     return (
-      <EmptyState tone="empty" title="Aday kareler hazırlanmamış"
-                 action={<button type="button" className="btn btn--primary"
-                                 onClick={() => api.retry(jobId).then(() => navigate({ mode: "analysis", screen: "processing", jobId }))}>
-                   Aday kareleri hazırla</button>}>
-        Bu analiz, takip hazırlığı eklenmeden önce yapılmış. Önbellekteki pozlar kullanılarak hızlıca hazırlanabilir.
+      <EmptyState tone="empty" title={L.noCandidatesTitle}
+                  action={
+                    <Button variant="primary"
+                            onClick={() => api.retry(jobId).then(() => navigate({ mode: "analysis", screen: "processing", jobId }))}>
+                      {L.prepareCandidates}
+                    </Button>
+                  }>
+        {L.noCandidatesText}
       </EmptyState>
     );
   }
-  if (candError) return <EmptyState tone="error" title="Aday kareler alınamadı">{candError}</EmptyState>;
-  if (!cands || current === null) return <EmptyState tone="loading" title="Aday kareler yükleniyor…" />;
+  if (candError) return <EmptyState tone="error" title={L.candidatesFailed}>{candError}</EmptyState>;
+  if (!cands || current === null) return <EmptyState tone="loading" title={L.candidatesLoading} />;
 
   const lastFrame = video.frame_count - 1;
   const goTo = (f: number) => {
@@ -128,11 +150,13 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   const prevCand = [...sortedCands].reverse().find((f) => f < current);
   const nextCand = sortedCands.find((f) => f > current);
   const candIndex = sortedCands.indexOf(current);
+  const time = formatClock(current / video.fps, true);
   const label = candIndex >= 0
-    ? `Aday ${candIndex + 1} / ${sortedCands.length} · ${formatClock(current / video.fps, true)}`
-    : `Kare ${formatNumber(current)} · ${formatClock(current / video.fps, true)}`;
+    ? L.candidateOf(candIndex + 1, sortedCands.length, time)
+    : L.frameAt(formatNumber(current), time);
   const detsLoaded = dets !== null && dets.frame === current;
   const frameDets = detsLoaded ? dets.list : [];
+  const shownNames = names ?? savedNames(data);
 
   const confirm = async () => {
     if (picks.red === null || picks.blue === null) return;
@@ -143,11 +167,8 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
     setBusy(true);
     setProblem(null);
     try {
-      if (names && (names.red.trim() && names.blue.trim())) {
-        const saved = savedNames(data);
-        const changed = saved.red !== names.red.trim() || saved.blue !== names.blue.trim();
-        if (changed) await api.setNames(jobId, { red: names.red.trim(), blue: names.blue.trim() });
-      }
+      const saved = savedNames(data);
+      if (shownNames.red !== saved.red || shownNames.blue !== saved.blue) await api.setNames(jobId, shownNames);
       await api.submitSelection(jobId, { anchors });
       navigate({ mode: "analysis", screen: "processing", jobId });
     } catch (e) {
@@ -158,28 +179,30 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   };
 
   const step = (n: number) => (
-    <button type="button" className="btn btn--sm btn--ghost" onClick={() => goTo(current + n)}
-            title={`${n > 0 ? "+" : ""}${n} kare`}>
+    <Button size="sm" onClick={() => goTo(current + n)} aria-label={L.frameStep(n)} title={L.frameStep(n)}>
       {n > 0 ? `+${n}` : n}
-    </button>
+    </Button>
   );
 
   return (
     <SelectionLayout
-      title={<>{data.source?.filename ?? `Analiz ${jobId.slice(0, 8)}`}</>}
+      title={data.source?.filename ?? L.title}
       picks={picks}
-      onPick={(p) => {
+      onPick={(next) => {
         setProblem(null);
-        setPicks(p);
+        setPicks(next);
       }}
       detections={frameDets.map(toDetection)}
       frame={{ width: video.width, height: video.height }}
+      source={detsLoaded ? source : null}
+      names={shownNames}
+      onRename={(side, name) => setNames({ ...shownNames, [side]: name })}
       stage={(boxes) => (
         <div className="stage" style={{ aspectRatio: `${video.width} / ${video.height}` }}>
           <video ref={videoRef} className="stage__video" src={urls.video(jobId)} muted playsInline preload="auto" />
           {boxes}
-          {!detsLoaded && <div className="stage__veil">Kişiler yükleniyor…</div>}
-          {detsLoaded && frameDets.length === 0 && <div className="stage__veil">Bu karede kişi tespit edilmedi</div>}
+          {!detsLoaded && <div className="stage__veil">{L.peopleLoading}</div>}
+          {detsLoaded && frameDets.length === 0 && <div className="stage__veil">{L.noPeople}</div>}
         </div>
       )}
       candidateLabel={label}
@@ -189,41 +212,25 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
       onConfirm={() => void confirm()}
       busy={busy}
       problem={problem}
-      confirmLabel={keep && existing.length ? "Düzeltmeyi ekle ve yeniden eşle" : "Onayla ve takibi başlat"}
+      confirmLabel={keep && existing.length ? L.confirmCorrection : L.confirm}
       allowNotInView={keep && existing.length > 0}
-      extra={
-        <div className="select__extra">
-          {names && (
-            <div className="names">
-              <label className="names__field names__field--red">
-                <span>Kırmızı köşe adı</span>
-                <input value={names.red} maxLength={40} onChange={(e) => setNames({ ...names, red: e.target.value })} />
-              </label>
-              <label className="names__field names__field--blue">
-                <span>Mavi köşe adı</span>
-                <input value={names.blue} maxLength={40} onChange={(e) => setNames({ ...names, blue: e.target.value })} />
-              </label>
-            </div>
-          )}
-          {existing.length > 0 && (
-            <div className="anchors">
-              <label className="anchors__keep">
-                <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
-                Önceki seçimleri koru (düzeltme olarak ekle)
-              </label>
-              <ul className="anchors__list">
-                {existing.map((a) => (
-                  <li key={a.frame_index}>
-                    <button type="button" className="linkbtn" onClick={() => goTo(a.frame_index)}>
-                      Kare {formatNumber(a.frame_index)} · {formatClock(a.frame_index / video.fps, true)}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      extra={existing.length > 0 && (
+        <div className="anchors">
+          <label className="anchors__keep">
+            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+            {L.keepEarlier}
+          </label>
+          <ul className="anchors__list">
+            {existing.map((a) => (
+              <li key={a.frame_index}>
+                <button type="button" className="linkbtn" onClick={() => goTo(a.frame_index)}>
+                  {L.frameAt(formatNumber(a.frame_index), formatClock(a.frame_index / video.fps, true))}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
-      }
+      )}
     />
   );
 }

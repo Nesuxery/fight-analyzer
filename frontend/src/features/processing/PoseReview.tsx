@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { urls } from "../../api/client";
 import type { VideoInfo } from "../../contracts/generated";
 import { usePoseFrames } from "../../hooks/usePoseFrames";
-import { formatNumber } from "../../labels";
+import { PROCESSING_LABELS as L, formatNumber } from "../../labels";
 import { formatClock } from "../../player/clock";
 import { PoseSvg } from "../../player/PoseSvg";
 import type { PoseLayers } from "../../player/PoseSvg";
+import { Button, Chip } from "../../ui";
 
 /**
  * Plays the analysis copy (the same file the engine read) with every
@@ -64,22 +65,18 @@ export function PoseReview({ jobId, video }: { jobId: string; video: VideoInfo }
         )}
       </div>
       <div className="review__bar">
-        <button type="button" className="btn btn--sm btn--ghost" onClick={() => step(-1)}>‹ Kare</button>
-        <button type="button" className="btn btn--sm btn--ghost" onClick={() => step(1)}>Kare ›</button>
+        <Button size="sm" onClick={() => step(-1)}>{L.framePrev}</Button>
+        <Button size="sm" onClick={() => step(1)}>{L.frameNext}</Button>
         <span className="num review__info">
-          Kare {formatNumber(frame)} / {formatNumber(lastFrame)} · {formatClock(frame / fps, true)} ·{" "}
-          {record && record !== "loading" ? `${record.detections.length} kişi` : record === "loading" ? "yükleniyor…" : "—"}
+          {L.frameOf(formatNumber(frame), formatNumber(lastFrame))} · {formatClock(frame / fps, true)} ·{" "}
+          {record && record !== "loading" ? L.people(record.detections.length) : record === "loading" ? L.loadingShort : "—"}
         </span>
-        <div className="review__toggles" role="group" aria-label="Katmanlar">
-          {(["skeleton", "boxes"] as const).map((key) => (
-            <button key={key} type="button" className="toggle" aria-pressed={layers[key]}
-                    onClick={() => setLayers({ ...layers, [key]: !layers[key] })}>
-              <span className="toggle__dot" aria-hidden="true" />{key === "skeleton" ? "İskelet" : "Kutular"}
-            </button>
-          ))}
+        <div className="review__toggles" role="group" aria-label={L.layers}>
+          <Chip pressed={layers.skeleton} onPressedChange={(on) => setLayers({ ...layers, skeleton: on })}>{L.skeleton}</Chip>
+          <Chip pressed={layers.boxes} onPressedChange={(on) => setLayers({ ...layers, boxes: on })}>{L.boxes}</Chip>
         </div>
       </div>
-      {poses.error && <p className="inline-warn">Poz verisi alınamadı: {poses.error}</p>}
+      {poses.error && <p className="inline-warn">{L.posesFailed(poses.error)}</p>}
     </div>
   );
 }

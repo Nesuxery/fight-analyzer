@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, urls } from "../../api/client";
 import type { PosePreview } from "../../contracts/generated";
-import { formatNumber } from "../../labels";
+import { PROCESSING_LABELS as L, formatNumber } from "../../labels";
 import { PoseSvg } from "../../player/PoseSvg";
+import { IconSpinner } from "../../ui/icons";
 
 const LAYERS = { skeleton: true, boxes: true };
 
@@ -22,16 +23,18 @@ export function PosePreviewPanel({ jobId, seq, fallbackAspect }: {
   }, [jobId, seq]);
 
   if (!preview) {
-    return <div className="stage stage--empty" style={{ aspectRatio: fallbackAspect }}><span className="spinner" /></div>;
+    return (
+      <div className="stage stage--empty" style={{ aspectRatio: fallbackAspect }}>
+        <IconSpinner className="icon-spin" />
+      </div>
+    );
   }
   const { width, height, frame } = preview;
   return (
     <div className="stage" style={{ aspectRatio: `${width} / ${height}` }}>
-      <img className="stage__img" src={urls.previewImage(jobId, preview.seq)} alt="İşlenen kare" />
+      <img className="stage__img" src={urls.previewImage(jobId, preview.seq)} alt={L.previewTitle} />
       <PoseSvg width={width} height={height} detections={frame.detections} layers={LAYERS} />
-      <span className="stage__badge num">
-        Kare {formatNumber(frame.frame_index)} · {frame.detections.length} kişi
-      </span>
+      <span className="stage__badge num">{L.previewFrame(formatNumber(frame.frame_index), frame.detections.length)}</span>
     </div>
   );
 }

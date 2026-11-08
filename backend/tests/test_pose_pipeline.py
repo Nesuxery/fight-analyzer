@@ -109,6 +109,18 @@ def test_video_range_and_preview(env: Env, first: dict):
     assert preview["width"] == 640 and preview["frame"]["detections"]
 
 
+def test_history_thumbnail(env: Env, first: dict, clip: bytes):
+    job_id = first["job_id"]
+    image = env.client.get(f"/api/v1/jobs/{job_id}/thumbnail.jpg")
+    assert image.status_code == 200 and image.headers["content-type"] == "image/jpeg"
+    assert image.headers["cache-control"] == "no-cache" and len(image.content) > 1000
+    assert len(list((env.settings.jobs_dir / job_id).glob("thumb-*.jpg"))) == 1
+    queued = env.upload(clip, "queued.mp4")  # no analysis copy yet
+    missing = env.client.get(f"/api/v1/jobs/{queued}/thumbnail.jpg")
+    assert missing.status_code == 404 and missing.json()["code"] == "thumbnail_unavailable"
+    assert env.worker.run_once()  # leave the queue empty for the next tests
+
+
 def test_same_video_reuses_both_caches(env: Env, first: dict, clip: bytes):
     second = env.process(clip)
     assert second["status"] == "awaiting_selection"

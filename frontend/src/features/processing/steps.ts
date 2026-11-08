@@ -1,7 +1,7 @@
 import type { Job, StageProgress } from "../../contracts/generated";
 import { DEMO_POST_SELECTION_S, DEMO_PRE_SELECTION_S } from "../../demo/DemoContext";
 import type { DemoState } from "../../demo/DemoContext";
-import { ERROR_LABELS, PROCESS_STEPS, formatBytes, formatDuration, formatNumber } from "../../labels";
+import { ERROR_LABELS, PROCESS_STEPS, STEP_LABELS as L, formatBytes, formatDuration, formatNumber } from "../../labels";
 import type { StepId } from "../../labels";
 
 /** "stopped": cancelled by the user (not an error). */
@@ -23,10 +23,16 @@ export interface ProcessView {
   previewTimeS: number | null;
   phase: "notStarted" | "running" | "awaitingSelection" | "done" | "failed" | "queued" | "cancelled";
   errorText: string | null;
+  /** Estimated seconds left, measured for the running step only (null: not known). */
+  etaS: number | null;
+  /** Label of the step the estimate refers to. */
+  etaStep: string | null;
 }
 
 const steps = (status: (id: StepId) => Omit<StepView, "id" | "label">): StepView[] =>
   PROCESS_STEPS.map((s) => ({ id: s.id, label: s.label, ...status(s.id) }));
+
+const labelOf = (id: StepId) => PROCESS_STEPS.find((s) => s.id === id)?.label ?? null;
 
 // Demo timeline (seconds): prep 0-2, pose 2-PRE, [selection], motion 0-3.5, results 3.5-POST.
 const PREP_S = 2;
@@ -35,7 +41,7 @@ const MOTION_S = 3.5;
 export function demoProcess(state: DemoState, now: number, durationS: number): ProcessView {
   if (state.startedAt === null) {
     return { steps: steps(() => ({ status: "waiting", progress: null, detail: null })), overall: 0,
-             previewTimeS: null, phase: "notStarted", errorText: null };
+             previewTimeS: null, phase: "notStarted", errorText: null, etaS: null, etaStep: null };
   }
   const pre = (now - state.startedAt) / 1000;
   const post = state.selectedAt === null ? null : (now - state.selectedAt) / 1000;
@@ -49,51 +55,60 @@ export function demoProcess(state: DemoState, now: number, durationS: number): P
     switch (id) {
       case "prep": {
         const p = Math.min(1, pre / PREP_S);
-        return { status: p >= 1 ? "done" : "active", progress: p, detail: p >= 1 ? "H.264 · sabit 30 fps" : "Video dönüştürülüyor" };
+        return { status: p >= 1 ? "done" : "active", progress: p, detail: p >= 1 ? L.demoPrepDone : L.demoPrepActive };
       }
       case "pose":
         if (pre < PREP_S) return { status: "waiting", progress: null, detail: null };
         return { status: poseP >= 1 ? "done" : "active", progress: poseP,
-                 detail: `${Math.round(poseP * durationS * 30).toLocaleString("tr-TR")} kare işlendi` };
+                 detail: L.demoPoseFrames(Math.round(poseP * durationS * 30).toLocaleString("tr-TR")) };
       case "select":
-        if (post !== null) return { status: "done", progress: 1, detail: "İki dövüşçü seçildi" };
+        if (post !== null) return { status: "done", progress: 1, detail: L.demoSelected };
         return awaiting
-          ? { status: "action", progress: null, detail: "Kırmızı ve mavi dövüşçüyü seçin" }
+          ? { status: "action", progress: null, detail: L.demoSelect }
           : { status: "waiting", progress: null, detail: null };
       case "motion":
         if (post === null) return { status: "waiting", progress: null, detail: null };
-        return { status: motionP >= 1 ? "done" : "active", progress: motionP, detail: "Takip, olaylar ve sinyaller" };
+        return { status: motionP >= 1 ? "done" : "active", progress: motionP, detail: L.demoMotion };
       case "results":
         if (post === null || post < MOTION_S) return { status: "waiting", progress: null, detail: null };
-        return { status: resultP >= 1 ? "done" : "active", progress: resultP, detail: "Zaman çizelgesi ve istatistikler" };
+        return { status: resultP >= 1 ? "done" : "active", progress: resultP, detail: L.demoResults };
     }
   });
   const overall = post === null
     ? 0.6 * Math.min(1, pre / DEMO_PRE_SELECTION_S)
     : 0.6 + 0.4 * Math.min(1, post / DEMO_POST_SELECTION_S);
+  const active = view.find((s) => s.status === "active");
+  // the simulated timeline is known exactly: time left in the running step
+  const etaS = !active ? null
+    : active.id === "prep" ? PREP_S - pre
+      : active.id === "pose" ? DEMO_PRE_SELECTION_S - pre
+        : active.id === "motion" ? MOTION_S - (post ?? 0)
+          : DEMO_POST_SELECTION_S - (post ?? 0);
   return {
     steps: view,
     overall,
     previewTimeS: pre < PREP_S ? 0 : poseP * durationS,
     phase: done ? "done" : awaiting ? "awaitingSelection" : "running",
     errorText: null,
+    etaS: etaS === null ? null : Math.max(0, etaS),
+    etaStep: active ? active.label : null,
   };
 }
 
-/** Human-readable measured progress, e.g. "120 / 327 kare · 14,8 kare/sn · ~14 sn kaldı". */
+/** Human-readable measured progress, e.g. "120 / 327 kare · 14,8 kare/sn". */
 export function progressText(d: StageProgress): string {
   const parts: string[] = [];
   if (d.note) parts.push(d.note);
+  const total = (format: (v: number) => string) => (d.total != null ? format(d.total) : null);
   if (d.unit === "frames") {
-    parts.push(`${formatNumber(d.done)}${d.total != null ? ` / ${formatNumber(d.total)}` : ""} kare`);
-    if (d.rate_per_s) parts.push(`${formatNumber(d.rate_per_s, 1)} kare/sn`);
+    parts.push(L.frames(formatNumber(d.done), total((v) => formatNumber(v))));
+    if (d.rate_per_s) parts.push(L.framesPerSecond(formatNumber(d.rate_per_s, 1)));
   } else if (d.unit === "seconds") {
-    parts.push(`${formatNumber(d.done, 1)}${d.total != null ? ` / ${formatNumber(d.total, 1)}` : ""} sn video`);
-    if (d.rate_per_s) parts.push(`${formatNumber(d.rate_per_s, 1)}× hız`);
+    parts.push(L.seconds(formatNumber(d.done, 1), total((v) => formatNumber(v, 1))));
+    if (d.rate_per_s) parts.push(L.speed(formatNumber(d.rate_per_s, 1)));
   } else {
-    parts.push(`${formatBytes(d.done)}${d.total != null ? ` / ${formatBytes(d.total)}` : ""}`);
+    parts.push(L.bytes(formatBytes(d.done), total(formatBytes)));
   }
-  if (d.eta_s != null) parts.push(`~${formatDuration(d.eta_s)} kaldı`);
   return parts.join(" · ");
 }
 
@@ -102,28 +117,28 @@ function doneDetail(job: Job, id: StepId): string | null {
   const pose = job.outputs.pose;
   if (id === "prep" && av) {
     const v = av.video;
-    return `${v.width}×${v.height} · ${formatNumber(v.fps, 2)} fps · ${formatNumber(v.frame_count)} kare` +
-      (av.cache_hit ? " · önbellekten" : "");
+    return L.prepDone(v.width, v.height, formatNumber(v.fps, 2), formatNumber(v.frame_count)) +
+      (av.cache_hit ? L.fromCache : "");
   }
   if (id === "pose" && pose) {
     const prep = job.outputs.tracking_prep;
-    return `${formatNumber(pose.detection_count)} kişi tespiti · en fazla ${pose.max_persons} kişi/kare` +
-      (pose.cache_hit ? " · önbellekten" : pose.processing_s != null ? ` · ${formatDuration(pose.processing_s)}` : "") +
-      (prep ? ` · ${prep.cuts.length} kamera kesimi · ${prep.candidates} aday kare` : "");
+    return L.poseDone(formatNumber(pose.detection_count), pose.max_persons) +
+      (pose.cache_hit ? L.fromCache : pose.processing_s != null ? ` · ${formatDuration(pose.processing_s)}` : "") +
+      (prep ? L.prepSummary(prep.cuts.length, prep.candidates) : "");
   }
   if (id === "select" && job.selection) {
-    return `${job.selection.anchors.length} seçim noktası`;
+    return L.anchors(job.selection.anchors.length);
   }
   if (id === "motion" && job.outputs.tracking) {
     const [r, b] = job.outputs.tracking.fighters;
     const ev = job.outputs.events;
-    return `Kimlik takibi: belirsiz ${formatDuration((r?.uncertain_ms ?? 0) / 1000)} / ${formatDuration((b?.uncertain_ms ?? 0) / 1000)}` +
-      ` · olası kimlik değişimi ${job.outputs.tracking.identity_switches}` +
-      (ev ? ` · ${ev.events} olay · kamera hareketi karelerin %${Math.round(ev.camera_known_share * 100)}'inde ölçüldü` : "");
+    return L.trackingDone(formatDuration((r?.uncertain_ms ?? 0) / 1000), formatDuration((b?.uncertain_ms ?? 0) / 1000),
+                          job.outputs.tracking.identity_switches) +
+      (ev ? L.eventsDone(ev.events, Math.round(ev.camera_known_share * 100)) : "");
   }
   if (id === "results" && job.outputs.tracking) {
     const sc = job.outputs.scoring;
-    return sc ? `Deneysel momentum hazır · ${sc.contributions} puan kaydı` : "Takip sonuçları hazır";
+    return sc ? L.momentumReady(sc.contributions) : L.trackingReady;
   }
   return null;
 }
@@ -152,10 +167,7 @@ export function jobProcess(job: Job): ProcessView {
     if (job.status === "completed") return { status: "done", progress: 1, detail: doneDetail(job, id) };
     if (job.status === "awaiting_selection") {
       if (index < selectIndex) return { status: "done", progress: 1, detail: doneDetail(job, id) };
-      if (index === selectIndex) {
-        return { status: "action", progress: null,
-                 detail: "Pozlar hazır. Kırmızı ve mavi köşedeki dövüşçüleri seçin." };
-      }
+      if (index === selectIndex) return { status: "action", progress: null, detail: L.awaitingSelection };
       return { status: "waiting", progress: null, detail: null };
     }
     const pending = (): Omit<StepView, "id" | "label"> => produced(job, id)
@@ -164,10 +176,8 @@ export function jobProcess(job: Job): ProcessView {
     if (job.status === "queued" || current === -1) return pending();
     if (index < current) return { status: "done", progress: 1, detail: doneDetail(job, id) };
     if (index === current) {
-      if (job.status === "failed") return { status: "error", progress: null, detail: "Analiz bu aşamada durdu." };
-      if (job.status === "cancelled") {
-        return { status: "stopped", progress: null, detail: "Kullanıcı iptal etti; yeniden başlatılabilir." };
-      }
+      if (job.status === "failed") return { status: "error", progress: null, detail: L.stopped };
+      if (job.status === "cancelled") return { status: "stopped", progress: null, detail: L.cancelledByUser };
       const measured = detail && detail.total ? Math.min(1, detail.done / detail.total) : null;
       return { status: "active", progress: measured, detail: detail ? progressText(detail) : job.message };
     }
@@ -175,5 +185,10 @@ export function jobProcess(job: Job): ProcessView {
   });
   const phase = ({ queued: "queued", running: "running", awaiting_selection: "awaitingSelection",
                    completed: "done", failed: "failed", cancelled: "cancelled" } as const)[job.status];
-  return { steps: view, overall: job.progress, previewTimeS: null, phase, errorText };
+  const runningStep = job.status === "running" && current >= 0 ? PROCESS_STEPS[current]!.id : null;
+  return {
+    steps: view, overall: job.progress, previewTimeS: null, phase, errorText,
+    etaS: runningStep && detail?.eta_s != null ? detail.eta_s : null,
+    etaStep: runningStep ? labelOf(runningStep) : null,
+  };
 }

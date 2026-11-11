@@ -2,10 +2,6 @@
    Every value comes from tokens.css (overlay-tokens.css for marks drawn over
    the picture). Shared components: ui/ui.css. */
 
-.section-title {
-  font-size: var(--fs-20);
-}
-
 /* ---------- video stage: dark and rounded on the light page ---------- */
 .stage {
   --focus-ring: var(--stage-text);
@@ -528,16 +524,15 @@
   min-width: 0;
 }
 
-.proc__previewhead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+.proc__frame {
+  font-size: var(--fs-13);
 }
 
-.proc__frame {
-  color: var(--text-3);
-  font-size: var(--fs-13);
+/* a label with its "?" */
+.proc__term {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .proc__body {
@@ -619,8 +614,9 @@
   border-top: 0;
 }
 
-.vsteps__item.is-active { --tone: var(--text-1); }
-.vsteps__item.is-done { --tone: var(--success); }
+/* the running stage takes the accent (brand red here); finished ones a black check */
+.vsteps__item.is-active { --tone: var(--accent); }
+.vsteps__item.is-done { --tone: var(--text-1); }
 .vsteps__item.is-error { --tone: var(--danger); }
 .vsteps__item.is-stopped { --tone: var(--text-3); }
 .vsteps__item.is-action { --tone: var(--warning); }
@@ -632,8 +628,12 @@
 
 .vsteps__body {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-width: 0;
+}
+
+.vsteps__body > .bar {
+  margin: var(--space-1) 0;
 }
 
 .vsteps__row {
@@ -657,9 +657,25 @@
   white-space: nowrap;
 }
 
+.vsteps__item.is-active .vsteps__label {
+  font-weight: var(--fw-semibold);
+}
+
+/* what the stage does */
+.vsteps__desc {
+  color: var(--text-2);
+  font-size: var(--fs-13);
+}
+
+.vsteps__item.is-waiting .vsteps__desc {
+  color: var(--text-3);
+}
+
+/* measured progress or the result of the stage */
 .vsteps__detail {
   color: var(--text-3);
-  font-size: var(--fs-13);
+  font-size: var(--fs-12);
+  font-variant-numeric: tabular-nums;
 }
 
 .dialog__error {

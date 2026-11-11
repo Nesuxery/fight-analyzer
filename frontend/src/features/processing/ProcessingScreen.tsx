@@ -8,12 +8,14 @@ import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME } from "../../demo/script";
 import { useJob } from "../../hooks/useJob";
 import { useNow } from "../../hooks/useNow";
 import {
-  COMMON_LABELS, ERROR_LABELS, HISTORY_LABELS, JOB_STATUS_LABELS, PROCESSING_LABELS as L,
-  formatBytes, formatDateTime, formatDuration, formatNumber,
+  COMMON_LABELS, ERROR_LABELS, HISTORY_LABELS, JOB_STATUS_LABELS, PROCESSING_LABELS as L, PROCESS_STEP_DESCRIPTIONS,
+  UI_LABELS, formatBytes, formatDateTime, formatDuration, formatNumber,
 } from "../../labels";
 import { formatClock } from "../../player/clock";
 import { VideoStage } from "../../player/VideoStage";
-import { Button, ButtonLink, Card, CardHeader, DemoTag, Dialog, EmptyState, Progress, cx, useToast } from "../../ui";
+import {
+  Button, ButtonLink, Card, CardHeader, DemoTag, Dialog, EmptyState, HelpTip, Progress, SectionHeading, cx, useToast,
+} from "../../ui";
 import { IconAlert, IconCheck, IconCircle, IconSpinner, IconStop, IconTarget } from "../../ui/icons";
 import type { IconProps } from "../../ui/icons";
 import { PosePreviewPanel } from "./PosePreviewPanel";
@@ -112,8 +114,10 @@ function JobProcessing({ jobId }: { jobId: string }) {
 
   let preview: ReactNode;
   let previewTitle: string = L.previewTitle;
+  let previewDescription: string = L.previewDescription;
   if (data.status === "awaiting_selection" && av && pose) {
     previewTitle = L.previewPoses;
+    previewDescription = L.previewPosesDescription;
     preview = <PoseReview jobId={jobId} video={av.video} />;
   } else if (data.status === "running" && detail?.stage === "pose" && detail.preview_seq) {
     preview = <PosePreviewPanel jobId={jobId} seq={detail.preview_seq} fallbackAspect={aspect} />;
@@ -154,8 +158,9 @@ function JobProcessing({ jobId }: { jobId: string }) {
       meta={meta}
       preview={preview}
       previewTitle={previewTitle}
+      previewDescription={previewDescription}
       errorDetail={data.error && ERROR_LABELS[data.error.code] ? data.error.message : null}
-      frameLabel={video ? L.frames(formatNumber(video.frame_count)) : "—"}
+      frameLabel={video ? L.frames(formatNumber(video.frame_count)) : UI_LABELS.noValue}
       actions={
         <>
           {view.phase === "done" && (
@@ -228,7 +233,8 @@ function CancelButton({ jobId }: { jobId: string }) {
 }
 
 function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale = false,
-                        previewTitle = L.previewTitle, errorDetail = null }: {
+                        previewTitle = L.previewTitle, previewDescription = L.previewDescription,
+                        errorDetail = null }: {
   view: ProcessView;
   title: ReactNode;
   meta: [string, string][];
@@ -237,6 +243,7 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
   actions: ReactNode;
   stale?: boolean;
   previewTitle?: string;
+  previewDescription?: string;
   errorDetail?: string | null;
 }) {
   const previewId = useId();
@@ -245,15 +252,13 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
   return (
     <div className="proc">
       <section className="proc__preview" aria-labelledby={previewId}>
-        <div className="proc__previewhead">
-          <h2 id={previewId} className="section-title">{previewTitle}</h2>
-          <span className="proc__frame num">{frameLabel}</span>
-        </div>
+        <SectionHeading id={previewId} title={previewTitle} description={previewDescription}
+                        aside={<span className="proc__frame">{frameLabel}</span>} />
         {preview}
       </section>
 
       <Card tag="aside" className="proc__panel" aria-label={L.stepsLabel}>
-        <CardHeader title={title} />
+        <CardHeader title={title} description={L.panelDescription} />
         <div className="proc__body">
           {stale && <p className="inline-warn">{L.stale}</p>}
           {view.phase === "failed" && view.errorText && (
@@ -268,13 +273,19 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
           </ol>
           <div className="proc__overall">
             <div className="proc__overallhead">
-              <span className="label">{L.overall}</span>
+              <span className="label proc__term">
+                {L.overall}
+                <HelpTip label={UI_LABELS.help(L.overall)} align="start">{L.overallHelp}</HelpTip>
+              </span>
               <span className="proc__pct num"><small>%</small>{pct}</span>
             </div>
             <Progress value={view.overall} label={L.overall} tone={view.phase === "failed" ? "danger" : "default"} />
             {showEta && (
               <p className="proc__eta">
-                <span className="label">{L.eta}</span>
+                <span className="label proc__term">
+                  {L.eta}
+                  <HelpTip label={UI_LABELS.help(L.eta)} align="start">{L.etaHelp}</HelpTip>
+                </span>
                 <span className="proc__etavalue num">
                   {view.etaS !== null ? `~${formatDuration(view.etaS)}` : L.etaUnknown}
                 </span>
@@ -303,7 +314,7 @@ const STEP_ICON: Record<StepStatus, ComponentType<IconProps>> = {
   action: IconTarget,
 };
 
-/** One stage: status icon, name, status or percentage, its own progress and details. */
+/** One stage: status icon, name, status or percentage, what the stage does, its own progress and details. */
 function StepRow({ step }: { step: StepView }) {
   const Icon = STEP_ICON[step.status];
   const pct = step.status === "active" && step.progress !== null ? Math.round(step.progress * 100) : null;
@@ -315,6 +326,7 @@ function StepRow({ step }: { step: StepView }) {
           <span className="vsteps__label">{step.label}</span>
           <span className="vsteps__status num">{pct !== null ? `%${pct}` : L.status[step.status]}</span>
         </div>
+        <p className="vsteps__desc">{PROCESS_STEP_DESCRIPTIONS[step.id]}</p>
         {pct !== null && <Progress value={step.progress} label={step.label} />}
         {step.detail && <p className="vsteps__detail">{step.detail}</p>}
       </div>

@@ -145,16 +145,21 @@ export const HISTORY_LABELS = {
 
 export const PROCESSING_LABELS = {
   previewTitle: "İşlenen kare",
+  previewDescription: "Analiz sürerken üzerinde çalışılan kare.",
   previewPoses: "Poz önizleme · tüm kişiler",
+  previewPosesDescription: "Bulunan herkesin iskeleti; dövüşçüler henüz seçilmedi.",
   stepsLabel: "Analiz aşamaları",
+  panelDescription: "Analiz aşamaları ve toplam ilerleme",
   overall: "Toplam ilerleme",
+  overallHelp: "Bütün aşamaların birlikte ne kadar ilerlediğini gösterir; her aşamanın toplamdaki payı farklıdır.",
   eta: "Tahmini kalan süre",
+  etaHelp: "Yalnızca şu an süren aşama için, ölçülen hızdan hesaplanır; sonraki aşamaları kapsamaz.",
   etaStage: (stage: string) => `${stage} aşaması için`,
   etaUnknown: "Hesaplanıyor…",
   stale: "Bağlantı kesildi; son bilinen durum gösteriliyor.",
   queued: "Analiz sırada; işçi boşaldığında başlayacak.",
   videoInfo: "Video bilgileri",
-  status: { waiting: "Bekliyor", active: "Sürüyor", done: "Tamamlandı", error: "Hata", stopped: "İptal edildi", action: "Sizi bekliyor" },
+  status: { waiting: "Bekliyor", active: "Sürüyor", done: "Tamamlandı", error: "Hata", stopped: "İptal edildi", action: "Seni bekliyor" },
   running: {
     video_prep: "Video analiz kopyasına dönüştürülüyor…",
     pose: "Poz modeli hazırlanıyor…",
@@ -186,7 +191,7 @@ export const PROCESSING_LABELS = {
   uploadScreen: "Yükleme ekranı",
   newUpload: "Yeni video yükle",
   cancelTitle: "Analiz iptal edilsin mi?",
-  cancelBody: "Analiz bu aşamada durdurulur. İstediğinizde yeniden başlatabilirsiniz.",
+  cancelBody: "Analiz bu aşamada durdurulur. İstediğinde yeniden başlatabilirsin.",
   cancelKeep: "Vazgeç",
   cancelConfirm: "Analizi iptal et",
   cancelled: "Analiz iptal edildi.",
@@ -197,7 +202,7 @@ export const PROCESSING_LABELS = {
   unreachableTitle: "Analiz durumu alınamadı",
   unreachableText: "API'ye ulaşılamıyor; bağlantı otomatik olarak yeniden denenecek.",
   demoNotStartedTitle: "Demo analizi henüz başlatılmadı",
-  demoNotStartedText: "Örnek sahne üzerinde işlem adımlarının nasıl ilerlediğini izleyin.",
+  demoNotStartedText: "Örnek sahne üzerinde işlem adımlarının nasıl ilerlediğini izle.",
   demoStart: "Demo analizini başlat",
   demoRestart: "Demo'yu baştan başlat",
   demoSource: "Sentetik demo sahnesi",
@@ -220,7 +225,7 @@ export const STEP_LABELS = {
   demoPrepActive: "Video dönüştürülüyor",
   demoPoseFrames: (n: string) => `${n} kare işlendi`,
   demoSelected: "İki dövüşçü seçildi",
-  demoSelect: "Kırmızı ve mavi dövüşçüyü seçin",
+  demoSelect: "Kırmızı ve mavi dövüşçüyü seç",
   demoMotion: "Takip, olaylar ve sinyaller",
   demoResults: "Zaman çizelgesi ve istatistikler",
   frames: (done: string, total: string | null) => `${done}${total !== null ? ` / ${total}` : ""} kare`,
@@ -238,7 +243,7 @@ export const STEP_LABELS = {
   eventsDone: (events: number, cameraPct: number) => ` · ${events} olay · kamera hareketi karelerin %${cameraPct}'inde ölçüldü`,
   momentumReady: (n: number) => `Deneysel momentum hazır · ${n} puan kaydı`,
   trackingReady: "Takip sonuçları hazır",
-  awaitingSelection: "Pozlar hazır. Kırmızı ve mavi köşedeki dövüşçüleri seçin.",
+  awaitingSelection: "Pozlar hazır. Kırmızı ve mavi köşedeki dövüşçüleri seç.",
   stopped: "Analiz bu aşamada durdu.",
   cancelledByUser: "Kullanıcı iptal etti; yeniden başlatılabilir.",
 } as const;
@@ -368,6 +373,20 @@ export const PROCESS_STEPS: readonly { id: StepId; label: string; stages: Pipeli
   { id: "motion", label: "Hareket analizi", stages: ["tracking", "events", "scoring"] },
   { id: "results", label: "Sonuç hazırlama", stages: ["export"] },
 ];
+
+/**
+ * What each step does, one line under its name. Written from the pipeline
+ * (backend/fight_analyzer/pipeline): "results" has no stage of its own in an
+ * analysis, so its line only says what opens; momentum is called experimental
+ * and never scoring.
+ */
+export const PROCESS_STEP_DESCRIPTIONS: Record<StepId, string> = {
+  prep: "Video, analiz için sabit kare hızlı bir kopyaya dönüştürülüyor.",
+  pose: "Her karede görünen herkesin iskelet noktaları bulunuyor; ardından kamera kesimleri ve aday kareler hazırlanıyor.",
+  select: "Kırmızı ve mavi köşedeki dövüşçüleri sen işaretlersin; analiz bu seçimle sürer.",
+  motion: "Seçilen dövüşçüler video boyunca izleniyor; olaylar ve deneysel momentum hesaplanıyor.",
+  results: "Zaman çizelgesi, istatistikler ve hakem kartları sonuç ekranında açılır.",
+};
 
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });

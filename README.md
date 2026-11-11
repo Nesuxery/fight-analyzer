@@ -153,11 +153,18 @@ data/                   çalışma verisi (git dışı):
 - **Klavye (Sonuç)**: Boşluk oynat/duraklat · ←/→ 1 sn (Shift ile 5 sn) ·
   `,` / `.` bir kare · S iskelet · E olay efektleri · D mesafe ·
   O diğer kişiler · F tam ekran (gerçek analiz; videoya çift tıklama da).
-- **Görsel dil (v2, Bölüm 1)**: aydınlık ve sade arayüz; tek kaynak
-  `frontend/src/styles/tokens.css` (renk, yazı, boşluk, köşe yarıçapı, gölge,
-  hareket). Renk yalnızca köşeleri (kırmızı `#c62b3b`, mavi `#2457c5`) ve
-  durumları (başarı, uyarı, hata) anlatır; ayrım 1 px çizgiyle yapılır, gölge
-  yalnızca yüzen katmanlarda. Arayüz **Inter**, başlıklar ve skor rakamları
+- **Görsel dil (v2, Bölüm 1)**: aydınlık sayfa üzerinde siyah-beyaz-kırmızı
+  kimlik; tek kaynak `frontend/src/styles/tokens.css` (renk, yazı, boşluk, köşe
+  yarıçapı, gölge, hareket). Siyah (`#0e0e10`): üst bar, koyu bantlar, ana
+  butonlar, aktif sekme çizgisi. Tek kırmızı (`#d0142c`) hem marka hem kırmızı
+  köşedir: logo, üst bardaki aktif adım, ilerleme çubukları, bölüm başlığı
+  çizgileri ve Yükleme ekranındaki "Dosya seç". Mavi (`#2457c5`) yalnızca mavi
+  köşe verisinde. Seçim ve Sonuç ekranlarında kırmızı yalnızca kırmızı köşeyi
+  anlatır; oralarda buton, sekme, çubuk ve bölüm çizgileri siyahtır. Durum
+  renkleri (başarı, uyarı, hata) ayrıdır ve hata her zaman ikon ve metinle
+  gösterilir. Kartlar beyaz, 1 px kenarlıklı ve çok hafif gölgeli; bölüm
+  başlıkları tek satır açıklama, metrikler "?" ile açılan tanım taşır (tanımlar
+  `frontend/src/labels.ts`). Arayüz **Inter**, başlıklar ve skor rakamları
   **Inter Tight** (yerel `@fontsource-variable` paketleri; internetten font
   yüklenmez); tüm sayılarda eşit genişlikli rakamlar. Video sahnesi koyu ve
   yuvarlak köşeli kalır; üzerindeki iskelet ve efektler canlı tonlardadır

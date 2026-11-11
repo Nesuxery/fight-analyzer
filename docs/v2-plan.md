@@ -15,7 +15,7 @@ Bu paket Fight Analyzer'ı yedi adımda v2'ye taşır: roundları ABC'nin 2025 k
 | Bölüm | Sonuç | Önce gereken |
 | --- | --- | --- |
 | 0 — Proje kuralları | CLAUDE.md'de puanlama ilkeleri ve çalışma düzeni | — |
-| 1 — Tasarım sistemi | Aydınlık tema, tokenlar, bileşenler; Yükleme, İşlem ve Seçim ekranları yenilenmiş | 0 |
+| 1 — Tasarım sistemi | Aydınlık tema, siyah-beyaz-kırmızı kimlik, tokenlar, bileşenler; Yükleme, İşlem ve Seçim ekranları yenilenmiş | 0 |
 | 2 — Veri temeli | Otomatik round tespiti, replay ayıklama, daha az kimlik karışması | 0 |
 | 3 — Olaylar ve metrikler | İsabet tahmini, önemli vuruş, hasar sinyalleri, knockdown, grappling durumları, round bazlı istatistik | 2 |
 | 4 — Hakem motoru | Üç sanal hakem, 10-9 / 10-8 / 10-7, karar türleri, bitiş ve puan kesintisi | 3 |
@@ -92,13 +92,21 @@ Fight Analyzer kayıtlı MMA videolarını tamamen yerelde analiz eder. v2 hedef
 
 Görev: Arayüzü koyu temadan aydınlık, minimalist ve premium bir görünüme taşı. Bu bölümde tasarım sistemini kur ve Yükleme, İşlem, Seçim ekranlarını yenile. Sonuç ekranına yalnızca yeni renkleri ve tipografiyi uygula; düzenini Bölüm 5'te yeniden kuracağız. Koyu tema seçeneği kapsam dışı, ama tokenları ileride eklenebilecek şekilde kur.
 
+> Kasım 2026'da görsel kimlik siyah-beyaz-kırmızıya taşındı (`v2/bolum-1-renk`). Bu bölümdeki ilkeler, token tablosu ve ekran tarifleri o hâli anlatır; Bölüm 5 bu tokenları kullanır.
+
 ### İlkeler
 
-- Renk yalnızca köşeleri (kırmızı, mavi) ve durumları anlatır; geri kalan her şey nötr.
-- Ayrım gölgeyle değil, 1 px ince çizgiyle yapılır. Gölge yalnızca açılır menü, diyalog ve bildirim gibi yüzen katmanlarda.
+- Ana renkler siyah, beyaz ve kırmızıdır. Tek kırmızı vardır: marka kırmızısı ile kırmızı köşe aynı tondur. Mavi yalnızca mavi köşe verisinde kullanılır.
+- Siyah: üst bar, koyu bantlar, ana butonlar, aktif sekme çizgisi.
+- Kırmızı (marka): logo, üst bardaki aktif adım, ilerleme çubukları, bölüm başlığı çizgileri, sürükle-bırak vurgusu ve Yükleme ekranındaki "Dosya seç" butonu.
+- Seçim ve Sonuç ekranlarında kırmızı yalnızca kırmızı köşeyi anlatır. Buralarda buton, sekme, ilerleme çubuğu ve bölüm çizgileri siyahtır (`--accent` bu ekranlarda `--ink` olur). Üst bar ortak çerçevedir ve her ekranda aynı kalır.
+- Siyah zeminde kırmızı yalnızca dolgu, çizgi ve ikondur; küçük metin olarak kullanılmaz (3,5:1).
+- Hata rengi (`--danger`) her zaman ikon ve metinle gösterilir; kırmızı köşeyle karışmaz.
+- Doluluk süsle değil bilgiyle gelir: açıklama, ikon, durum, adım. Bölüm başlıkları solda 4×16 px çizgi ve altında tek satır açıklama taşır; metrik ve terimlerin yanında "?" ile açılan tanım bulunur. Tanımlar hesaplamadan çıkarılır ve `labels.ts`'te durur.
+- Kartlar beyazdır: 1 px kenarlık ve çok hafif gölge (`--shadow-card`); başlıkla içerik arasında ayırıcı. Belirgin gölge yalnızca açılır menü, diyalog ve bildirim gibi yüzen katmanlarda.
 - Rakamlar öne çıkar: istatistikler büyük ve eşit genişlikli rakamlarla, etiketler küçük ve sakin.
-- Video sahnesi koyu kalır. Aydınlık sayfada koyu, köşeleri yuvarlatılmış bir video kapsayıcısı görüntüyü öne çıkarır.
-- Neon, parlama, degrade ve süs ikonu yok. Başlıklar cümle düzeninde ("Maç videosunu yükle"); büyük harf yalnızca küçük etiketlerde.
+- Video sahnesi koyu kalır; video üstündeki overlay renkleri arayüz renklerinden bağımsızdır.
+- Neon, parlama ve degrade yok. UFC ya da başka bir markanın logosu, adı veya yazı tipi kullanılmaz. Başlıklar cümle düzeninde ("Maç videosunu yükle"); büyük harf yalnızca küçük etiketlerde.
 
 ### Renk tokenları
 
@@ -106,21 +114,31 @@ Tek kaynak CSS değişkenleridir; Tailwind kullanılıyorsa config bu değişken
 
 | Token | Değer | Kullanım |
 | --- | --- | --- |
-| --bg | #F7F7F5 | Sayfa zemini |
-| --surface | #FFFFFF | Kartlar, paneller, üst bar |
+| --ink | #0E0E10 | Üst bar, koyu bantlar, ana butonlar, dövüşçü kartı |
+| --ink-2 | #1C1C20 | Koyu yüzeyde kart ve hover |
+| --on-ink | #FFFFFF | Koyu yüzeyde metin |
+| --on-ink-2 | beyaz %72 | Koyu yüzeyde ikincil metin (10,2:1) |
+| --ink-line | beyaz %16 | Koyu yüzeyde ayırıcı ve ince çerçeve |
+| --bg | #F2F2F0 | Sayfa zemini; beyaz kartlar belirgin ayrılır |
+| --surface | #FFFFFF | Kartlar, paneller |
 | --surface-muted | #F1F1EE | Seçili satır, ikincil zemin, hover |
-| --border | #E6E6E1 | Kenarlıklar, ayırıcılar |
-| --border-strong | #D4D4CE | Giriş alanları, sürükle-bırak çerçevesi |
-| --text-1 | #111111 | Ana metin, ana buton zemini |
+| --border | #DEDED9 | Kenarlıklar, ayırıcılar |
+| --border-strong | #858580 | Giriş alanları, sürükle-bırak çerçevesi (zeminde 3,3:1) |
+| --text-1 | #0E0E10 | Ana metin (--ink ile aynı siyah) |
 | --text-2 | #52524C | İkincil metin |
 | --text-3 | #6E6E68 | Etiketler, yardımcı metin |
-| --red | #C62B3B | Kırmızı köşe |
-| --red-soft | #FBEEF0 | Kırmızı köşe zemin tonu |
-| --blue | #2457C5 | Mavi köşe |
+| --red | #D0142C | Tek kırmızı: marka ve kırmızı köşe |
+| --red-soft | #FDECEE | Kırmızı zemin tonu |
+| --red-strong | #B01025 | Kırmızı dolgunun hover tonu |
+| --blue | #2457C5 | Yalnızca mavi köşe |
 | --blue-soft | #EDF2FC | Mavi köşe zemin tonu |
+| --accent | var(--red) | İlerleme çubuğu, bölüm çizgisi, aktif işlem adımı; Seçim ve Sonuç'ta var(--ink) |
 | --success | #1F7A4D | Tamamlandı, iyi veri kalitesi |
 | --warning | #9A6100 | Düşük güven, veri yetersiz |
+| --danger | #B42318 | Hata; her zaman ikon ve metinle |
 | --stage | #0B0B0C | Video sahnesi |
+| --shadow-card | 0 1px 2px rgba(0,0,0,.06) | Kart gölgesi |
+| --band-pattern-opacity | 0.05 | Koyu banttaki oktagon çizgi deseni (en fazla %6) |
 
 Video üstündeki iskelet ve olay efektleri koyu görüntüde okunmalı. Mevcut canlı tonları koru; arayüzdeki köşe renkleriyle aynı aileden olsunlar.
 
@@ -137,18 +155,19 @@ Video üstündeki iskelet ve olay efektleri koyu görüntüde okunmalı. Mevcut 
 
 - 4 px ızgara; yaygın aralıklar 8, 12, 16, 24, 32, 48.
 - Köşe yarıçapı: 8 (buton, giriş), 12 (kart), 16 (video sahnesi, büyük panel), 999 (hap).
-- Yüzen katman gölgesi: `0 8px 24px rgba(17,17,17,0.08)`. Kartlarda gölge yok.
+- Yüzen katman gölgesi: `0 8px 24px rgba(17,17,17,0.08)`. Kart gölgesi: `0 1px 2px rgba(0,0,0,.06)`.
 - Sayfa en fazla 1440 px genişlikte, 24 px kenar boşluğuyla; 1024 px'e kadar bozulmamalı.
 - Hareket: 160–220 ms, `cubic-bezier(0.2, 0.8, 0.2, 1)`, yalnızca opaklık ve transform. `prefers-reduced-motion` açıksa animasyon yok.
-- Odak halkası: tüm etkileşimli öğelerde 2 px --text-1, 2 px ofset.
+- Odak halkası: tüm etkileşimli öğelerde 2 px --text-1, 2 px ofset; koyu yüzeylerde beyaz.
 
 ### Bileşenler
 
 Ortak bir `ui/` klasöründe topla ve mevcut bileşenleri bunlara taşı:
 
-- Button (ana: siyah zemin, beyaz metin; ikincil: kenarlıklı; hayalet) ve IconButton
+- Button (ana: siyah zemin, beyaz metin; marka: kırmızı, yalnızca Yükleme ekranı; ikincil: kenarlıklı; hayalet) ve IconButton
 - SegmentedControl (Analiz / Demo) ve Stepper (üst adımlar)
 - Card, Divider, Badge (nötr, başarı, uyarı, kırmızı, mavi), Tooltip, Tabs (alt çizgili)
+- SectionHeading (4×16 px çizgi, başlık, tek satır açıklama) ve HelpTip ("?" ile açılan çok satırlı tanım)
 - Chip: İskelet, Olay efektleri gibi aç/kapa düğmeleri
 - Dialog, Toast, Skeleton (yükleniyor), EmptyState
 - StatPair: ayna karşılaştırma satırı. Solda kırmızı değer ve çubuk, ortada etiket, sağda mavi. Bölüm 5'te çok kullanılacak.
@@ -156,12 +175,12 @@ Ortak bir `ui/` klasöründe topla ve mevcut bileşenleri bunlara taşı:
 
 ### Ekranlar
 
-1. Üst bar: beyaz, alt kenarlıklı. Solda tek renk (--text-1) oktagon işareti ve "Fight Analyzer", ortada adımlar (numara ve etiket; aktif adımda siyah alt çizgi), sağda Analiz/Demo seçici ve küçük bir durum noktasıyla "Sistem hazır".
-2. Yükleme: ortada 44 px başlık, altında --text-2 açıklama. Sürükle-bırak alanı beyaz, 1.5 px kesikli --border-strong çerçeveli, 16 px yarıçaplı. Sürüklerken çerçeve --text-1, zemin --surface-muted olur. "Dosya seç" ana buton; biçimler ve sınırlar tek satır, --text-3.
-3. Geçmiş analizler: küçük 16:9 önizleme, dosya adı, tarih · çözünürlük · süre ve durum rozeti. Hover'da --surface-muted. Sonuç özetini Bölüm 5 ekleyecek.
+1. Üst bar: siyah, yazılar beyaz. Solda kırmızı oktagon işareti ve "Fight Analyzer", ortada adımlar (aktif adımda kırmızı numara rozeti ve kırmızı alt çizgi; önceki adımlar onay ikonlu), sağda Analiz/Demo seçici ve küçük bir durum noktasıyla "Sistem hazır".
+2. Yükleme: tam genişlikte siyah giriş bandı (44 px beyaz başlık, açıklama, ikonlu üç not, çok silik oktagon çizgi deseni). Sürükle-bırak alanı bandın alt kenarına yarı taşan beyaz bir kart: 1.5 px kesikli --border-strong çerçeve, 16 px yarıçap. Sürüklerken çerçeve --red, zemin --red-soft olur. "Dosya seç" kırmızı (marka) buton; biçimler ve sınırlar tek satır, --text-3. Altında dört adımlı "Nasıl çalışır" şeridi.
+3. Geçmiş analizler: başlıkta toplam sayı. Satırda küçük 16:9 önizleme, dosya adı, tarih · çözünürlük · süre, olay sayısı, durum rozeti ve "Aç" butonu; satırın tamamı tıklanabilir. Hover'da --surface-muted. Analiz yoksa açıklayıcı boş durum. Sonuç özetini Bölüm 5 ekleyecek.
 4. İşlem: aşamalar dikey bir listede (ad, durum ikonu, ilerleme), altında toplam ilerleme, tahmini kalan süre ve "İptal" ikincil butonu.
 5. Seçim: dövüşçü adayları büyük karelerle. Seçili aday köşe renginde 2 px çerçeve ve köşe rozeti alır; isimler satır içinde düzenlenir.
-6. Sonuç: yalnızca tokenlar ve tipografi. Video sahnesi koyu, paneller beyaz.
+6. Sonuç: yalnızca stil ve açıklama; yerleşim Bölüm 5'te değişir. Üstteki dövüşçü kartı siyah (adlar beyaz, köşe etiketleri kırmızı ve mavi rozet; momentum çubuğu beyaz iç panelde). Yan panellerde metrikler gruplu (Vuruş, Hareket ve baskı, Kontrol, Veri kalitesi) ve "?" tanımlı. Momentum kartında tek cümlelik açıklama; formül "Nasıl hesaplanır?" altında. Video sahnesi koyu, paneller beyaz.
 
 ### Kabul ölçütleri
 

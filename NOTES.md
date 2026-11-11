@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 8 Kasım 2026 (v2 Bölüm 1: aydınlık tasarım sistemi). Ayrıntılı
+Son güncelleme: 12 Kasım 2026 (v2 Bölüm 1: siyah-beyaz-kırmızı kimlik). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -117,6 +117,43 @@ Bölüm 1'de plana göre verilen kararlar (8 Kasım 2026):
 - Sonuç ekranına bu bölümde yalnızca renk ve yazı uygulandı; bileşen metinleri
   Bölüm 5'te `labels.ts`'e taşınacak. `StatPair` ve `Tabs` hazır ama o zamana
   kadar kullanılmıyor.
+
+### Siyah-beyaz-kırmızı kimlik (v2 Bölüm 1 renk)
+Bölüm 1'in aydınlık tasarımı üzerine verilen kararlar (12 Kasım 2026); yukarıdaki
+Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
+- **Tek kırmızı:** `--red` `#c62b3b` yerine `#d0142c`; marka ve kırmızı köşe aynı
+  ton. Siyah `--ink` `#0e0e10` (`--text-1` ile aynı), zemin `--bg` `#f2f2f0`.
+  `--danger` (`#b42318`) ayrı kaldı ama kırmızıdan renkle ayırt edilemez (1,2:1);
+  bu yüzden her zaman ikon ve metinle gösterilir.
+- **`--accent`:** ilerleme çubukları, bölüm çizgileri ve aktif işlem adımı bu
+  tokenı kullanır. Varsayılanı kırmızıdır; `AppShell` `<main>`'e `data-screen`
+  yazar ve Seçim ile Sonuç ekranlarında `--accent` siyaha döner, çünkü orada
+  kırmızı yalnızca kırmızı köşeyi anlatır. Üst bar ortak çerçeve olduğu için her
+  ekranda kırmızı logo ve kırmızı aktif adım taşır.
+- **Siyah üstünde kırmızı:** 3,5:1; yalnızca dolgu, çizgi ve ikon. Bir test,
+  oran 4,5:1'i geçerse kuralın güncellenmesi için uyarır. Siyah dövüşçü kartında
+  mavi 3:1'in altında kaldığı için momentum çubuğu beyaz bir iç panelde durur;
+  ikinci bir açık kırmızı ya da mavi eklenmedi.
+- **Kenarlık:** `--border-strong` `#8f8f8a` yeni zeminde 2,9:1'e düştüğü için
+  `#858580` (3,3:1). `--border` `#deded9`; kartlara `--shadow-card` eklendi.
+- **Üst bar adımları:** "tamamlandı" işareti, açık ekrandan önceki adımlar
+  demektir; kabuk işin gerçek durumunu sorgulamaz.
+- **Geçmiş satırı:** satır artık `<button>` değil; tek bağlantı "Aç"tır ve
+  tıklama alanı satırın tamamını kaplar. Olay sayısı olay aşaması çalışana kadar
+  boştur.
+- **Tanımlar ("?"):** her biri hesaplamadan çıkarıldı ve `labels.ts`'te durur.
+  "Diğer" olay türü üretilmediği için tanımı yok. "Yeniden bulma" ve "Geçici
+  numara değişimi" ileri ve geri takip geçişlerinin toplamıdır; tanım bunu
+  söyler. "Hakem kartları (AI)" sekmesine tanım eklenmedi; Bölüm 3–5'te yeniden
+  kurulacak.
+- **İşlem adımları:** "Sonuç hazırlama"nın analizde kendi backend aşaması yok;
+  açıklaması yalnızca neyin açıldığını söyler. Momentum her yerde "deneysel"
+  diye anılır, "puanlama" denmez.
+- **Sonuç ekranı:** yerleşim değişmedi. Dokunulan bileşenlerin metinleri
+  (`FighterHeader`, `StatPanel`, `TrackQuality`, `MomentumPanel`,
+  `TrackingResult`, `ExportPanel`) `labels.ts`'e taşındı; diğerleri Bölüm 5'te.
+  Demo'da "Veri kalitesi" grubu ve momentum kartı yok (veri yok).
+- **Hitap:** yeni metinler ve dokunulan ekranlardaki yönergeler "sen" biçiminde.
 
 ### Yerel güvenlik
 - Yol sınırlama (`fsutil.inside`), en fazla 20 aktif analiz, analiz başına tek

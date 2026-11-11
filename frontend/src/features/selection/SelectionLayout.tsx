@@ -1,12 +1,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { SELECTION_LABELS as L, SIDE_LABEL } from "../../labels";
+import { SELECTION_LABELS as L, SIDE_LABEL, UI_LABELS } from "../../labels";
 import { NOT_IN_VIEW } from "../../model/analysis";
 import type { Assignment, Detection, Side } from "../../model/analysis";
-import { Badge, Button, Card, IconButton, cx } from "../../ui";
-import { IconAlert, IconChevronLeft, IconChevronRight, IconEdit } from "../../ui/icons";
+import { Badge, Button, Card, HelpTip, IconButton, SectionHeading, cx } from "../../ui";
+import { IconAlert, IconCheck, IconChevronLeft, IconChevronRight, IconEdit } from "../../ui/icons";
 import { cropRect } from "./crop";
 import type { CropRect } from "./crop";
+import { selectionGuide } from "./guide";
+import type { GuideStep } from "./guide";
 
 /** The picture the candidate tiles are cut from. */
 export interface CropSource {
@@ -102,6 +104,29 @@ function InlineName({ value, label, editLabel, onSave }: {
 }
 
 /**
+ * Numbered guide: 1. red corner, 2. blue corner, 3. names and confirm, each
+ * with its state. The first two steps carry their corner's colour; the third
+ * is black, so red on this screen only ever means the red corner.
+ */
+function Guide({ steps }: { steps: GuideStep[] }) {
+  return (
+    <ol className="guide" aria-label={L.guide.label}>
+      {steps.map((step, i) => (
+        <li key={step.id} className={cx("guide__step", `guide__step--${step.id}`, `is-${step.state}`)}
+            aria-current={step.state === "active" ? "step" : undefined}>
+          <span className="guide__num num">{step.state === "done" ? <IconCheck size={16} /> : i + 1}</span>
+          <span className="guide__text">
+            <span className="guide__title">{L.guide.steps[step.id].title}</span>
+            <span className="guide__hint">{L.guide.steps[step.id].hint}</span>
+          </span>
+          <span className="guide__state">{L.guide.state[step.state]}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
  * Pick the red and then the blue corner on a frame: by clicking a box on the
  * frame or one of the large candidate tiles below it (the keyboard path).
  */
@@ -157,6 +182,7 @@ export function SelectionLayout(p: LayoutProps) {
 
   return (
     <div className="select">
+      <Guide steps={selectionGuide(p.picks, ready)} />
       <section className="select__main" aria-labelledby={titleId}>
         <div className="select__head">
           <h1 id={titleId} className="select__title">{p.title}</h1>
@@ -173,9 +199,8 @@ export function SelectionLayout(p: LayoutProps) {
         <p className="select__hint">{L.hint}</p>
         {ordered.length > 0 && (
           <section className="candidates" aria-labelledby={peopleId}>
-            <h2 id={peopleId} className="candidates__title">
-              {L.peopleTitle} <span className="label">{L.peopleOrder}</span>
-            </h2>
+            <SectionHeading id={peopleId} level={3} title={L.peopleTitle} description={L.peopleDescription}
+                            aside={<HelpTip label={UI_LABELS.help(L.confidenceTerm)} align="start">{L.confidenceHelp}</HelpTip>} />
             <ul className="candidates__grid">
               {ordered.map((d) => {
                 const side = sideOf(d.personId);
@@ -202,6 +227,7 @@ export function SelectionLayout(p: LayoutProps) {
       </section>
 
       <Card tag="aside" className="select__side" aria-label={L.cornersLabel}>
+        <SectionHeading level={3} title={L.cornersTitle} description={L.cornersDescription} />
         <ol className="corners">
           {(["red", "blue"] as const).map((side, i) => {
             const pick = p.picks[side];

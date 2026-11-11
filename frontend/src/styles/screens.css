@@ -713,6 +713,95 @@
 }
 
 /* ---------- selection ---------- */
+/* numbered guide across the top of the selection grid: 1 red corner, 2 blue corner, 3 names and confirm */
+.guide {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.guide__step {
+  /* the third step is black; the first two take their corner's colour */
+  --tone: var(--ink);
+  --tone-soft: var(--surface-muted);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid transparent;
+}
+
+.guide__step + .guide__step {
+  border-left: 1px solid var(--border);
+}
+
+.guide__step--red { --tone: var(--red); --tone-soft: var(--red-soft); }
+.guide__step--blue { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+
+.guide__step.is-active {
+  border-bottom-color: var(--tone);
+}
+
+.guide__num {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+}
+
+.guide__step.is-active .guide__num {
+  border-color: var(--tone);
+  background: var(--tone-soft);
+  color: var(--tone);
+}
+
+.guide__step.is-done .guide__num {
+  border-color: var(--tone);
+  background: var(--tone);
+  color: var(--text-on-fill);
+}
+
+.guide__text {
+  display: grid;
+  min-width: 0;
+}
+
+.guide__title {
+  font-weight: var(--fw-semibold);
+}
+
+.guide__step.is-upcoming .guide__title {
+  color: var(--text-3);
+}
+
+.guide__hint {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.guide__state {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.guide__step.is-active .guide__state,
+.guide__step.is-done .guide__state {
+  color: var(--text-1);
+}
+
 .select {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -833,13 +922,6 @@
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-3);
-}
-
-.candidates__title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  font-size: var(--fs-16);
 }
 
 .candidates__grid {
@@ -1071,6 +1153,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .select__side { position: static; }
+}
+
+@media (max-width: 760px) {
+  .guide { grid-template-columns: minmax(0, 1fr); }
+  .guide__step + .guide__step { border-left: 0; border-top: 1px solid var(--border); }
 }
 
 @media (max-width: 860px) {

@@ -2,11 +2,15 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "reac
 import { cx } from "./cx";
 import { Tooltip } from "./Tooltip";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant = "primary" | "brand" | "secondary" | "ghost";
 export type ButtonSize = "sm" | "md";
 
 interface Look {
-  /** primary: black fill; secondary: outlined; ghost: no frame. */
+  /**
+   * primary: black fill; secondary: outlined; ghost: no frame. brand: red fill,
+   * only for the one call to action of the Upload screen. Never on the Selection
+   * or Result screens, where red means the red corner.
+   */
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** Leading icon (16 px in small buttons, 20 px otherwise). */
@@ -39,7 +43,7 @@ export function ButtonLink({ variant = "secondary", size = "md", icon, className
 export function IconButton({ label, icon, variant = "ghost", size = "md", className, tooltipSide = "top", ...rest }: {
   label: string;
   icon: ReactNode;
-  variant?: Exclude<ButtonVariant, "primary">;
+  variant?: Exclude<ButtonVariant, "primary" | "brand">;
   size?: ButtonSize;
   tooltipSide?: "top" | "bottom";
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type" | "children" | "aria-label">) {

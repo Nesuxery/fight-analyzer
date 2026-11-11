@@ -140,6 +140,30 @@ code,
   flex-direction: column;
 }
 
+/* black surfaces (top bar, dark bands, the fighter card): white text and a white focus ring */
+.topbar,
+.on-ink {
+  --focus-ring: var(--on-ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+/* buttons without a fill keep working on ink */
+.on-ink .btn--ghost,
+.on-ink .btn--quiet {
+  color: var(--on-ink);
+}
+
+.on-ink .btn--quiet {
+  color: var(--on-ink-2);
+}
+
+.on-ink .btn--ghost:hover:not(:disabled),
+.on-ink .btn--quiet:hover:not(:disabled) {
+  background: var(--ink-2);
+  color: var(--on-ink);
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -149,16 +173,21 @@ code,
   gap: var(--space-4);
   height: var(--topbar-h);
   padding: 0 var(--page-gutter);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--text-1);
+  color: var(--on-ink);
   text-decoration: none;
+}
+
+/* the brand mark: a filled red octagon */
+.brand__mark {
+  flex: none;
+  color: var(--red);
+  fill: currentColor;
 }
 
 .brand__name {
@@ -174,6 +203,26 @@ code,
   gap: var(--space-3);
 }
 
+/* Analiz / Demo on the ink bar: the chosen mode is a white pill */
+.topbar .segmented {
+  border-color: var(--ink-line);
+  background: var(--ink-2);
+}
+
+.topbar .segmented__item {
+  color: var(--on-ink-2);
+}
+
+.topbar .segmented__item:hover {
+  color: var(--on-ink);
+}
+
+.topbar .segmented__item.is-active {
+  background: var(--surface);
+  color: var(--text-1);
+  box-shadow: none;
+}
+
 /* system status: summary in the top bar, details in a floating panel */
 .sys {
   position: relative;
@@ -187,7 +236,7 @@ code,
   height: 32px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-control);
-  color: var(--text-2);
+  color: var(--on-ink-2);
   font-size: var(--fs-13);
   cursor: pointer;
   list-style: none;
@@ -195,7 +244,8 @@ code,
 }
 
 .sys__summary:hover {
-  background: var(--surface-muted);
+  background: var(--ink-2);
+  color: var(--on-ink);
 }
 
 .sys__summary::-webkit-details-marker {
@@ -206,9 +256,11 @@ code,
 .sys__summary--warn { --tone: var(--warning); }
 .sys__summary--bad { --tone: var(--danger); }
 
+/* the state colour inside a white ring, so the dot reads on ink whatever its colour */
 .sys__dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--on-ink);
   border-radius: 50%;
   background: var(--tone);
 }
@@ -222,6 +274,9 @@ code,
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
+  /* a white panel hanging from the ink bar: back to dark text and the dark focus ring */
+  --focus-ring: var(--text-1);
+  color: var(--text-1);
   box-shadow: var(--shadow-float);
 }
 
@@ -289,6 +344,13 @@ code,
   max-width: calc(var(--page-max) + 2 * var(--page-gutter));
   margin: 0 auto;
   padding: var(--space-6) var(--page-gutter) var(--space-12);
+}
+
+/* On the Selection and Result screens red only ever means the red corner:
+   progress bars, section bars and other accents are black there. */
+.shell__main[data-screen="select"],
+.shell__main[data-screen="result"] {
+  --accent: var(--ink);
 }
 
 /* result screen keeps its current width until Bölüm 5 rebuilds its layout */

@@ -60,7 +60,54 @@ export const IconStop = (p: IconProps) => <Icon {...p}><circle cx="12" cy="12" r
 export const IconSpinner = (p: IconProps) => (
   <Icon {...p}><path d="M12 4a8 8 0 018 8" /><circle cx="12" cy="12" r="8" opacity="0.25" /></Icon>
 );
-/** Brand mark: a plain octagon outline in the text colour. */
+/** Brand mark: a plain octagon; the top bar fills it with the brand red (.brand__mark). */
 export const IconOctagon = (p: IconProps) => (
   <Icon {...p}><path d="M8.7 3h6.6L21 8.7v6.6L15.3 21H8.7L3 15.3V8.7z" /></Icon>
 );
+/** "?" of HelpTip. */
+export const IconHelp = (p: IconProps) => (
+  <Icon {...p}><circle cx="12" cy="12" r="8.5" /><path d="M9.7 9.7a2.4 2.4 0 114 1.8c-.9.7-1.7 1.2-1.7 2.4M12 16.8v.01" /></Icon>
+);
+export const IconArrowRight = (p: IconProps) => <Icon {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Icon>;
+/** Runs on this computer. */
+export const IconMonitor = (p: IconProps) => (
+  <Icon {...p}><rect x="3" y="4.5" width="18" height="12" rx="2" /><path d="M8.5 20h7M12 16.5V20" /></Icon>
+);
+/** No internet needed. */
+export const IconWifiOff = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 4l16 16M8.6 15.6a5 5 0 016.2-.5M5.3 12.2a9.6 9.6 0 013.3-2.1M12.4 9.1a9.6 9.6 0 016.3 3.1M2.5 8.6a14 14 0 013-2.2M9.6 5.2A14 14 0 0121.5 8.6M12 19.3v.01" />
+  </Icon>
+);
+/** The video does not leave the computer. */
+export const IconLock = (p: IconProps) => (
+  <Icon {...p}><rect x="5" y="10.5" width="14" height="9.5" rx="2" /><path d="M8 10.5V8a4 4 0 018 0v2.5" /></Icon>
+);
+/** Processing. */
+export const IconCpu = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="7" y="7" width="10" height="10" rx="1.5" />
+    <path d="M10 3.5V7M14 3.5V7M10 17v3.5M14 17v3.5M3.5 10H7M3.5 14H7M17 10h3.5M17 14h3.5" />
+  </Icon>
+);
+/** The two fighters. */
+export const IconUsers = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="8.5" cy="8" r="3" /><path d="M2.5 19.5a6 6 0 0112 0" />
+    <circle cx="16.8" cy="9" r="2.4" /><path d="M17 14a4.8 4.8 0 014.5 5.5" />
+  </Icon>
+);
+/** Result and scorecards. */
+export const IconScorecard = (p: IconProps) => (
+  <Icon {...p}><rect x="5" y="4.5" width="14" height="16" rx="2" /><path d="M9.5 3.5h5v2h-5zM8.5 10.5h7M8.5 14h7M8.5 17.5h4" /></Icon>
+);
+/** Metric group: striking. */
+export const IconZap = (p: IconProps) => <Icon {...p}><path d="M13 3L5 13.5h6l-1 7.5 8-10.5h-6z" /></Icon>;
+/** Metric group: movement and pressure. */
+export const IconMove = (p: IconProps) => <Icon {...p}><path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4" /></Icon>;
+/** Metric group: control (time on top). */
+export const IconTimer = (p: IconProps) => (
+  <Icon {...p}><circle cx="12" cy="13.5" r="7" /><path d="M12 10v3.5l2.4 1.4M9.5 3.5h5" /></Icon>
+);
+/** Metric group: data quality. */
+export const IconSignal = (p: IconProps) => <Icon {...p}><path d="M5 19.5v-3M10 19.5v-7M15 19.5v-11M20 19.5V4.5" /></Icon>;

@@ -1,6 +1,9 @@
 /* Shared interface components (src/ui). Every value comes from tokens.css.
-   Separation is a 1 px line; only floating layers (tooltip, menu panel,
-   dialog, toast) cast a shadow. Motion: opacity and transform only. */
+   Cards have a 1 px border and the very light --shadow-card; floating layers
+   (tooltip, menu panel, dialog, toast) cast --shadow-float. Black (--ink) is
+   for primary buttons and the active tab line; red (--accent) for progress
+   and section bars, and it turns black on the Selection and Result screens.
+   Motion: opacity and transform only. */
 
 /* ---------- Button, ButtonLink, IconButton ---------- */
 .btn {
@@ -40,6 +43,18 @@
 .btn--primary:hover:not(:disabled) {
   background: var(--text-1);
   opacity: 0.86;
+}
+
+/* red call to action: Upload screen only */
+.btn--brand {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--text-on-fill);
+}
+
+.btn--brand:hover:not(:disabled) {
+  border-color: var(--red-strong);
+  background: var(--red-strong);
 }
 
 .btn--ghost {
@@ -138,6 +153,64 @@
   transform: translate(-50%, 0);
 }
 
+/* ---------- HelpTip: "?" with a multi-line explanation ---------- */
+.helptip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.helptip__btn {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-3);
+  cursor: help;
+}
+
+.helptip__btn:hover,
+.helptip__btn:focus-visible {
+  color: var(--text-1);
+}
+
+.helptip__bubble {
+  position: absolute;
+  z-index: 40;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 2 * var(--page-gutter)));
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-regular);
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease);
+}
+
+.helptip__bubble--top { bottom: calc(100% + var(--space-1)); }
+.helptip__bubble--bottom { top: calc(100% + var(--space-1)); }
+.helptip__bubble--start { left: calc(-1 * var(--space-2)); }
+.helptip__bubble--end { right: calc(-1 * var(--space-2)); }
+.helptip__bubble--center { left: 50%; transform: translateX(-50%); }
+
+.helptip__bubble.is-open {
+  opacity: 1;
+}
+
 /* ---------- SegmentedControl ---------- */
 .segmented {
   display: inline-flex;
@@ -197,7 +270,7 @@
   gap: var(--space-2);
   padding: 0 var(--space-3);
   border-bottom: 2px solid transparent;
-  color: var(--text-3);
+  color: var(--on-ink-2);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
   text-decoration: none;
@@ -205,12 +278,13 @@
 }
 
 a.stepper__item:hover {
-  color: var(--text-1);
+  color: var(--on-ink);
 }
 
+/* the open step: red line and red number badge; its label stays white (red text fails AA on ink) */
 .stepper__item.is-active {
-  border-bottom-color: var(--text-1);
-  color: var(--text-1);
+  border-bottom-color: var(--red);
+  color: var(--on-ink);
 }
 
 .stepper__item.is-disabled {
@@ -223,16 +297,22 @@ a.stepper__item:hover {
   place-items: center;
   width: 20px;
   height: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--ink-line);
   border-radius: 50%;
   font-size: var(--fs-12);
   font-variant-numeric: tabular-nums;
 }
 
 .stepper__item.is-active .stepper__num {
-  border-color: var(--text-1);
-  background: var(--text-1);
+  border-color: var(--red);
+  background: var(--red);
   color: var(--text-on-fill);
+}
+
+/* finished steps: a check mark in a white ring */
+.stepper__item.is-done .stepper__num {
+  border-color: var(--on-ink-2);
+  color: var(--on-ink);
 }
 
 @media (max-width: 1000px) {
@@ -246,6 +326,7 @@ a.stepper__item:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .card__head {
@@ -258,12 +339,21 @@ a.stepper__item:hover {
   border-bottom: 1px solid var(--border);
 }
 
+.card__heading {
+  min-width: 0;
+}
+
 .card__title {
   min-width: 0;
   overflow: hidden;
   font-size: var(--fs-16);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card__desc {
+  color: var(--text-3);
+  font-size: var(--fs-12);
 }
 
 .card__aside {
@@ -283,6 +373,52 @@ a.stepper__item:hover {
   margin: 0;
   border: 0;
   background: var(--border);
+}
+
+/* ---------- SectionHeading: 4 × 16 px bar, title, one-line description ---------- */
+.sechead {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.sechead__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.sechead__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--fs-20);
+}
+
+.sechead__title--sm {
+  font-size: var(--fs-16);
+}
+
+.sechead__title::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.sechead__aside {
+  color: var(--text-3);
+  font-size: var(--fs-14);
+}
+
+.sechead__desc {
+  padding-left: var(--space-3);
+  color: var(--text-2);
+  font-size: var(--fs-13);
 }
 
 /* ---------- Badge (and the small uppercase tags of the result screen) ---------- */
@@ -570,6 +706,17 @@ a.stepper__item:hover {
   color: var(--text-2);
 }
 
+/* icon of an empty state, in a quiet round badge */
+.state__icon--badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--space-1);
+  border-radius: 50%;
+  background: var(--surface-muted);
+}
+
 .state--error .state__icon {
   color: var(--danger);
 }
@@ -623,7 +770,7 @@ a.stepper__item:hover {
   position: absolute;
   inset: 0 auto 0 0;
   width: 100%;
-  background: var(--text-1);
+  background: var(--accent);
   transform-origin: left center;
   transition: transform var(--motion) var(--ease);
 }

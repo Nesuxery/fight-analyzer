@@ -183,3 +183,9 @@ test("motion, radius and type tokens follow the spec", () => {
   assert.equal(T.get("--focus-width"), "2px");
   assert.equal(T.get("--focus-offset"), "2px");
 });
+
+test("the favicon is the brand mark in the one red", () => {
+  const favicon = readFileSync(new URL("../public/octagon.svg", import.meta.url), "utf8");
+  const colours = [...favicon.matchAll(/#[0-9a-f]{6}\b/gi)].map((m) => m[0].toLowerCase());
+  assert.deepEqual(colours, [hex("--red")]);
+});

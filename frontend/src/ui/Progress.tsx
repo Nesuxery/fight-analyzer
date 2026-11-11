@@ -1,6 +1,6 @@
 import { cx } from "./cx";
 
-/** Thin progress bar; value 0..1, or null when the amount is unknown. */
+/** Thin progress bar in the accent colour; value 0..1, or null when the amount is unknown. */
 export function Progress({ value, label, tone = "default", className }: {
   value: number | null;
   label: string;

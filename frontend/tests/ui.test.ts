@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { cx } from "../src/ui/cx.ts";
 import { statPairShares } from "../src/ui/statPairShares.ts";
+import { stepState } from "../src/ui/stepState.ts";
 
 test("StatPair: the larger value fills its side, the other is in proportion", () => {
   assert.deepEqual(statPairShares(12, 6), { red: 1, blue: 0.5 });
@@ -23,4 +24,11 @@ test("StatPair: missing values and an empty scale draw no bar", () => {
 
 test("cx joins only the truthy class names", () => {
   assert.equal(cx("btn", false, "btn--sm", null, undefined, ""), "btn btn--sm");
+});
+
+test("Stepper: steps before the open one are done, the rest are upcoming", () => {
+  assert.deepEqual([0, 1, 2, 3].map((i) => stepState(i, 2)), ["done", "done", "active", "upcoming"]);
+  assert.deepEqual([0, 1, 2, 3].map((i) => stepState(i, 0)), ["active", "upcoming", "upcoming", "upcoming"]);
+  // no screen open (page not found): nothing is done or active
+  assert.deepEqual([0, 1].map((i) => stepState(i, -1)), ["upcoming", "upcoming"]);
 });

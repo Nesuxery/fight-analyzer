@@ -72,7 +72,7 @@ export function AppShell({ route, children }: { route: Route; children: ReactNod
           <IconOctagon className="brand__mark" />
           <span className="brand__name">{L.brand}</span>
         </a>
-        <Stepper label={L.stepsLabel} steps={steps} current={current} />
+        <Stepper label={L.stepsLabel} steps={steps} current={current} doneLabel={L.stepDone} />
         <div className="topbar__end">
           <SegmentedControl label={L.modeLabel} value={demo ? "demo" : "analysis"} options={[
             { value: "analysis", label: L.modeAnalysis, href: "#/" },
@@ -82,7 +82,10 @@ export function AppShell({ route, children }: { route: Route; children: ReactNod
         </div>
       </header>
       {demo && <DemoBanner />}
-      <main className={`shell__main${current === "result" ? " shell__main--wide" : ""}`}>{children}</main>
+      {/* data-screen: the Selection and Result screens turn the accent black (base.css) */}
+      <main className={`shell__main${current === "result" ? " shell__main--wide" : ""}`} data-screen={current ?? undefined}>
+        {children}
+      </main>
     </div>
   );
 }

@@ -54,6 +54,8 @@ export const UI_LABELS = {
   closeNotification: "Bildirimi kapat",
   uncertain: "belirsiz",
   noValue: "—",
+  /** Accessible name of the "?" next to a metric or term. */
+  help: (term: string) => `${term}: açıklama`,
 } as const;
 
 /** Top bar. */
@@ -62,7 +64,8 @@ export const SHELL_LABELS = {
   home: "Fight Analyzer, yükleme ekranı",
   stepsLabel: "Ekranlar",
   steps: { upload: "Yükleme", processing: "İşlem", select: "Seçim", result: "Sonuç" } satisfies Record<Screen, string>,
-  stepDisabled: "Önce bir analiz seçin veya video yükleyin",
+  stepDisabled: "Önce bir analiz seç veya video yükle",
+  stepDone: "tamamlandı",
   modeLabel: "Mod",
   modeAnalysis: "Analiz",
   modeDemo: "Demo",

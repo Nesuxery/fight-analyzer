@@ -347,6 +347,220 @@ export const EVENT_LABELS: Record<EventType, string> = {
   other: "Diğer",
 };
 
+/**
+ * Result screen: fighter card, side panels, momentum card, export tab. The
+ * "help" texts are the "?" explanations; each one is written from the
+ * computation it describes (backend/fight_analyzer/motion and tracking,
+ * model/measured.ts) and says what the number does not show.
+ */
+export const RESULT_LABELS = {
+  header: {
+    region: "Dövüşçüler ve momentum",
+    corner: (side: string) => `${side} köşe`,
+    rename: (side: string) => `${side} köşe adını değiştir`,
+    renameTitle: "Adı değiştir",
+    nameInput: (side: string) => `${side} köşe dövüşçü adı`,
+    swap: "Tarafları değiştir",
+    reselect: "Dövüşçüleri yeniden seç",
+    export: "Dışa aktar",
+  },
+  momentum: {
+    title: "Momentum",
+    help: "Vuruş denemeleri, rakibe doğru ilerleme, tahmini yer kontrolü ve olası büyük olaylardan toplanan, zamanla sönen puanların iki köşe arasındaki payıdır. Deneysel bir göstergedir; kazanma olasılığı ya da hakem puanı değildir.",
+    experimental: "Deneysel",
+    excluded: "Dışlanan bölüm",
+    excludedHelp: "Bu an dışlanan bir bölümde (ör. tekrar): olay sayılmaz, momentum donar.",
+    insufficient: "Veri yetersiz",
+    insufficientHelp: "Bu anda dövüşçülerden en az biri ölçülemiyor; yeni olay üretilmiyor.",
+    meter: "Momentum, kırmızı köşe payı",
+    noData: "Veri yok",
+    shares: (red: number, blue: number) => `Kırmızı %${red}, mavi %${blue}`,
+    caption: "Deneysel momentum — kazanma olasılığı değildir",
+  },
+  stats: {
+    region: (side: string) => `${side} köşe istatistikleri`,
+    empty: "Ölçüm verisi yok",
+    loading: "Ölçüm verisi yükleniyor…",
+    noMotion: "Hareket analizi yapılmadı",
+    interval: (until: string) => `Bu değerler 00:00 – ${until} arası içindir`,
+    groups: { striking: "Vuruş", movement: "Hareket ve baskı", control: "Kontrol", quality: "Veri kalitesi" },
+    outOf100: "/100",
+    percent: "%",
+    strikeAttempts: {
+      label: "Vuruş denemeleri",
+      help: "Bu ana kadar tespit edilen yumruk ve diz denemelerinin sayısı; tekmeler ayrı sayılır. Deneme, vuruşun isabet ettiği anlamına gelmez.",
+    },
+    kicks: {
+      label: "Tekmeler",
+      help: "Bu ana kadar tespit edilen tekme denemelerinin sayısı. Deneme, tekmenin isabet ettiği anlamına gelmez.",
+    },
+    activity: {
+      label: "Aktivite",
+      help: "El ve ayak bileklerinin gövdeye göre ortalama hızından türetilen 0–100 arası hareketlilik endeksi; bu ana kadarki ortalamadır. İsabet ya da etki ölçmez.",
+    },
+    pressure: {
+      label: "Baskı",
+      help: "İki dövüşçü de ayaktayken ölçülebilen sürenin yüzde kaçında bu dövüşçünün rakibine doğru ilerlediğini gösterir.",
+    },
+    advanceRetreat: {
+      label: "İlerleme / geri çekilme",
+      help: "Dövüşçünün rakibe yaklaştığı ya da ondan uzaklaştığı sürenin yüzde kaçında ilerlediğini, kaçında geri çekildiğini gösterir. Yerinde durduğu süre sayılmaz.",
+    },
+    controlTime: {
+      label: "Tahmini kontrol süresi",
+      help: "Rakip yerdeyken bu dövüşçünün ona yakın ve üstünde göründüğü toplam süre. Yalnızca duruş ve yakınlıktan çıkarılan bir tahmindir; gerçek pozisyon kontrolünü doğrulamaz.",
+    },
+    majorEvents: {
+      label: "Olası büyük olaylar",
+      help: "Bu dövüşçüye yazılan olası knockdown ve olası takedown sayısı. Duruş ve konum değişiminden çıkarılır; doğrulanmış değildir ve düşük güvenli olanlar da sayıya dahildir.",
+    },
+  },
+  quality: {
+    scope: "Durum ve ölçülebilen süre şu ana kadar; diğer satırlar tüm video içindir.",
+    stateTerm: "Kimlik durumu",
+    state: { tracked: "Takipte", occluded: "Örtüşme", uncertain: "Takip belirsiz" },
+    stateHelp: "Takipte: kimlik bu karede doğrulandı. Örtüşme: dövüşçü başka biriyle üst üste ya da kısa süre görünmüyor; kimlik önceki karelerden taşınıyor. Takip belirsiz: kimlik doğrulanamadı; tahmin edilmez ve ölçüm yapılmaz.",
+    measured: {
+      label: "Ölçülebilen süre",
+      help: "Bu ana kadar dövüşçünün kimliğinin doğrulandığı ve vücudunun yeterince göründüğü toplam süre. Bunun dışındaki sürede ölçüm yapılmaz ve olay üretilmez.",
+    },
+    tracked: {
+      label: "Takipte",
+      help: "Tüm videodaki karelerin yüzde kaçında bu dövüşçünün kimliği doğrulanmış olarak izlendi.",
+    },
+    occluded: {
+      label: "Örtüşme",
+      help: "Tüm videodaki karelerin yüzde kaçında dövüşçü başka biriyle üst üste bindi ya da kısa süre (1 saniyeden az) görünmedi. Bu karelerde kimlik önceki karelerden taşınır.",
+    },
+    uncertain: {
+      label: "Belirsiz",
+      help: "Tüm videoda bu dövüşçünün kimliğinin doğrulanamadığı toplam süre. Bu sürede kimlik tahmin edilmez ve ölçüm yapılmaz.",
+    },
+    longestUncertain: {
+      label: "En uzun belirsiz",
+      help: "Kimliğin kesintisiz olarak doğrulanamadığı en uzun aralığın süresi.",
+    },
+    reacquisitions: {
+      label: "Yeniden bulma",
+      help: "Dövüşçünün bir kamera kesiminden ya da 1 saniyeden uzun bir kayıptan sonra yeniden tanındığı durumların sayısı. İleri ve geri takip geçişleri toplanır; birden fazla seçim noktası varsa aynı durum iki kez sayılabilir.",
+    },
+    trackChanges: {
+      label: "Geçici numara değişimi",
+      help: "İzleyicinin bu dövüşçüye verdiği geçici iz numarasının kaç kez değiştiği. Kimliğin değiştiği anlamına gelmez; kimlik her seferinde yeniden eşlenir. İleri ve geri takip geçişleri toplanır.",
+    },
+  },
+  /** The momentum card of the "Olaylar ve momentum" tab. */
+  mpanel: {
+    region: "Momentum açıklaması",
+    title: "Momentum",
+    intro: (halfLife: string) =>
+      `Momentum; vuruş denemeleri, ilerleme, tahmini yer kontrolü ve olası büyük olaylardan toplanan, her ${halfLife} saniyede yarıya inen puanların iki köşe arasındaki payını gösteren deneysel bir göstergedir; kazanma olasılığı ya da hakem puanı değildir.`,
+    now: "Şu an",
+    points: "puan",
+    howTitle: "Nasıl hesaplanır?",
+    formula: (prior: string, twicePrior: string, halfLife: string) =>
+      `Kırmızı payı = 100 × (m₁ + ${prior}) / (m₁ + m₂ + ${twicePrior}), mavi = 100 − kırmızı. m₁ ve m₂ iki köşenin şu anki puan toplamıdır; her puan ${halfLife} saniyede yarıya iner.`,
+    paramsTitle: "Model parametreleri (başlangıç tasarım değerleri; doğrulanmış ağırlıklar değildir)",
+    params: {
+      strike_attempt: "Vuruş denemesi (yumruk, diz)",
+      kick_attempt: "Tekme denemesi (ayrıca yumruk sayılmaz)",
+      contact_bonus: "Olası temas eki",
+      advance_per_s: "İlerleme (saniye başına)",
+      control_per_s: "Tahmini yer kontrolü (saniye başına)",
+      knockdown: "Olası knockdown",
+      takedown: "Olası takedown",
+      min_major_confidence: "Büyük olay için en düşük güven",
+      half_life_s: "Yarı ömür",
+      prior: "Başlangıç payı (iki tarafa)",
+    },
+    seconds: "sn",
+    noPoints: "Henüz puan yok",
+    source: "Kaynak",
+    earned: "Kazanılan",
+    current: "Şu an",
+    columnsTerm: "Kazanılan ve şu an",
+    columnsHelp: "Kazanılan: bu kaynaktan şu ana kadar toplanan puan. Şu an: aynı puanların zamanla sönmüş güncel değeri.",
+    pickEvent: "Olay listesinden bir olay seç: bu olayın puanı ve şu anki etkisi burada açıklanır.",
+    possibleContact: "Olası temas",
+    belowThreshold: (confidence: number, threshold: number) =>
+      `Puan yok: kanıt yeterli değil (güven %${confidence}, eşik %${threshold}).`,
+    noPointsType: "Bu olay momentum puanı üretmez.",
+    // the effect sentence is assembled around bold numbers
+    totalFor: (name: string) => `${name} için toplam`,
+    atEvent: (name: string) => `puan. Olay anında ${name} payını`,
+    raised: "yüzde puan artırdı.",
+    nowValue: (time: string) => `Şu an (${time}) değeri`,
+    affects: "puan; payı",
+    affectsEnd: "yüzde puan etkiliyor.",
+    notReached: "Oynatma henüz bu olaya gelmedi.",
+    /** Measures the detector stored with an event; unknown keys show as they are. */
+    measures: {
+      peak_speed: "Tepe hız (gövde boyu/sn)",
+      extension: "Rakibe uzanma (uzuv boyu)",
+      toward: "Rakibe yönelim (kosinüs)",
+      distance: "Mesafe (gövde boyu)",
+      duration_s: "Süre (sn)",
+      raise: "Ayak yüksekliği (gövde boyu)",
+      knee_height: "Diz yüksekliği (gövde boyu)",
+      seconds: "Süre (sn)",
+      fall_s: "Düşüş süresi (sn)",
+      strike_before_s: "Vuruştan sonra (sn)",
+      possible_contact: "Öncesinde olası temas",
+      close_s: "Yakın temas (sn)",
+      on_top_after: "Sonrasında üstte",
+      head_jolt: "Rakibin baş hareketi (gövde boyu)",
+      impact: "Olası etkili vuruş",
+    } as Record<string, string>,
+  },
+  /** Real-analysis result screen (TrackingResult). */
+  screen: {
+    majorWarning: { knockdown: "Olası knockdown", takedown: "Olası takedown" } as Record<string, string>,
+    posesLoading: "Poz verisi yükleniyor…",
+    noMotionNote: "Bu analiz hareket ve olay analizi eklenmeden önce tamamlanmış.",
+    runMotion: "Hareket analizini çalıştır",
+    syncFallback: "Bu tarayıcıda kare geri çağrısı yok; çizimler video zamanından izleniyor (oynarken bir kare sapabilir).",
+    others: "Diğer kişiler",
+    othersTitle: "Diğer kişiler (O)",
+    fullscreen: "Tam ekran",
+    fullscreenTitle: "Tam ekran (F)",
+    tabsLabel: "Sonuç ayrıntıları",
+    tabs: { events: "Olaylar ve momentum", tracking: "Kimlik takibi", judging: "Hakem kartları (AI)", export: "Dışa aktar" },
+    noEvents: "Bu videoda ölçülen olay yok.",
+    noMotion: "Hareket analizi yapılmadı.",
+  },
+  export: {
+    region: "Dışa aktarma",
+    options: {
+      skeleton: { label: "İskeletler", hint: "Kırmızı ve mavi köşenin eklem ve uzuvları" },
+      effects: { label: "Olay efektleri", hint: "Vuruş vurgusu, olası temas halkası, olası knockdown/takedown uyarısı" },
+      momentum: { label: "Momentum çubuğu", hint: "Üstte isimler ve deneysel momentum yüzdeleri" },
+      counters: { label: "Sayaçlar", hint: "İsimlerin altında vuruş ve tekme denemeleri" },
+      distance: { label: "Mesafe", hint: "Dövüşçüler arası mesafe çizgisi (gövde boyu)" },
+      others: { label: "Diğer kişiler", hint: "Hakem ve seyirciler gri, ince çizgiyle" },
+    },
+    files: { video: "MP4 video", metrics: "Kare metrikleri (CSV)", bundle: "Olaylar ve ayarlar (JSON)" },
+    outdated: "Önceki sonuçlardan",
+    outdatedHelp: "Bu dosyalar, taraflar ya da seçim değişmeden önceki sonuçlardan üretildi.",
+    cancel: "İptal",
+    progress: "Dışa aktarma ilerlemesi",
+    queued: "Sırada: işçi boşalınca başlar (önceki işler bitince).",
+    remaining: (eta: string) => ` · kalan ~${eta}`,
+    summary: (frames: number, events: number, redShare: string, hasAudio: boolean) =>
+      `${frames} kare · ${events} olay · son karede kırmızı %${redShare} · ${hasAudio ? "ses korundu" : "kaynakta ses yok"}`,
+    title: "Paylaşılabilir çıktı",
+    lead: "Videonun analiz kopyası, seçilen göstergeler işlenerek MP4 olarak yazılır; ses varsa olduğu gibi korunur. Kare bazlı metrikler (CSV) ile olaylar, momentum kayıtları ve ayarlar (JSON) her zaman eklenir. Sayılar bu ekrandakiyle aynı analiz verisinden hesaplanır. Dosyalar bu bilgisayarda kalır.",
+    optionsLegend: "Videoya işlenecekler",
+    alwaysShown: "Kimlik örtüşmesi/belirsizliği ve “veri yetersiz” uyarıları seçeneklerden bağımsız olarak videoda gösterilir.",
+    queueing: "Kuyruğa alınıyor…",
+    start: "Dışa aktarmayı başlat",
+    notReady: "Önce hareket analizi ve momentum tamamlanmalı.",
+    listTitle: "Dışa aktarmalar",
+    listLead: "Dışa aktarma ayrı bir iş olarak arka planda çalışır; bu sırada videoyu izlemeye devam edebilirsin.",
+    loading: "Yükleniyor…",
+    empty: "Henüz dışa aktarma yok.",
+  },
+} as const;
+
 /** Known job error codes shown in plain language; others show the message. */
 export const ERROR_LABELS: Record<string, string> = {
   stage_not_implemented: "Bu analiz aşaması bu sürümde henüz uygulanmadı.",

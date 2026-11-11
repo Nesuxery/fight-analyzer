@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, urls } from "../../api/client";
 import type { ExportFileKind, ExportOptions, Job } from "../../contracts/generated";
-import { ERROR_LABELS, JOB_STATUS_LABELS, formatBytes, formatDateTime, formatDuration } from "../../labels";
+import {
+  ERROR_LABELS, JOB_STATUS_LABELS, RESULT_LABELS, formatBytes, formatDateTime, formatDuration,
+} from "../../labels";
+import { IconAlert } from "../../ui/icons";
 
-const OPTION_LABELS: { key: keyof ExportOptions; label: string; hint: string }[] = [
-  { key: "skeleton", label: "İskeletler", hint: "Kırmızı ve mavi köşenin eklem ve uzuvları" },
-  { key: "effects", label: "Olay efektleri", hint: "Vuruş vurgusu, olası temas halkası, olası knockdown/takedown uyarısı" },
-  { key: "momentum", label: "Momentum çubuğu", hint: "Üstte isimler ve deneysel momentum yüzdeleri" },
-  { key: "counters", label: "Sayaçlar", hint: "İsimlerin altında vuruş ve tekme denemeleri" },
-  { key: "distance", label: "Mesafe", hint: "Dövüşçüler arası mesafe çizgisi (gövde boyu)" },
-  { key: "others", label: "Diğer kişiler", hint: "Hakem ve seyirciler gri, ince çizgiyle" },
-];
+const L = RESULT_LABELS.export;
+const OPTION_KEYS: (keyof ExportOptions)[] = ["skeleton", "effects", "momentum", "counters", "distance", "others"];
+const OPTION_LABELS: Record<keyof ExportOptions, { label: string; hint: string }> = L.options;
 const DEFAULT_OPTIONS: ExportOptions = {
   skeleton: true, effects: true, momentum: true, counters: true, distance: false, others: false,
 };
-const FILE_LABELS: Record<ExportFileKind, string> = {
-  video: "MP4 video",
-  metrics: "Kare metrikleri (CSV)",
-  bundle: "Olaylar ve ayarlar (JSON)",
-};
+const FILE_LABELS: Record<ExportFileKind, string> = L.files;
 const ACTIVE = new Set(["queued", "running"]);
 
 function ExportRow({ exp, current, onCancel }: { exp: Job; current: Job; onCancel: (id: string) => void }) {
@@ -31,35 +25,38 @@ function ExportRow({ exp, current, onCancel }: { exp: Job; current: Job; onCance
     <li className={`xrow xrow--${exp.status}`}>
       <div className="xrow__head">
         <span className="xrow__when num">{formatDateTime(exp.created_at)}</span>
+        {/* a failure is shown with an icon and text, so it is not read as the red corner */}
         <span className={`tag ${exp.status === "failed" ? "tag--danger" : exp.status === "completed" ? "tag--ok" : "tag--muted"}`}>
+          {exp.status === "failed" && <IconAlert size={16} />}
           {JOB_STATUS_LABELS[exp.status]}
         </span>
         {exp.fighters.length === 2 && (
           <span className="xrow__names">{exp.fighters[0]!.display_name} – {exp.fighters[1]!.display_name}</span>
         )}
         {outdated && (
-          <span className="tag tag--amber" title="Bu dosyalar, taraflar ya da seçim değişmeden önceki sonuçlardan üretildi.">
-            Önceki sonuçlardan
-          </span>
+          <span className="tag tag--amber" title={L.outdatedHelp}>{L.outdated}</span>
         )}
         {active && (
-          <button type="button" className="btn btn--sm btn--ghost" onClick={() => onCancel(exp.job_id)}>İptal</button>
+          <button type="button" className="btn btn--sm btn--ghost" onClick={() => onCancel(exp.job_id)}>{L.cancel}</button>
         )}
       </div>
       {active && (
         <div className="xrow__progress">
           <span className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={100}
-                aria-valuenow={Math.round(exp.progress * 100)} aria-label="Dışa aktarma ilerlemesi">
+                aria-valuenow={Math.round(exp.progress * 100)} aria-label={L.progress}>
             <span className="bar__fill" style={{ width: `${exp.progress * 100}%` }} />
           </span>
           <span className="xrow__msg">
-            {exp.status === "queued" ? "Sırada: işçi boşalınca başlar (önceki işler bitince)." : exp.message}
-            {eta != null && <> · kalan ~{formatDuration(eta)}</>}
+            {exp.status === "queued" ? L.queued : exp.message}
+            {eta != null && L.remaining(formatDuration(eta))}
           </span>
         </div>
       )}
       {exp.status === "failed" && exp.error && (
-        <p className="xrow__error">{ERROR_LABELS[exp.error.code] ?? exp.error.message}</p>
+        <p className="xrow__error" role="alert">
+          <IconAlert size={16} />
+          <span>{ERROR_LABELS[exp.error.code] ?? exp.error.message}</span>
+        </p>
       )}
       {exp.status === "completed" && summary && (
         <>
@@ -74,8 +71,7 @@ function ExportRow({ exp, current, onCancel }: { exp: Job; current: Job; onCance
             ))}
           </ul>
           <p className="xrow__meta">
-            {summary.frames} kare · {summary.events} olay · son karede kırmızı %{summary.final_red_share.toFixed(0)}
-            {" "}· {summary.has_audio ? "ses korundu" : "kaynakta ses yok"}
+            {L.summary(summary.frames, summary.events, summary.final_red_share.toFixed(0), summary.has_audio)}
           </p>
         </>
       )}
@@ -121,42 +117,34 @@ export function ExportPanel({ job }: { job: Job }) {
   };
 
   return (
-    <section className="xpanel" aria-label="Dışa aktarma">
+    <section className="xpanel" aria-label={L.region}>
       <div className="xpanel__form">
-        <h2 className="display display--sm">Paylaşılabilir çıktı</h2>
-        <p className="xpanel__lead">
-          Videonun analiz kopyası, seçilen göstergeler işlenerek MP4 olarak yazılır; ses varsa olduğu gibi korunur.
-          Kare bazlı metrikler (CSV) ile olaylar, momentum kayıtları ve ayarlar (JSON) her zaman eklenir. Sayılar bu
-          ekrandakiyle aynı analiz verisinden hesaplanır. Dosyalar bu bilgisayarda kalır.
-        </p>
+        <h2 className="display display--sm">{L.title}</h2>
+        <p className="xpanel__lead">{L.lead}</p>
         <fieldset className="xpanel__options" disabled={!ready}>
-          <legend>Videoya işlenecekler</legend>
-          {OPTION_LABELS.map((o) => (
-            <label key={o.key} className="xopt" title={o.hint}>
-              <input type="checkbox" checked={options[o.key]}
-                     onChange={(e) => setOptions((v) => ({ ...v, [o.key]: e.target.checked }))} />
-              <span>{o.label}<small>{o.hint}</small></span>
+          <legend>{L.optionsLegend}</legend>
+          {OPTION_KEYS.map((key) => (
+            <label key={key} className="xopt" title={OPTION_LABELS[key].hint}>
+              <input type="checkbox" checked={options[key]}
+                     onChange={(e) => setOptions((v) => ({ ...v, [key]: e.target.checked }))} />
+              <span>{OPTION_LABELS[key].label}<small>{OPTION_LABELS[key].hint}</small></span>
             </label>
           ))}
         </fieldset>
-        <p className="xpanel__note">
-          Kimlik örtüşmesi/belirsizliği ve “veri yetersiz” uyarıları seçeneklerden bağımsız olarak videoda gösterilir.
-        </p>
+        <p className="xpanel__note">{L.alwaysShown}</p>
         <button type="button" className="btn btn--primary" onClick={start} disabled={!ready || busy}>
-          {busy ? "Kuyruğa alınıyor…" : "Dışa aktarmayı başlat"}
+          {busy ? L.queueing : L.start}
         </button>
-        {!ready && <p className="inline-note">Önce hareket analizi ve momentum tamamlanmalı.</p>}
+        {!ready && <p className="inline-note">{L.notReady}</p>}
         {problem && <p className="inline-warn">{problem}</p>}
       </div>
       <div className="xpanel__list">
-        <h3 className="xpanel__title">Dışa aktarmalar</h3>
-        <p className="xpanel__lead">
-          Dışa aktarma ayrı bir iş olarak arka planda çalışır; bu sırada videoyu izlemeye devam edebilirsiniz.
-        </p>
+        <h3 className="xpanel__title">{L.listTitle}</h3>
+        <p className="xpanel__lead">{L.listLead}</p>
         {exportsList === null ? (
-          <p className="xpanel__empty">Yükleniyor…</p>
+          <p className="xpanel__empty">{L.loading}</p>
         ) : exportsList.length === 0 ? (
-          <p className="xpanel__empty">Henüz dışa aktarma yok.</p>
+          <p className="xpanel__empty">{L.empty}</p>
         ) : (
           <ul className="xpanel__rows">
             {exportsList.map((exp) => <ExportRow key={exp.job_id} exp={exp} current={job} onCancel={cancel} />)}

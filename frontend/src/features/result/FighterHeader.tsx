@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { IconDownload, IconEdit, IconSwap, IconTarget } from "../../ui/icons";
-import { DemoTag } from "../../ui";
+import { RESULT_LABELS, SIDE_LABEL, UI_LABELS } from "../../labels";
 import type { Side } from "../../model/analysis";
-import { SIDE_LABEL } from "../../labels";
+import { Badge, DemoTag, HelpTip } from "../../ui";
+import { IconDownload, IconEdit, IconSwap, IconTarget } from "../../ui/icons";
 import type { FighterActions } from "./types";
 
+const H = RESULT_LABELS.header;
+const M = RESULT_LABELS.momentum;
 const MAX_NAME = 40;
 
 function FighterName({ side, name, onRename }: {
@@ -20,13 +22,13 @@ function FighterName({ side, name, onRename }: {
   };
   return (
     <div className={`fname fname--${side}`}>
-      <span className="fname__corner">{SIDE_LABEL[side]} köşe</span>
+      <Badge tone={side} solid className="fname__corner">{H.corner(SIDE_LABEL[side])}</Badge>
       {draft === null ? (
         <div className="fname__row">
-          <span className="fname__name display">{name ?? "—"}</span>
+          <span className="fname__name display">{name ?? UI_LABELS.noValue}</span>
           {onRename && name !== null && (
             <button type="button" className="btn btn--icon btn--quiet" onClick={() => setDraft(name)}
-                    aria-label={`${SIDE_LABEL[side]} köşe adını değiştir`} title="Adı değiştir">
+                    aria-label={H.rename(SIDE_LABEL[side])} title={H.renameTitle}>
               <IconEdit size={16} />
             </button>
           )}
@@ -37,7 +39,7 @@ function FighterName({ side, name, onRename }: {
           value={draft}
           maxLength={MAX_NAME}
           autoFocus
-          aria-label={`${SIDE_LABEL[side]} köşe dövüşçü adı`}
+          aria-label={H.nameInput(SIDE_LABEL[side])}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={save}
           onKeyDown={(e) => {
@@ -50,7 +52,11 @@ function FighterName({ side, name, onRename }: {
   );
 }
 
-/** red: displayed red share in whole percent (blue = 100 - red), null without data. */
+/**
+ * red: displayed red share in whole percent (blue = 100 - red), null without data.
+ * The bar sits on a white inset of the black card, so the red and the blue keep
+ * their contrast.
+ */
 function Momentum({ red, demo, insufficient, excluded }: {
   red: number | null;
   demo: boolean;
@@ -60,26 +66,17 @@ function Momentum({ red, demo, insufficient, excluded }: {
   return (
     <div className="momentum">
       <div className="momentum__label">
-        <span className="display">Momentum</span>
-        <span className="tag tag--muted" title="Ölçülen sinyallerden türetilen deneysel endeks; kazanma olasılığı değildir.">
-          Deneysel
-        </span>
+        <span className="display">{M.title}</span>
+        <HelpTip label={UI_LABELS.help(M.title)} side="bottom">{M.help}</HelpTip>
+        <span className="tag tag--muted">{M.experimental}</span>
         {demo && <DemoTag small />}
-        {excluded && (
-          <span className="tag tag--muted" title="Bu an dışlanan bir bölümde (ör. tekrar): olay sayılmaz, momentum donar.">
-            Dışlanan bölüm
-          </span>
-        )}
-        {insufficient && !excluded && (
-          <span className="tag tag--amber" title="Bu anda dövüşçülerden biri ölçülemiyor; yeni olay üretilmiyor.">
-            Veri yetersiz
-          </span>
-        )}
+        {excluded && <span className="tag tag--muted" title={M.excludedHelp}>{M.excluded}</span>}
+        {insufficient && !excluded && <span className="tag tag--amber" title={M.insufficientHelp}>{M.insufficient}</span>}
       </div>
-      <div className="momentum__bar" role="meter" aria-label="Momentum, kırmızı köşe payı"
+      <div className="momentum__bar" role="meter" aria-label={M.meter}
            aria-valuemin={0} aria-valuemax={100} aria-valuenow={red ?? undefined}
-           aria-valuetext={red === null ? "Veri yok" : `Kırmızı %${red}, mavi %${100 - red}`}>
-        <span className="momentum__num momentum__num--red num">{red === null ? "—" : `${red}%`}</span>
+           aria-valuetext={red === null ? M.noData : M.shares(red, 100 - red)}>
+        <span className="momentum__num momentum__num--red num">{red === null ? UI_LABELS.noValue : `${red}%`}</span>
         <div className="momentum__track">
           {red === null ? <span className="momentum__none" /> : (
             <>
@@ -89,13 +86,14 @@ function Momentum({ red, demo, insufficient, excluded }: {
           )}
           <span className="momentum__mid" aria-hidden="true" />
         </div>
-        <span className="momentum__num momentum__num--blue num">{red === null ? "—" : `${100 - red}%`}</span>
+        <span className="momentum__num momentum__num--blue num">{red === null ? UI_LABELS.noValue : `${100 - red}%`}</span>
       </div>
-      <p className="momentum__caption">Deneysel momentum — kazanma olasılığı değildir</p>
+      <p className="momentum__caption">{M.caption}</p>
     </div>
   );
 }
 
+/** Black fighter card: white names, corner labels as red and blue badges, the momentum bar between them. */
 export function FighterHeader({ names, red, demo, actions, insufficient = false, excluded = false }: {
   names: Record<Side, string> | null;
   /** Red corner's momentum share in whole percent. */
@@ -107,20 +105,20 @@ export function FighterHeader({ names, red, demo, actions, insufficient = false,
   excluded?: boolean;
 }) {
   return (
-    <section className="rhead" aria-label="Dövüşçüler ve momentum">
+    <section className="rhead on-ink" aria-label={H.region}>
       <FighterName side="red" name={names?.red ?? null} onRename={actions.onRename} />
       <Momentum red={red} demo={demo} insufficient={insufficient} excluded={excluded} />
       <FighterName side="blue" name={names?.blue ?? null} onRename={actions.onRename} />
       <div className="rhead__actions">
         <button type="button" className="btn btn--ghost btn--sm" onClick={actions.onSwap} disabled={!actions.onSwap}>
-          <IconSwap size={16} /> Tarafları değiştir
+          <IconSwap size={16} /> {H.swap}
         </button>
         <button type="button" className="btn btn--ghost btn--sm" onClick={actions.onReselect} disabled={!actions.onReselect}>
-          <IconTarget size={16} /> Dövüşçüleri yeniden seç
+          <IconTarget size={16} /> {H.reselect}
         </button>
         {actions.onExport && (
           <button type="button" className="btn btn--ghost btn--sm" onClick={actions.onExport}>
-            <IconDownload size={16} /> Dışa aktar
+            <IconDownload size={16} /> {H.export}
           </button>
         )}
       </div>

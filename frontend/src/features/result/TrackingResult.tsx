@@ -3,7 +3,6 @@ import { api, urls } from "../../api/client";
 import { navigate } from "../../app/router";
 import type {
   EventTimeline,
-  FighterTrackStats,
   Scorecards,
   Job,
   MomentumTimeline,
@@ -11,7 +10,7 @@ import type {
   TrackingTimeline,
 } from "../../contracts/generated";
 import { usePoseFrames } from "../../hooks/usePoseFrames";
-import { formatDuration } from "../../labels";
+import { RESULT_LABELS, SELECTION_LABELS } from "../../labels";
 import { EMPTY_STATS } from "../../model/analysis";
 import type { Side } from "../../model/analysis";
 import { OVERLAY_STYLE } from "../../contracts/overlayStyle";
@@ -49,38 +48,10 @@ import { Timeline } from "./Timeline";
 import type { MomentumSeries } from "./Timeline";
 import { TrackingLanes } from "./TrackingLanes";
 import { TrackingLog } from "./TrackingLog";
+import { TrackQuality } from "./TrackQuality";
 
-const STATE_TEXT = { tracked: "Takipte", occluded: "Örtüşme", uncertain: "Takip belirsiz" } as const;
-const MAJOR_TEXT: Record<string, string> = { knockdown: "Olası knockdown", takedown: "Olası takedown" };
-
-function TrackQuality({ stats, frames, now, measuredS }: {
-  stats: FighterTrackStats | undefined;
-  frames: number;
-  now: "tracked" | "occluded" | "uncertain" | undefined;
-  measuredS: number | null;
-}) {
-  if (!stats) return null;
-  const pct = (n: number) => `%${Math.round((n / Math.max(1, frames)) * 100)}`;
-  return (
-    <div className="tq">
-      <p className="tq__title">Kimlik takibi</p>
-      {now && <span className={`tq__now tq__now--${now}`}>{STATE_TEXT[now]}</span>}
-      <dl className="tq__list">
-        {measuredS !== null && (
-          <div title="Bu ana kadar dövüşçünün güvenilir ölçüldüğü süre; kalan sürede olay üretilmez">
-            <dt>Ölçülebilen süre</dt><dd className="num">{formatDuration(measuredS)}</dd>
-          </div>
-        )}
-        <div><dt>Takipte</dt><dd className="num">{pct(stats.tracked_frames)}</dd></div>
-        <div><dt>Örtüşme</dt><dd className="num">{pct(stats.occluded_frames)}</dd></div>
-        <div><dt>Belirsiz</dt><dd className="num">{formatDuration(stats.uncertain_ms / 1000)}</dd></div>
-        <div><dt>En uzun belirsiz</dt><dd className="num">{formatDuration(stats.longest_uncertain_ms / 1000)}</dd></div>
-        <div><dt>Yeniden bulma</dt><dd className="num">{stats.reacquisitions}</dd></div>
-        <div><dt>Geçici numara değişimi</dt><dd className="num">{stats.track_changes}</dd></div>
-      </dl>
-    </div>
-  );
-}
+const R = RESULT_LABELS.screen;
+const STATE_TEXT = RESULT_LABELS.quality.state;
 
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -124,8 +95,8 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
   const posesRef = useRef(poses);
   posesRef.current = poses;
   const names = useMemo(() => ({
-    red: job.fighters[0]?.display_name ?? "Dövüşçü 1",
-    blue: job.fighters[1]?.display_name ?? "Dövüşçü 2",
+    red: job.fighters[0]?.display_name ?? SELECTION_LABELS.defaultNames.red,
+    blue: job.fighters[1]?.display_name ?? SELECTION_LABELS.defaultNames.blue,
   }), [job.fighters]);
   const eventsKey = job.outputs.events?.cache_key;
   const scoringKey = job.outputs.scoring?.cache_key;
@@ -273,10 +244,12 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
   };
   const panel = (side: Side) => (
     <StatPanel side={side} name={names[side]} stats={statsFor(side)} untilS={events ? snap.time : null} demo={false}
-               emptyNote={eventsKey ? "Ölçüm verisi yükleniyor…" : "Hareket analizi yapılmadı"}
-               extra={<TrackQuality stats={tracking.fighters[side === "red" ? 0 : 1]} frames={video.frame_count}
-                                    now={stateOf(side === "red" ? "fighter_a" : "fighter_b")}
-                                    measuredS={sums ? measuredSeconds(side, tMs, sums) : null} />} />
+               emptyNote={eventsKey ? RESULT_LABELS.stats.loading : RESULT_LABELS.stats.noMotion}
+               quality={tracking.fighters[side === "red" ? 0 : 1] && (
+                 <TrackQuality side={side} stats={tracking.fighters[side === "red" ? 0 : 1]} frames={video.frame_count}
+                               now={stateOf(side === "red" ? "fighter_a" : "fighter_b")}
+                               measuredS={sums ? measuredSeconds(side, tMs, sums) : null} />
+               )} />
   );
 
   return (
@@ -293,7 +266,7 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
                  onDoubleClick={() => toggleFullscreen(stageRef.current)} />
           <OverlayCanvas clock={clock} width={video.width} height={video.height} sceneAt={sceneAt}
                          layers={overlayLayers} version={poses.loaded} />
-          {record === "loading" && layers.skeleton && <span className="stage__loading">Poz verisi yükleniyor…</span>}
+          {record === "loading" && layers.skeleton && <span className="stage__loading">{R.posesLoading}</span>}
           {warnings.length > 0 && (
             <div className="majorwarn" role="status">
               {warnings.map(({ event: e, strength }) => {
@@ -301,7 +274,7 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
                 return (
                   <span key={e.event_id} className="majorwarn__item" style={{ opacity: strength }}>
                     <span className="majorwarn__icon" aria-hidden="true">!</span>
-                    {MAJOR_TEXT[e.type]}{side ? ` · ${names[side]}` : ""}
+                    {R.majorWarning[e.type]}{side ? ` · ${names[side]}` : ""}
                   </span>
                 );
               })}
@@ -321,9 +294,9 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
         </div>
         {!eventsKey && (
           <div className="inline-note">
-            Bu analiz hareket ve olay analizi eklenmeden önce tamamlanmış.{" "}
+            {R.noMotionNote}{" "}
             <button type="button" className="btn btn--sm btn--primary" onClick={() => void rerun()}>
-              Hareket analizini çalıştır
+              {R.runMotion}
             </button>
           </div>
         )}
@@ -333,17 +306,15 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
       <div className="result__controls">
         <PlaybackBar clock={clock} snap={snap} layers={layers} onLayers={setLayers} disabled={false}
                      layerKeys={["skeleton", "strikes", "distance"]}
-                     syncNote={clock.mode === "fallback"
-                       ? "Bu tarayıcıda kare geri çağrısı yok; çizimler video zamanından izleniyor (oynarken bir kare sapabilir)."
-                       : null}
+                     syncNote={clock.mode === "fallback" ? R.syncFallback : null}
                      extra={
                        <>
-                         <button type="button" className="toggle" aria-pressed={others} title="Diğer kişiler (O)"
+                         <button type="button" className="toggle" aria-pressed={others} title={R.othersTitle}
                                  onClick={() => setOthers((v) => !v)}>
-                           <span className="toggle__dot" aria-hidden="true" />Diğer kişiler
+                           <span className="toggle__dot" aria-hidden="true" />{R.others}
                          </button>
-                         <button type="button" className="btn btn--sm btn--ghost" title="Tam ekran (F)"
-                                 onClick={() => toggleFullscreen(stageRef.current)}>Tam ekran</button>
+                         <button type="button" className="btn btn--sm btn--ghost" title={R.fullscreenTitle}
+                                 onClick={() => toggleFullscreen(stageRef.current)}>{R.fullscreen}</button>
                        </>
                      } />
         <Timeline clock={clock} time={snap.time} events={tEvents} momentum={series} names={names} disabled={false}
@@ -356,21 +327,21 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
         )}
       </div>
       <div className="result__events">
-        <div className="rtabs" role="tablist" aria-label="Sonuç ayrıntıları">
+        <div className="rtabs" role="tablist" aria-label={R.tabsLabel}>
           <button type="button" role="tab" aria-selected={tab === "events"} className="rtabs__tab"
-                  onClick={() => setTab("events")}>Olaylar ve momentum</button>
+                  onClick={() => setTab("events")}>{R.tabs.events}</button>
           <button type="button" role="tab" aria-selected={tab === "tracking"} className="rtabs__tab"
-                  onClick={() => setTab("tracking")}>Kimlik takibi</button>
+                  onClick={() => setTab("tracking")}>{R.tabs.tracking}</button>
           <button type="button" role="tab" aria-selected={tab === "judging"} className="rtabs__tab"
-                  onClick={() => setTab("judging")}>Hakem kartları (AI)</button>
+                  onClick={() => setTab("judging")}>{R.tabs.judging}</button>
           <button type="button" role="tab" aria-selected={tab === "export"} className="rtabs__tab"
-                  onClick={() => setTab("export")}>Dışa aktar</button>
+                  onClick={() => setTab("export")}>{R.tabs.export}</button>
         </div>
         {tab === "events" ? (
           <div className="evmom">
             <EventList events={tEvents} clock={clock} time={snap.time} names={names} demo={false}
                        selectedId={selectedId} onSelect={setSelectedId}
-                       emptyText={eventsKey ? "Bu videoda ölçülen olay yok." : "Hareket analizi yapılmadı."} />
+                       emptyText={eventsKey ? R.noEvents : R.noMotion} />
             {momentum && (
               <MomentumPanel contribs={momentum.contributions} params={momentum.parameters} tMs={tMs} iv={iv}
                              names={names} selected={selected} />

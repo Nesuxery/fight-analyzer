@@ -1,16 +1,19 @@
 import { useMemo } from "react";
 import type { FightEvent, MomentumContribution, MomentumParameters } from "../../contracts/generated";
-import { EVENT_LABELS, SIDE_LABEL, formatNumber } from "../../labels";
+import { EVENT_LABELS, RESULT_LABELS, SIDE_LABEL, UI_LABELS, formatNumber } from "../../labels";
 import type { Side } from "../../model/analysis";
 import { SOURCE_LABELS, breakdown, eventEffect, eventMoment, redShare, totals } from "../../model/measured";
 import type { Intervals } from "../../model/measured";
 import { formatClock } from "../../player/clock";
+import { HelpTip, SectionHeading } from "../../ui";
 
+const L = RESULT_LABELS.mpanel;
 const pts = (v: number) => formatNumber(v, v >= 10 ? 1 : 2);
 
 /**
- * Why the momentum is where it is: the formula, each side's current points
- * by source, and what the selected event contributes right now.
+ * Why the momentum is where it is: one plain sentence, the current points,
+ * each side's points by source, and what the selected event contributes right
+ * now. The formula and the model parameters are under "Nasıl hesaplanır?".
  */
 export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [] }: {
   contribs: MomentumContribution[];
@@ -28,25 +31,59 @@ export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [] 
   const moment = selected ? eventMoment(selected) : 0;
   const effect = selected ? eventEffect(contribs, selected.event_id, moment, params, iv) : null;
   const effectNow = selected && tMs >= moment ? eventEffect(contribs, selected.event_id, tMs, params, iv) : null;
-  const prior = formatNumber(params.prior, 0);
+  const halfLife = formatNumber(params.half_life_s, 0);
 
   return (
-    <section className="mpanel" aria-label="Momentum açıklaması">
-      <p className="mpanel__formula">
-        Kırmızı payı = 100 × (m₁ + {prior}) / (m₁ + m₂ + {formatNumber(params.prior * 2, 0)}), mavi = 100 − kırmızı.
-        Her puan {formatNumber(params.half_life_s, 0)} saniyede yarıya iner. Şu an: m₁ = <b className="num">{pts(m.red)}</b>,
-        m₂ = <b className="num">{pts(m.blue)}</b> → <b className="num">%{Math.round(red)}</b> / <b className="num">%{100 - Math.round(red)}</b>.
+    <section className="mpanel" aria-label={L.region}>
+      <SectionHeading level={3} title={L.title} />
+      <p className="mpanel__intro">{L.intro(halfLife)}</p>
+      <p className="mpanel__now">
+        {L.now}: {names.red} <b className="num">{pts(m.red)}</b> {L.points}, {names.blue}{" "}
+        <b className="num">{pts(m.blue)}</b> {L.points} → <b className="num">%{Math.round(red)}</b> /{" "}
+        <b className="num">%{100 - Math.round(red)}</b>
       </p>
+
+      <details className="mpanel__how">
+        <summary>{L.howTitle}</summary>
+        <p className="mpanel__formula">
+          {L.formula(formatNumber(params.prior, 0), formatNumber(params.prior * 2, 0), halfLife)}
+        </p>
+        <p className="mpanel__paramstitle">{L.paramsTitle}</p>
+        <dl className="mpanel__params">
+          <div><dt>{L.params.strike_attempt}</dt><dd className="num">{pts(params.strike_attempt)}</dd></div>
+          <div><dt>{L.params.kick_attempt}</dt><dd className="num">{pts(params.kick_attempt)}</dd></div>
+          <div><dt>{L.params.contact_bonus}</dt><dd className="num">{pts(params.contact_bonus)}</dd></div>
+          <div><dt>{L.params.advance_per_s}</dt><dd className="num">{pts(params.advance_per_s)}</dd></div>
+          <div><dt>{L.params.control_per_s}</dt><dd className="num">{pts(params.control_per_s)}</dd></div>
+          <div><dt>{L.params.knockdown}</dt><dd className="num">{pts(params.knockdown)}</dd></div>
+          <div><dt>{L.params.takedown}</dt><dd className="num">{pts(params.takedown)}</dd></div>
+          <div>
+            <dt>{L.params.min_major_confidence}</dt>
+            <dd className="num">%{Math.round(params.min_major_confidence * 100)}</dd>
+          </div>
+          <div><dt>{L.params.half_life_s}</dt><dd className="num">{halfLife} {L.seconds}</dd></div>
+          <div><dt>{L.params.prior}</dt><dd className="num">{pts(params.prior)}</dd></div>
+        </dl>
+      </details>
 
       <div className="mpanel__sides">
         {(["red", "blue"] as const).map((side) => (
           <div key={side} className={`mpanel__side mpanel__side--${side}`}>
             <p className="mpanel__name">{names[side]} <span className="mpanel__corner">{SIDE_LABEL[side]}</span></p>
             {parts[side].length === 0 ? (
-              <p className="mpanel__none">Henüz puan yok</p>
+              <p className="mpanel__none">{L.noPoints}</p>
             ) : (
               <table className="mpanel__table">
-                <thead><tr><th>Kaynak</th><th className="num">Kazanılan</th><th className="num">Şu an</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>{L.source}</th>
+                    <th className="num">{L.earned}</th>
+                    <th className="num">
+                      {L.current}
+                      <HelpTip label={UI_LABELS.help(L.columnsTerm)} align="end">{L.columnsHelp}</HelpTip>
+                    </th>
+                  </tr>
+                </thead>
                 <tbody>
                   {parts[side].map((p) => (
                     <tr key={p.source}>
@@ -64,41 +101,40 @@ export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [] 
 
       <div className="mpanel__event">
         {selected === null ? (
-          <p className="mpanel__hint">Olay listesinden bir olay seçin: bu olayın puanı ve şu anki etkisi burada açıklanır.</p>
+          <p className="mpanel__hint">{L.pickEvent}</p>
         ) : (
           <>
             <p className="mpanel__evtitle">
               <span className="num">{formatClock((selected.peak_ms ?? selected.start_ms) / 1000, true)}</span>{" "}
               {EVENT_LABELS[selected.type]}
-              {selected.possible_contact && <span className="tag tag--amber">Olası temas</span>}
+              {selected.possible_contact && <span className="tag tag--amber">{L.possibleContact}</span>}
             </p>
             {effect === null ? (
               <p className="mpanel__none">
                 {selected.type === "knockdown" || selected.type === "takedown"
-                  ? `Puan yok: kanıt yeterli değil (güven %${Math.round(selected.confidence * 100)}, eşik %${Math.round(params.min_major_confidence * 100)}).`
-                  : "Bu olay momentum puanı üretmez."}
+                  ? L.belowThreshold(Math.round(selected.confidence * 100), Math.round(params.min_major_confidence * 100))
+                  : L.noPointsType}
               </p>
             ) : (
               <>
                 <ul className="mpanel__entries">
                   {effect.entries.map((c) => (
                     <li key={c.contribution_id}>
-                      {SOURCE_LABELS[c.source]}: <b className="num">+{pts(c.points)}</b> puan
+                      {SOURCE_LABELS[c.source]}: <b className="num">+{pts(c.points)}</b> {L.points}
                     </li>
                   ))}
                 </ul>
                 <p>
-                  {names[effect.side]} için toplam <b className="num">{pts(effect.points)}</b> puan. Olay anında{" "}
-                  {names[effect.side]} payını <b className="num">{formatNumber(Math.abs(effect.redDelta), 1)}</b> yüzde
-                  puan artırdı.{" "}
+                  {L.totalFor(names[effect.side])} <b className="num">{pts(effect.points)}</b>{" "}
+                  {L.atEvent(names[effect.side])} <b className="num">{formatNumber(Math.abs(effect.redDelta), 1)}</b>{" "}
+                  {L.raised}{" "}
                   {effectNow ? (
                     <>
-                      Şu an ({formatClock(tMs / 1000, true)}) değeri <b className="num">{pts(effectNow.now)}</b> puan;
-                      payı <b className="num">{formatNumber(Math.abs(effectNow.redDelta), 1)}</b> yüzde puan
-                      etkiliyor.
+                      {L.nowValue(formatClock(tMs / 1000, true))} <b className="num">{pts(effectNow.now)}</b> {L.affects}{" "}
+                      <b className="num">{formatNumber(Math.abs(effectNow.redDelta), 1)}</b> {L.affectsEnd}
                     </>
                   ) : (
-                    <>Oynatma henüz bu olaya gelmedi.</>
+                    <>{L.notReached}</>
                   )}
                 </p>
               </>
@@ -106,45 +142,13 @@ export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [] 
             {Object.keys(selected.measures).length > 0 && (
               <dl className="mpanel__measures">
                 {Object.entries(selected.measures).map(([k, v]) => (
-                  <div key={k}><dt>{MEASURE_LABELS[k] ?? k}</dt><dd className="num">{formatNumber(v, 2)}</dd></div>
+                  <div key={k}><dt>{L.measures[k] ?? k}</dt><dd className="num">{formatNumber(v, 2)}</dd></div>
                 ))}
               </dl>
             )}
           </>
         )}
       </div>
-
-      <details className="mpanel__params">
-        <summary>Model parametreleri (başlangıç tasarım değerleri; doğrulanmış ağırlıklar değildir)</summary>
-        <dl>
-          <div><dt>Vuruş denemesi (yumruk, diz)</dt><dd className="num">{pts(params.strike_attempt)}</dd></div>
-          <div><dt>Tekme denemesi (ayrıca yumruk sayılmaz)</dt><dd className="num">{pts(params.kick_attempt)}</dd></div>
-          <div><dt>Olası temas eki</dt><dd className="num">{pts(params.contact_bonus)}</dd></div>
-          <div><dt>İlerleme (saniye başına)</dt><dd className="num">{pts(params.advance_per_s)}</dd></div>
-          <div><dt>Tahmini yer kontrolü (saniye başına)</dt><dd className="num">{pts(params.control_per_s)}</dd></div>
-          <div><dt>Olası knockdown</dt><dd className="num">{pts(params.knockdown)}</dd></div>
-          <div><dt>Olası takedown</dt><dd className="num">{pts(params.takedown)}</dd></div>
-          <div><dt>Büyük olay için en düşük güven</dt><dd className="num">%{Math.round(params.min_major_confidence * 100)}</dd></div>
-          <div><dt>Yarı ömür</dt><dd className="num">{formatNumber(params.half_life_s, 0)} sn</dd></div>
-          <div><dt>Başlangıç payı (iki tarafa)</dt><dd className="num">{pts(params.prior)}</dd></div>
-        </dl>
-      </details>
     </section>
   );
 }
-
-const MEASURE_LABELS: Record<string, string> = {
-  peak_speed: "Tepe hız (gövde boyu/sn)",
-  extension: "Rakibe uzanma (uzuv boyu)",
-  toward: "Rakibe yönelim (kosinüs)",
-  distance: "Mesafe (gövde boyu)",
-  duration_s: "Süre (sn)",
-  raise: "Ayak yüksekliği (gövde boyu)",
-  knee_height: "Diz yüksekliği (gövde boyu)",
-  seconds: "Süre (sn)",
-  fall_s: "Düşüş süresi (sn)",
-  strike_before_s: "Vuruştan sonra (sn)",
-  possible_contact: "Öncesinde olası temas",
-  close_s: "Yakın temas (sn)",
-  on_top_after: "Sonrasında üstte",
-};

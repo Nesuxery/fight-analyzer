@@ -1,6 +1,7 @@
-/* Result screen. Bölüm 1 only moves it to the light tokens and the new type;
-   its layout is rebuilt in Bölüm 5. Every value comes from tokens.css
-   (overlay-tokens.css for marks drawn over the picture). */
+/* Result screen. Bölüm 1 only restyles it and adds explanations; its layout
+   is rebuilt in Bölüm 5. Every value comes from tokens.css (overlay-tokens.css
+   for marks drawn over the picture). Red here only ever means the red corner:
+   buttons, tabs and heading bars are black (--accent is --ink on this screen). */
 
 /* ---------- result layout: video centre, stat panels on both sides ---------- */
 .result {
@@ -22,40 +23,33 @@
 .result__controls { grid-area: controls; min-width: 0; display: grid; gap: var(--space-2); }
 .result__events { grid-area: events; min-width: 0; }
 
-/* ---------- names + momentum ---------- */
+/* ---------- fighter card: black, white names, red and blue corner badges ---------- */
 .rhead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 1.5fr) minmax(0, 1fr);
   grid-template-areas: "red momentum blue" "actions actions actions";
   align-items: center;
-  gap: var(--space-2) var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  /* background and text colour: .on-ink (base.css) */
 }
 
-.fname { min-width: 0; }
-.fname--red { grid-area: red; border-left: 3px solid var(--red); padding-left: var(--space-3); }
-.fname--blue { grid-area: blue; border-right: 3px solid var(--blue); padding-right: var(--space-3); text-align: right; }
+.fname { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: var(--space-1); min-width: 0; }
+.fname--red { grid-area: red; }
+.fname--blue { grid-area: blue; justify-items: end; text-align: right; }
 
+/* solid corner badge; the hairline keeps the blue one separate from the black card */
 .fname__corner {
-  display: block;
-  color: var(--text-3);
-  font-size: var(--fs-label);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
+  box-shadow: 0 0 0 1px var(--ink-line);
 }
-
-.fname--red .fname__corner { color: var(--red); }
-.fname--blue .fname__corner { color: var(--blue); }
 
 .fname__row {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
+  max-width: 100%;
 }
 
 .fname--blue .fname__row { flex-direction: row-reverse; }
@@ -80,7 +74,17 @@
 
 .fname--blue .fname__input { text-align: right; }
 
-.momentum { grid-area: momentum; display: grid; gap: var(--space-2); }
+/* the momentum bar on a white inset: red and blue keep their contrast */
+.momentum {
+  --focus-ring: var(--text-1);
+  grid-area: momentum;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-1);
+}
 
 .momentum__label {
   display: flex;
@@ -147,6 +151,7 @@
   border-top: 3px solid var(--tone);
   border-radius: var(--radius-card);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .stats--blue { --tone: var(--blue); }
@@ -175,6 +180,25 @@
   white-space: nowrap;
 }
 
+/* metric groups: Vuruş, Hareket ve baskı, Kontrol, Veri kalitesi */
+.statgroup__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-semibold);
+}
+
+.statgroup__title svg {
+  flex: none;
+  color: var(--text-2);
+}
+
 .stats__list {
   display: grid;
 }
@@ -182,13 +206,16 @@
 .stat {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-1) var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
 }
 
 .stat dt {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   color: var(--text-3);
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
@@ -240,10 +267,15 @@
 
 .stats__foot {
   padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
   color: var(--text-3);
   font-size: var(--fs-12);
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
+}
+
+.stats > :last-child {
+  border-bottom: 0;
 }
 
 /* ---------- playback bar ---------- */
@@ -672,23 +704,20 @@
 .idbadge--blue { --side: var(--overlay-blue); }
 .idbadge--uncertain { color: var(--overlay-amber); }
 
+/* rows of the "Veri kalitesi" group */
 .tq {
   display: grid;
-  gap: 6px;
-  padding: 10px var(--space-3) var(--space-3);
-  border-top: 1px solid var(--border);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
-.tq__title {
-  color: var(--text-3);
-  font-size: var(--fs-label);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
+.tq__state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .tq__now {
-  justify-self: start;
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
   font-size: var(--fs-12);
@@ -707,11 +736,23 @@
 
 .tq__list div {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.tq__list dt { color: var(--text-3); }
+.tq__list dt {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-3);
+}
+
+.tq__scope {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  line-height: 1.3;
+}
 
 .tlid__legend {
   display: flex;
@@ -916,14 +957,33 @@
 .mpanel {
   display: grid;
   gap: 10px;
-  padding: 10px var(--space-3);
+  padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
   font-size: var(--fs-13);
 }
 
-.mpanel__formula { margin: 0; color: var(--text-2); line-height: 1.5; }
+/* one plain sentence, then the current points */
+.mpanel__intro { color: var(--text-2); line-height: 1.5; }
+.mpanel__now { font-variant-numeric: tabular-nums; }
+
+/* "Nasıl hesaplanır?": the formula and the model parameters, closed by default */
+.mpanel__how {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
+.mpanel__how summary {
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.mpanel__formula { margin: var(--space-2) 0 0; color: var(--text-2); line-height: 1.5; }
+.mpanel__paramstitle { margin: var(--space-3) 0 0; color: var(--text-3); font-size: var(--fs-12); }
 
 .mpanel__sides {
   display: grid;
@@ -948,6 +1008,7 @@
 
 .mpanel__table { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
 .mpanel__table th { padding: 2px 0; color: var(--text-3); font-weight: var(--fw-medium); text-align: left; }
+.mpanel__table th .helptip { margin-left: 2px; }
 .mpanel__table td { padding: 2px 0; border-top: 1px solid var(--border); }
 .mpanel__table .num { text-align: right; }
 
@@ -980,11 +1041,10 @@
   font-size: var(--fs-12);
 }
 
-.mpanel__measures div, .mpanel__params dl div { display: flex; justify-content: space-between; gap: 6px; }
+.mpanel__measures div, .mpanel__params div { display: flex; justify-content: space-between; gap: 6px; }
 .mpanel__measures dt, .mpanel__params dt { color: var(--text-3); }
 
-.mpanel__params summary { color: var(--text-3); font-size: var(--fs-12); cursor: pointer; }
-.mpanel__params dl { display: grid; gap: 2px; margin: 6px 0 0; font-size: var(--fs-12); }
+.mpanel__params { display: grid; gap: 2px; margin: 6px 0 0; font-size: var(--fs-12); }
 
 .inline-note {
   display: flex;
@@ -1251,7 +1311,44 @@
 .xrow__files li { display: inline-flex; align-items: center; gap: 6px; }
 .xrow__size { color: var(--text-3); font-size: var(--fs-12); }
 .xrow__meta { margin: 0; color: var(--text-3); font-size: var(--fs-12); }
-.xrow__error { margin: 0; color: var(--danger); font-size: var(--fs-13); }
+/* a failed export: icon and text, never the colour alone */
+.xrow__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--danger-soft);
+  color: var(--text-1);
+  font-size: var(--fs-13);
+}
+
+.xrow__error svg { flex: none; margin-top: 1px; color: var(--danger); }
+.xrow .tag--danger { gap: var(--space-1); }
+
+/* headings of the cards on this screen carry the same 4 × 16 px bar as SectionHeading;
+   it is black here (--accent) */
+.events__head h2,
+.xpanel__form > h2,
+.xpanel__title,
+.medit__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.events__head h2::before,
+.xpanel__form > h2::before,
+.xpanel__title::before,
+.medit__title::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--accent);
+}
 
 @media (max-width: 900px) {
   .xpanel { grid-template-columns: minmax(0, 1fr); }

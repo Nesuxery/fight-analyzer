@@ -85,20 +85,38 @@ CLAUDE.md geçerlidir.
 - Güven en fazla "orta" (bağımsız doğrulama yok).
 
 ### Arayüz ve tasarım sistemi (v2 Bölüm 1)
-- Renk, yazı, boşluk, yarıçap, gölge ve hareket değerlerinin tek kaynağı
-  `frontend/src/styles/tokens.css`; bileşenlerde renk kodu yok (test denetler).
-  Koyu tema ileride aynı adları `:root[data-theme="dark"]` altında yeniden
-  tanımlayarak eklenebilir.
-- Tablodan farklı iki onaylı karar: `--border-strong` `#8f8f8a` (giriş alanı ve
-  sürükle-bırak çerçevesi beyaz üstünde 3:1'i geçsin diye), hatalar için ayrı
-  `--danger` (köşe kırmızısıyla karışmasın diye her zaman ikon ve metinle).
-- Video katmanı arayüz köşe renklerinin canlı tonları: kırmızı `#ff2e4d`, mavi
-  `#3d8bff` (önceki camgöbeği `#19d6f0` arayüz mavisiyle aynı aileden değildi),
-  diğer kişiler nötr gri. Tarayıcı, MP4 ve `Fighter.color` aynı JSON'u okur.
+Bölüm 1'de plana göre verilen kararlar (8 Kasım 2026):
+- **Tokenlar:** Renk, yazı, boşluk, yarıçap, gölge ve hareket değerlerinin tek
+  kaynağı `frontend/src/styles/tokens.css`; bileşenlerde renk kodu yok (bir test
+  denetler). Koyu tema ileride aynı adları `:root[data-theme="dark"]` altında
+  yeniden tanımlayarak eklenebilir. Hatalar için tabloda olmayan `--danger`
+  eklendi (köşe kırmızısıyla karışmasın diye her zaman ikon ve metinle).
+- **Kenarlık kontrastı:** `--border-strong` plandaki `#D4D4CE` yerine `#8f8f8a`.
+  Giriş alanlarında ve sürükle-bırak çerçevesinde kullanıldığı için beyaz üstünde
+  3:1'i geçmesi gerekiyordu (3,25:1; testle doğrulanır). Kart kenarlıkları ve
+  ayırıcılar açık kalan `--border` ile çizilir.
+- **Video katmanı (overlay) renkleri:** kırmızı `#ff2e4d` aynı kaldı; mavi
+  `#19d6f0` (camgöbeği) yerine `#3d8bff` oldu, çünkü camgöbeği arayüzün
+  `#2457c5` mavisiyle aynı aileden değildi; koyu sahnede 5,9:1 kontrast veriyor
+  ve kırmızıyla benzer parlaklıkta. Diğer kişiler mavimsi gri yerine nötr gri
+  (`#a8a8a2`). Tek kaynak `shared/overlay-style.json`; tarayıcı canvas'ı, MP4
+  dışa aktarma ve `Fighter.color` (`store.py` → `CORNER_COLORS`) aynı dosyayı
+  okur. `npm run gen:types` ayrıca DOM öğeleri için `overlay-tokens.css` üretir.
+  Dışa aktarılmış eski MP4'ler eski renkte kalır.
+- **Önizleme uç noktası:** geçmiş listesindeki 16:9 önizleme için
+  `GET /jobs/{id}/thumbnail.jpg`. Analiz kopyasından 320 px JPEG üretir (seçim
+  karesi, yoksa videonun %10'u) ve iş klasöründe `thumb-<anahtar>-<kare>.jpg`
+  olarak önbelleğe alır; seçim ya da analiz kopyası değişince eski dosya
+  silinir. Şema sürümü değişmedi. Analiz kopyası yoksa 404
+  (`thumbnail_unavailable`); arayüz boş koyu kutu gösterir. Demo satırı
+  önizlemeyi sentetik sahneden çizer.
+- **Sayfa genişliği:** en fazla 1440 px (`--page-max`); **sonuç ekranı** Bölüm 5'e
+  kadar eski 1640 px sınırını korur (`--page-max-wide`, `.shell__main--wide`).
+  Sonuç ekranının genişliğine Bölüm 5'te karar verilecek.
 - Fontlar yerel paket (Inter, Inter Tight); internetten font yüklenmez.
-- Sayfa en fazla 1440 px; sonuç ekranı Bölüm 5'e kadar 1640 px. Sonuç ekranına
-  bu bölümde yalnızca renk ve yazı uygulandı; bileşen metinleri Bölüm 5'te
-  `labels.ts`'e taşınacak.
+- Sonuç ekranına bu bölümde yalnızca renk ve yazı uygulandı; bileşen metinleri
+  Bölüm 5'te `labels.ts`'e taşınacak. `StatPair` ve `Tabs` hazır ama o zamana
+  kadar kullanılmıyor.
 
 ### Yerel güvenlik
 - Yol sınırlama (`fsutil.inside`), en fazla 20 aktif analiz, analiz başına tek

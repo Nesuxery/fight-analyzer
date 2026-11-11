@@ -4,7 +4,7 @@ import { ApiError, api, uploadVideo } from "../../api/client";
 import { navigate } from "../../app/router";
 import type { UploadLimits } from "../../contracts/generated";
 import { usePolling } from "../../hooks/usePolling";
-import { UPLOAD_LABELS as L, formatBytes, formatNumber } from "../../labels";
+import { UI_LABELS, UPLOAD_LABELS as L, formatBytes, formatNumber } from "../../labels";
 import { formatClock } from "../../player/clock";
 import { Button, Progress, cx } from "../../ui";
 import { IconFilm } from "../../ui/icons";
@@ -40,7 +40,7 @@ function limitProblem(file: File, meta: LocalVideoMeta | null, limits: UploadLim
   return null;
 }
 
-/** White drop area with a dashed frame; while dragging the frame turns --text-1 and the area --surface-muted. */
+/** White drop card with a dashed frame; while dragging the frame turns red and the card --red-soft. */
 export function DropZone() {
   const [state, setState] = useState<FileState>({ kind: "idle" });
   const [dragging, setDragging] = useState(false);
@@ -78,15 +78,15 @@ export function DropZone() {
   };
 
   const pick = () => inputRef.current?.click();
-  const hint = [L.formats, limits && L.limits(formatBytes(limits.max_bytes), formatNumber(limits.max_duration_s / 60)),
-                L.local].filter(Boolean).join(" · ");
+  const hint = [L.formats, limits && L.limits(formatBytes(limits.max_bytes), formatNumber(limits.max_duration_s / 60))]
+    .filter(Boolean).join(" · ");
 
   let body: ReactNode;
   if (state.kind === "idle" || state.kind === "rejected") {
     body = (
       <>
         <p className="dropzone__lead">{L.dropLead}</p>
-        <Button variant="primary" onClick={pick}>{L.chooseFile}</Button>
+        <Button variant="brand" onClick={pick}>{L.chooseFile}</Button>
         <p className="dropzone__hint">{hint}</p>
         {state.kind === "rejected" && <p className="dropzone__error" role="alert">{state.reason}</p>}
       </>
@@ -104,10 +104,10 @@ export function DropZone() {
           <dl className="filecard__meta">
             <div><dt>{L.size}</dt><dd className="num">{formatBytes(file.size)}</dd></div>
             <div><dt>{L.duration}</dt><dd className="num">
-              {state.kind === "reading" ? L.reading : meta?.durationS != null ? formatClock(meta.durationS) : "—"}
+              {state.kind === "reading" ? L.reading : meta?.durationS != null ? formatClock(meta.durationS) : UI_LABELS.noValue}
             </dd></div>
             <div><dt>{L.resolution}</dt><dd className="num">
-              {state.kind === "reading" ? L.reading : meta ? `${meta.width}×${meta.height}` : "—"}
+              {state.kind === "reading" ? L.reading : meta ? `${meta.width}×${meta.height}` : UI_LABELS.noValue}
             </dd></div>
           </dl>
           {state.kind === "ready" && !meta && <p className="filecard__note">{L.metaUnreadable}</p>}

@@ -82,7 +82,7 @@ export function AppShell({ route, children }: { route: Route; children: ReactNod
         </div>
       </header>
       {demo && <DemoBanner />}
-      {/* data-screen: the Selection and Result screens turn the accent black (base.css) */}
+      {/* data-screen: the Upload screen runs edge to edge; Selection and Result turn the accent black (base.css) */}
       <main className={`shell__main${current === "result" ? " shell__main--wide" : ""}`} data-screen={current ?? undefined}>
         {children}
       </main>

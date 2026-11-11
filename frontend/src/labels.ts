@@ -75,12 +75,27 @@ export const SHELL_LABELS = {
 
 export const UPLOAD_LABELS = {
   title: "Maç videosunu yükle",
-  lead: "Kayıtlı bir maçı yükleyin, iki dövüşçüyü seçin; iskeletler, hareket istatistikleri ve olay zaman çizelgesi video ile senkron görünsün.",
-  dropLead: "Videoyu buraya sürükleyip bırakın",
+  lead: "Kayıtlı bir maçı yükle, iki dövüşçüyü seç; iskeletler, hareket istatistikleri ve olay zaman çizelgesi videoyla eş zamanlı görünsün.",
+  /** The three notes of the intro band. */
+  notes: {
+    local: "Bilgisayarında işlenir",
+    offline: "İnternet gerekmez",
+    private: "Video dışarı çıkmaz",
+  },
+  /** "Nasıl çalışır" strip under the drop area. */
+  how: {
+    title: "Nasıl çalışır",
+    description: "Videodan sonuca dört adım; hepsi bu bilgisayarda.",
+    step: (n: number) => `${n}. adım`,
+    upload: { title: "Yükle", text: "Kayıtlı maç videosunu seç ya da sürükleyip bırak." },
+    process: { title: "İşlenir", text: "Her karede görünen kişilerin iskelet noktaları çıkarılır." },
+    select: { title: "Dövüşçüleri seç", text: "Kırmızı ve mavi köşedeki dövüşçüleri işaretle." },
+    result: { title: "Sonuç ve hakem kartları", text: "Olaylar, istatistikler ve AI tahmini hakem kartları açılır." },
+  },
+  dropLead: "Videoyu buraya sürükleyip bırak",
   chooseFile: "Dosya seç",
   formats: "MP4, MOV, MKV, WEBM, AVI",
   limits: (size: string, minutes: string) => `en fazla ${size} · ${minutes} dk`,
-  local: "video bu bilgisayarda işlenir",
   size: "Boyut",
   duration: "Süre",
   resolution: "Çözünürlük",
@@ -101,18 +116,23 @@ export const UPLOAD_LABELS = {
   emptyFile: "Dosya boş görünüyor.",
   overMax: "Dosya 20 GB sınırını aşıyor.",
   demoLead: "Demo modunda dosya yüklenmez",
-  demoHint: "Sentetik bir örnek sahneyle işlem, seçim ve sonuç ekranlarının tamamını inceleyin.",
+  demoHint: "Sentetik bir örnek sahneyle işlem, seçim ve sonuç ekranlarının tamamını incele.",
   demoStart: "Demo analizini başlat",
 } as const;
 
 export const HISTORY_LABELS = {
   title: "Geçmiş analizler",
+  description: "Daha önce analiz ettiğin maçlar; yeniden işlemeden açılır.",
+  count: (total: string) => `${total} analiz`,
+  events: (count: string) => `${count} olay`,
+  open: "Aç",
+  openNamed: (name: string) => `Aç: ${name}`,
   loading: "Geçmiş analizler yükleniyor",
   errorTitle: "Geçmiş analizler alınamadı",
   errorBefore: "API'ye ulaşılamıyor. Uygulamayı",
-  errorAfter: "ile başlattığınızdan emin olun; bağlantı otomatik olarak yeniden denenecek.",
+  errorAfter: "ile başlattığından emin ol; bağlantı otomatik olarak yeniden denenecek.",
   emptyTitle: "Henüz analiz yok",
-  emptyText: "Analiz ettiğiniz maçlar burada listelenir ve yeniden işlemeden açılabilir.",
+  emptyText: "Yukarıdan bir maç videosu yüklediğinde analiz burada listelenir. Tamamlanan analizler yeniden işlenmeden açılır.",
   stale: "Bağlantı kesildi; son bilinen liste gösteriliyor.",
   untitled: (id: string) => `Analiz ${id}`,
   noVideoInfo: "Video bilgisi yok",

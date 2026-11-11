@@ -22,7 +22,7 @@
   --on-ink-2: rgba(255, 255, 255, 0.72);
   --ink-line: rgba(255, 255, 255, 0.16);
   /* the octagon line pattern of dark bands: never above 6 % */
-  --band-pattern-opacity: 0.06;
+  --band-pattern-opacity: 0.05;
 
   /* surfaces and text */
   --bg: #f2f2f0;

@@ -346,6 +346,12 @@ code,
   padding: var(--space-6) var(--page-gutter) var(--space-12);
 }
 
+/* the Upload screen's black band runs edge to edge; its content sets its own width */
+.shell__main[data-screen="upload"] {
+  max-width: none;
+  padding: 0 0 var(--space-12);
+}
+
 /* On the Selection and Result screens red only ever means the red corner:
    progress bars, section bars and other accents are black there. */
 .shell__main[data-screen="select"],

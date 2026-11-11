@@ -1,5 +1,5 @@
-// Design tokens (Bölüm 1): the specified values are in tokens.css, and every
-// text/background pair the interface uses passes WCAG AA.
+// Design tokens (Bölüm 1, black-white-red identity): the specified values are
+// in tokens.css, and every text/background pair the interface uses passes WCAG AA.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -45,6 +45,19 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** A translucent token (rgba) as the opaque colour it shows over `bg`. */
+function over(name: string, bg: string): string {
+  const v = T.get(name);
+  assert.ok(v, `${name} missing from tokens.css`);
+  const m = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(v);
+  assert.ok(m, `${name} should be an rgba() colour, got ${v}`);
+  const alpha = Number(m[4]);
+  const base = Number.parseInt(bg.slice(1), 16);
+  const mix = (fg: number, shift: number) => Math.round(fg * alpha + ((base >> shift) & 255) * (1 - alpha));
+  const [r, g, b] = [mix(Number(m[1]), 16), mix(Number(m[2]), 8), mix(Number(m[3]), 0)];
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
 test("contrast helper matches known WCAG values", () => {
   assert.equal(Math.round(contrast("#000000", "#ffffff") * 10) / 10, 21);
   assert.equal(contrast("#777777", "#777777"), 1);
@@ -53,17 +66,23 @@ test("contrast helper matches known WCAG values", () => {
 
 test("colour tokens have the specified values", () => {
   const spec: Record<string, string> = {
-    "--bg": "#f7f7f5",
+    "--ink": "#0e0e10",
+    "--ink-2": "#1c1c20",
+    "--on-ink": "#ffffff",
+    "--bg": "#f2f2f0",
     "--surface": "#ffffff",
     "--surface-muted": "#f1f1ee",
-    "--border": "#e6e6e1",
-    // darker than the first draft (#d4d4ce) so inputs and the drop zone reach 3:1 (approved change)
-    "--border-strong": "#8f8f8a",
-    "--text-1": "#111111",
+    // a step darker than before so white cards stand out from --bg
+    "--border": "#deded9",
+    // darker than #8f8f8a, which fell to 2.9:1 on the new --bg
+    "--border-strong": "#858580",
+    // the same black as --ink
+    "--text-1": "#0e0e10",
     "--text-2": "#52524c",
     "--text-3": "#6e6e68",
-    "--red": "#c62b3b",
-    "--red-soft": "#fbeef0",
+    "--red": "#d0142c",
+    "--red-soft": "#fdecee",
+    "--red-strong": "#b01025",
     "--blue": "#2457c5",
     "--blue-soft": "#edf2fc",
     "--success": "#1f7a4d",
@@ -73,12 +92,22 @@ test("colour tokens have the specified values", () => {
   for (const [name, value] of Object.entries(spec)) assert.equal(hex(name), value, name);
 });
 
+test("one black and one red: text is ink, the accent is the red", () => {
+  assert.equal(hex("--text-1"), hex("--ink"));
+  assert.equal(hex("--accent"), hex("--red"), "--accent is brand red by default");
+  assert.equal(T.get("--shadow-card"), "0 1px 2px rgba(0, 0, 0, 0.06)");
+  const pattern = Number(T.get("--band-pattern-opacity"));
+  assert.ok(pattern > 0 && pattern <= 0.06, `--band-pattern-opacity = ${T.get("--band-pattern-opacity")}`);
+});
+
 // [foreground, background]: every text colour on every background it is used on.
 const TEXT_PAIRS: [string, string][] = [
   ...["--bg", "--surface", "--surface-muted"].flatMap((bg) =>
     ["--text-1", "--text-2", "--text-3"].map((fg) => [fg, bg] as [string, string])),
-  ["--text-on-fill", "--text-1"], // primary button, active step, play button
-  ["--text-on-fill", "--red"], // red corner badge
+  ["--text-on-fill", "--text-1"], // primary button, play button
+  ["--on-ink", "--ink"], ["--on-ink", "--ink-2"], // top bar, dark bands, the fighter card
+  ["--text-on-fill", "--red"], // red corner badge, active step number, "Dosya seç"
+  ["--text-on-fill", "--red-strong"], // its hover
   ["--text-on-fill", "--blue"], // blue corner badge
   ["--text-on-fill", "--warning"], // DEMO tag
   ["--text-on-fill", "--danger"],
@@ -98,11 +127,28 @@ test("text tokens pass WCAG AA for normal text (4.5:1) on their backgrounds", ()
   }
 });
 
+test("secondary text on ink passes AA although it is translucent", () => {
+  for (const bg of ["--ink", "--ink-2"]) {
+    const ratio = contrast(over("--on-ink-2", hex(bg)), hex(bg));
+    assert.ok(ratio >= 4.5, `--on-ink-2 on ${bg}: ${ratio.toFixed(2)}:1`);
+  }
+});
+
+test("red on ink is a mark, not text: 3:1 for the logo, the active step and its line", () => {
+  for (const bg of ["--ink", "--ink-2"]) {
+    const ratio = contrast(hex("--red"), hex(bg));
+    assert.ok(ratio >= 3, `--red against ${bg}: ${ratio.toFixed(2)}:1`);
+    // the reason the rule exists: it does not reach the 4.5:1 of normal text
+    assert.ok(ratio < 4.5, `--red on ${bg} now passes as text (${ratio.toFixed(2)}:1): update the rule in tokens.css`);
+  }
+});
+
 test("inputs, focus rings and corner marks on the video reach 3:1 (non-text contrast)", () => {
   const pairs: [string, string][] = [
     ["--border-strong", "--surface"], ["--border-strong", "--bg"],
     ["--text-1", "--bg"], ["--text-1", "--surface"], ["--text-1", "--surface-muted"], // focus ring
     ["--stage-text", "--stage"], // focus ring on the stage
+    ["--on-ink", "--ink"], ["--on-ink", "--ink-2"], // focus ring on ink
     ["--red", "--stage"], ["--blue", "--stage"], // selected candidate frames over the video
   ];
   for (const [fg, bg] of pairs) {

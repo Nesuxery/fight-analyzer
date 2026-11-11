@@ -1,6 +1,7 @@
 /*
  * Design tokens: the only place in the UI with raw colour values.
  *
+ * Identity: black, white and one red. Blue exists only for blue-corner data.
  * Components use these semantic names and never a colour code of their own
  * (tests/no-hardcoded-colors.test.ts). A dark theme can later redefine the
  * same names in a :root[data-theme="dark"] block without touching components.
@@ -12,24 +13,45 @@
 :root {
   color-scheme: light;
 
+  /* ink: the black of the identity (top bar, dark bands, primary buttons, active tab line) */
+  --ink: #0e0e10;
+  /* cards and hover on an ink surface */
+  --ink-2: #1c1c20;
+  --on-ink: #ffffff;
+  /* secondary text and hairlines on ink */
+  --on-ink-2: rgba(255, 255, 255, 0.72);
+  --ink-line: rgba(255, 255, 255, 0.16);
+  /* the octagon line pattern of dark bands: never above 6 % */
+  --band-pattern-opacity: 0.06;
+
   /* surfaces and text */
-  --bg: #f7f7f5;
+  --bg: #f2f2f0;
   --surface: #ffffff;
   --surface-muted: #f1f1ee;
-  --border: #e6e6e1;
+  --border: #deded9;
   /* inputs and the drop zone: at least 3:1 against --surface and --bg */
-  --border-strong: #8f8f8a;
-  --text-1: #111111;
+  --border-strong: #858580;
+  /* the same black as --ink */
+  --text-1: #0e0e10;
   --text-2: #52524c;
   --text-3: #6e6e68;
-  /* text on --text-1, --red and --blue fills */
+  /* text on --ink, --red and --blue fills */
   --text-on-fill: #ffffff;
 
-  /* corners: colour only ever means a corner or a state */
-  --red: #c62b3b;
-  --red-soft: #fbeef0;
+  /* the one red: brand and red corner share it. On ink it is a fill, a line
+     or an icon, never small text (3.5:1). */
+  --red: #d0142c;
+  --red-soft: #fdecee;
+  /* hover of a red fill */
+  --red-strong: #b01025;
+  /* blue: blue-corner data only */
   --blue: #2457c5;
   --blue-soft: #edf2fc;
+
+  /* accent of progress bars, section bars and the active processing step.
+     Brand red by default; the Selection and Result screens set it to --ink
+     (base.css), because red there only ever means the red corner. */
+  --accent: var(--red);
 
   /* states */
   --success: #1f7a4d;
@@ -50,6 +72,8 @@
   /* floating layers (menus, dialogs, toasts) */
   --scrim: rgba(17, 17, 17, 0.32);
   --shadow-float: 0 8px 24px rgba(17, 17, 17, 0.08);
+  /* cards: a 1 px border plus this very light shadow */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06);
 
   /* synthetic demo footage, drawn on canvas (player/draw.ts, demo/render.ts) */
   --scene-backdrop: #0d1015;
@@ -110,7 +134,7 @@
   --motion-slow: 220ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* focus: 2 px --text-1 with a 2 px offset (light text on the video stage) */
+  /* focus: 2 px --text-1 with a 2 px offset (white on ink surfaces and the video stage) */
   --focus-ring: var(--text-1);
   --focus-width: 2px;
   --focus-offset: 2px;

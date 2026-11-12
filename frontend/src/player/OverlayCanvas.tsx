@@ -45,7 +45,7 @@ export function OverlayCanvas({ clock, width, height, sceneAt, layers, version }
     if (fit.scale <= 0) return;
     ctx.setTransform(...canvasTransform(fit, dpr));
     const scene = sceneRef.current(clock.time);
-    if (scene) drawOverlay(ctx, scene, fit, dpr, layersRef.current);
+    if (scene) drawOverlay(ctx, scene, fit, dpr, layersRef.current, { width, height });
   }, [clock, width, height]);
 
   // Once per presented video frame.

@@ -10,12 +10,15 @@
  * line widths, glow and text are given in CSS pixels and converted, so the
  * overlay looks the same at any size and pixel density. Nothing is invented:
  * joints below KP_MIN and bones touching them are not drawn, and only people
- * whose identity is verified get a fighter colour.
+ * whose identity is verified get a fighter colour. Name labels are drawn after
+ * all skeletons and placed by labelLayout.ts: never over each other, always
+ * inside the picture (the MP4 export uses the same rule).
  */
 import { OVERLAY_STYLE } from "../contracts/overlayStyle";
 import { OVERLAY_LABELS } from "../labels";
 import { cssToken, withAlpha } from "../styles/tokens";
 import type { Fit } from "./geometry";
+import { placeLabels } from "./labelLayout";
 
 /** Same threshold as the motion analysis (MotionSettings.kp_min_conf). */
 export const KP_MIN = OVERLAY_STYLE.kp_min_conf;
@@ -102,8 +105,18 @@ function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number
   ctx.fillText(text, x, y);
 }
 
-function drawPerson(ctx: CanvasRenderingContext2D, person: OverlayPerson, px: number, dpr: number) {
+/** A fighter's name, wanted centred above the head (ax, ay: centre x, bottom y). */
+interface NameLabel {
+  text: string;
+  color: string;
+  ax: number;
+  ay: number;
+}
+
+/** Draws one person; returns the fighter's name label to place once all skeletons are drawn. */
+function drawPerson(ctx: CanvasRenderingContext2D, person: OverlayPerson, px: number, dpr: number): NameLabel | null {
   const k = person.keypoints;
+  let name: NameLabel | null = null;
   const fighter = person.role !== "other";
   const color = OVERLAY_COLORS[person.role];
   const path = new Path2D();
@@ -163,8 +176,34 @@ function drawPerson(ctx: CanvasRenderingContext2D, person: OverlayPerson, px: nu
         top = { x: highest.x, y: highest.y - 10 * px };
       }
     }
-    if (person.label && top) label(ctx, person.label, top.x, top.y, color, px);
+    if (person.label && top) name = { text: person.label, color, ax: top.x, ay: top.y };
   }
+  ctx.restore();
+  return name;
+}
+
+const NAME_FONT_PX = 12;
+/** label() strokes a 3 px outline around the letters. */
+const NAME_OUTLINE_PX = 3;
+const NAME_MARGIN_PX = 4;
+const NAME_GAP_PX = 4;
+
+/** Fighters' names: apart from each other and inside the picture (labelLayout.ts). */
+function drawNameLabels(ctx: CanvasRenderingContext2D, names: NameLabel[], px: number,
+                        frame: { width: number; height: number }) {
+  if (!names.length) return;
+  ctx.save();
+  ctx.font = `600 ${NAME_FONT_PX * px}px ${cssToken("--font-sans")}`;
+  const outline = NAME_OUTLINE_PX * px;
+  const h = NAME_FONT_PX * px + outline;
+  const sized = names.map((n) => ({ ...n, w: ctx.measureText(n.text).width + outline, h }));
+  const margin = NAME_MARGIN_PX * px;
+  const spots = placeLabels(sized, { left: margin, top: margin, right: frame.width - margin, bottom: frame.height - margin },
+                            NAME_GAP_PX * px);
+  sized.forEach((n, i) => {
+    const spot = spots[i]!;
+    label(ctx, n.text, spot.x + n.w / 2, spot.y + n.h - outline / 2, n.color, px);
+  });
   ctx.restore();
 }
 
@@ -248,13 +287,22 @@ function drawDistance(ctx: CanvasRenderingContext2D, d: OverlayDistance, px: num
   ctx.restore();
 }
 
-/** Draw a scene; the context must already map video pixels to the canvas (see geometry). */
+/**
+ * Draw a scene; the context must already map video pixels to the canvas (see geometry).
+ * `frame`: the video size in pixels, the area name labels are kept in.
+ */
 export function drawOverlay(ctx: CanvasRenderingContext2D, scene: OverlayScene, fit: Fit, dpr: number,
-                            layers: OverlayLayers) {
+                            layers: OverlayLayers, frame: { width: number; height: number }) {
   const px = 1 / fit.scale; // one CSS pixel in video pixels
   if (layers.skeleton) {
     if (layers.others) for (const p of scene.people) if (p.role === "other") drawPerson(ctx, p, px, dpr);
-    for (const p of scene.people) if (p.role !== "other") drawPerson(ctx, p, px, dpr);
+    const names: NameLabel[] = [];
+    for (const p of scene.people) {
+      if (p.role === "other") continue;
+      const name = drawPerson(ctx, p, px, dpr);
+      if (name) names.push(name);
+    }
+    drawNameLabels(ctx, names, px, frame);
   }
   if (layers.distance && scene.distance) drawDistance(ctx, scene.distance, px);
   if (layers.strikes) {

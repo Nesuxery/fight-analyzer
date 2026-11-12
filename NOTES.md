@@ -65,6 +65,14 @@ CLAUDE.md geçerlidir.
   (`export/frames.py` ↔ `model/measured.ts`), ortak test dosyası
   `shared/fixtures/frame-metrics.json` iki tarafta da denetlenir. Efekt süreleri ve
   renkler `shared/overlay-style.json` içinde tek kaynak.
+- Videodaki ad etiketleri (12 Kasım 2026): tüm iskeletlerden sonra çizilir ve
+  hiçbir zaman üst üste binmez, çerçevenin içinde kalır. Önce kafanın üstünde
+  ortalanır ve çerçeveye sıkıştırılır; çakışan iki etiket, her biri kendi
+  kafasının hizasını örtmeye devam edecek kadar yana itilir; yetmezse üst üste
+  dizilir (kafası yüksekte olan üstte; yukarıda yer yoksa diğeri alta). MP4'te
+  etiketler üst bandın altında kalır. Aynı kural ve aritmetik
+  `frontend/src/player/labelLayout.ts` ↔ `backend/fight_analyzer/export/label_layout.py`;
+  ortak test dosyası `shared/fixtures/label-layout.json` iki tarafta da denetlenir.
 
 ### Dışlanan bölümler (tekrar / ağır çekim)
 - Otomatik ayırt edilemediği için kullanıcı işaretler. Dışlanan bölüm maç süresi

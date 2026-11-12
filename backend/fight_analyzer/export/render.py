@@ -10,7 +10,9 @@ numbers as the browser; identity problems and "insufficient data" are always
 shown and never covered by an effect.
 
 Text goes through Pillow (Turkish characters) and is cached as small RGBA
-patches that are alpha-blended into the frame.
+patches that are alpha-blended into the frame. Fighters' name labels are drawn
+after all skeletons and placed like in the browser (label_layout.py): never over
+each other, inside the picture and below the top band.
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ from PIL import Image, ImageDraw, ImageFont
 from fight_analyzer.contracts import EventType, ExportOptions, FighterId, FrameRecord
 
 from .frames import Effects, FrameMetrics
+from .label_layout import LabelBounds, LabelRequest, place_labels
 from .style import OverlayStyle
 
 BONES = ((5, 7), (7, 9), (6, 8), (8, 10), (5, 6), (5, 11), (6, 12), (11, 12), (11, 13), (13, 15), (12, 14), (14, 16))
@@ -138,6 +141,13 @@ def _blend_region(frame: np.ndarray, layer: np.ndarray, x0: int, y0: int, x1: in
 
 
 @dataclass
+class _NameLabel:
+    patch: _Patch
+    ax: float  # wanted centre x
+    ay: float  # wanted bottom y
+
+
+@dataclass
 class _Person:
     kp: np.ndarray  # [17, 3] x, y, confidence (rounded as served to the browser)
     role: str  # "red" | "blue" | "other"
@@ -193,23 +203,24 @@ class Renderer:
             else:
                 cv2.line(img, _pt(*pa), _pt(*pb), color, thickness, cv2.LINE_AA, SHIFT)
 
-    def _person(self, frame: np.ndarray, p: _Person) -> None:
+    def _person(self, frame: np.ndarray, p: _Person) -> _NameLabel | None:
+        """Draws one person; returns the fighter's name label, placed once all skeletons are drawn."""
         px, kp = self.px, p.kp
         box = self._bounds(kp, 40 * px)
         if box is None:
-            return
+            return None
         color = self.style.colors[p.role]
         dashed = p.state == "occluded"
         x0, y0, x1, y1 = self._clip(box)
         if x0 >= x1 or y0 >= y1:
-            return
+            return None
         local = kp - np.array([x0, y0, 0])
         roi = frame[y0:y1, x0:x1]
         if p.role == "other":  # thin, grey, translucent
             layer = roi.copy()
             self._bones(layer, local, color, _thick(1.5 * px), dashed)
             cv2.addWeighted(layer, 0.55, roi, 0.45, 0, dst=roi)
-            return
+            return None
         # dark under-stroke for contrast, then a modest glow, then the coloured bones
         under = roi.copy()
         self._bones(under, local, BLACK, _thick(5.5 * px), dashed)
@@ -242,7 +253,21 @@ class Renderer:
                 top = (kp[j, 0], kp[j, 1] - 10 * px)
         if p.label and top:
             patch = self.text.get(p.label, _thick(13 * px), color, outline=_thick(2 * px))
-            _blit(frame, patch, top[0] - patch.alpha.shape[1] / 2, top[1] - patch.alpha.shape[0])
+            return _NameLabel(patch, top[0], top[1])
+        return None
+
+    def place_name_labels(self, labels: list[_NameLabel]) -> list[tuple[float, float]]:
+        """Top-left corners of the name labels: apart from each other, inside the picture
+        and below the top band (same rule as the browser, label_layout.py)."""
+        px = self.px
+        margin = 4 * px
+        bounds = LabelBounds(margin, self._band_height() + margin, self.w - margin, self.h - margin)
+        requests = [LabelRequest(n.ax, n.ay, n.patch.alpha.shape[1], n.patch.alpha.shape[0]) for n in labels]
+        return place_labels(requests, bounds, 4 * px)
+
+    def _name_labels(self, frame: np.ndarray, labels: list[_NameLabel]) -> None:
+        for n, (x, y) in zip(labels, self.place_name_labels(labels)):
+            _blit(frame, n.patch, x, y)
 
     def _torso(self, kp: np.ndarray) -> float | None:
         if not all(self._ok(kp, i) for i in (5, 6, 11, 12)):
@@ -345,12 +370,19 @@ class Renderer:
 
     # ---- top band, badges, footnote --------------------------------------
 
-    def _band(self, frame: np.ndarray, metrics: FrameMetrics, i: int) -> float:
+    def _band_height(self) -> int:
+        """Height of the darkened top band; 0 without one."""
         o = self.options
         if not (o.momentum or o.counters):
+            return 0
+        return _thick((62 if o.counters else 50) * self.px)
+
+    def _band(self, frame: np.ndarray, metrics: FrameMetrics, i: int) -> float:
+        band = self._band_height()
+        if not band:
             return 8 * self.px
+        o = self.options
         px, style = self.px, self.style
-        band = _thick((62 if o.counters else 50) * px)
         frame[:band] = (frame[:band] * 0.3).astype(np.uint8)
         margin = 14 * px
         for side in ("red", "blue"):
@@ -435,9 +467,8 @@ class Renderer:
                 for p in people:
                     if p.role == "other":
                         self._person(frame, p)
-            for p in people:
-                if p.role != "other":
-                    self._person(frame, p)
+            names = [n for p in people if p.role != "other" and (n := self._person(frame, p)) is not None]
+            self._name_labels(frame, names)
         if o.distance:
             self._distance(frame, people, distance)
         if o.effects:

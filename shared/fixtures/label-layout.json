@@ -1,0 +1,75 @@
+{
+  "description": "Name labels over the video: expected top-left corners for the shared placement rule. Checked by frontend/tests/label-layout.test.ts (player/labelLayout.ts) and backend/tests/test_label_layout.py (export/label_layout.py). Labels are [anchor x, anchor y (bottom), width, height]; bounds are [left, top, right, bottom].",
+  "cases": [
+    {
+      "name": "far apart: each label centred above its anchor",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[200, 100, 120, 20], [700, 100, 120, 20]],
+      "expected": [[140, 80], [640, 80]]
+    },
+    {
+      "name": "close: pushed apart sideways, each still over its anchor",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[480, 100, 200, 20], [560, 100, 200, 20]],
+      "expected": [[318, 80], [522, 80]]
+    },
+    {
+      "name": "close with fractions: the push is split evenly",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 3,
+      "labels": [[480, 100, 200, 20], [560.5, 100, 200, 20]],
+      "expected": [[318.75, 80], [521.75, 80]]
+    },
+    {
+      "name": "near the left edge: the other label takes the rest of the push",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[120, 100, 200, 20], [210, 100, 200, 20]],
+      "expected": [[0, 80], [204, 80]]
+    },
+    {
+      "name": "same spot: stacked, the label with the higher anchor on top",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[500, 200, 200, 20], [502, 190, 200, 20]],
+      "expected": [[400, 180], [402, 156]]
+    },
+    {
+      "name": "at the left edge without room: stacked, the left label on top on a tie",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[60, 100, 200, 20], [150, 100, 200, 20]],
+      "expected": [[0, 56], [50, 80]]
+    },
+    {
+      "name": "same spot at the top edge: the lower label goes below instead",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[500, 30, 200, 20], [502, 24, 200, 20]],
+      "expected": [[400, 24], [402, 0]]
+    },
+    {
+      "name": "outside the picture: pulled back inside",
+      "bounds": [0, 0, 1000, 600],
+      "gap": 4,
+      "labels": [[990, 10, 120, 20], [5, 700, 120, 20]],
+      "expected": [[880, 0], [0, 580]]
+    },
+    {
+      "name": "export: kept below the top band",
+      "bounds": [0, 70, 1000, 600],
+      "gap": 4,
+      "labels": [[300, 50, 120, 20]],
+      "expected": [[240, 70]]
+    },
+    {
+      "name": "wider than the picture: sticks to the left edge",
+      "bounds": [0, 0, 100, 100],
+      "gap": 4,
+      "labels": [[50, 50, 150, 20]],
+      "expected": [[0, 30]]
+    }
+  ]
+}

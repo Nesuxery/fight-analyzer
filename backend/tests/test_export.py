@@ -126,6 +126,39 @@ def test_renderer_draws_overlay_and_always_shows_identity_problems():
     assert (bare[300:345, :200] != blank[300:345, :200]).any()  # "Mavi: Takip belirsiz" badge stays
 
 
+def _fighter(cx: float, head_y: float, role: str, label: str) -> render._Person:
+    """A standing figure whose face points sit around (cx, head_y)."""
+    kp = np.zeros((17, 3))
+    kp[0] = (cx, head_y, 0.9)
+    kp[1], kp[2] = (cx - 4, head_y - 3, 0.9), (cx + 4, head_y - 3, 0.9)
+    kp[3], kp[4] = (cx - 8, head_y, 0.9), (cx + 8, head_y, 0.9)
+    for i in range(5, 17):
+        kp[i] = (cx + (-10 if i % 2 else 10), head_y + 20 + (i - 5) * 12, 0.9)
+    return render._Person(kp, role, "tracked", label)
+
+
+def test_name_labels_never_overlap_and_stay_in_the_picture_below_the_band():
+    names = {"red": "Alexander Volkanovski", "blue": "İlia Topuria"}
+    r = render.Renderer(640, 360, names, ExportOptions(momentum=True, counters=True), load_style())
+    frame = np.full((360, 640, 3), 90, np.uint8)
+    band = r._band_height()
+    assert band > 0
+    # heads 20 px apart, just under the top band (a clinch near the top of the picture)
+    labels = [r._person(frame, _fighter(300, 70, "red", names["red"])),
+              r._person(frame, _fighter(320, 74, "blue", names["blue"]))]
+    assert all(labels)
+    boxes = [(x, y, n.patch.alpha.shape[1], n.patch.alpha.shape[0])
+             for n, (x, y) in zip(labels, r.place_name_labels(labels))]
+    for x, y, w, h in boxes:
+        assert 0 <= x and x + w <= 640 and band <= y and y + h <= 360
+    (ax, ay, aw, ah), (bx, by, bw, bh) = boxes
+    assert ax + aw <= bx or bx + bw <= ax or ay + ah <= by or by + bh <= ay
+    # a fighter at the right edge keeps the whole name in the picture
+    edge = [r._person(frame, _fighter(634, 200, "blue", names["red"]))]
+    ((x, y),) = r.place_name_labels(edge)
+    assert x + edge[0].patch.alpha.shape[1] <= 640
+
+
 def _info(path: Path) -> VideoInfo:
     p = probe_video(path)
     cap = cv2.VideoCapture(str(path))

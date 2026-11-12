@@ -1,21 +1,25 @@
 /**
  * Canvas drawing cannot use var(); it reads the same custom properties from
- * tokens.css here, so colours still have a single source. Values are cached:
- * tokens do not change while the app runs (a future theme switch would call
- * clearTokenCache).
+ * tokens.css here, so colours still have a single source. Values are cached
+ * until the theme changes: app/useTheme.ts calls clearTokenCache, and canvas
+ * code compares tokenVersion() to redraw with the new colours.
  */
-const cache = new Map<string, string>();
+import { createTokenCache } from "./tokenCache.ts";
+
+const tokens = createTokenCache((name) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 
 export function cssToken(name: `--${string}`): string {
-  const hit = cache.get(name);
-  if (hit !== undefined) return hit;
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  if (value) cache.set(name, value);
-  return value;
+  return tokens.get(name);
 }
 
 export function clearTokenCache(): void {
-  cache.clear();
+  tokens.clear();
+}
+
+/** Changes every time the token cache is cleared (theme change). */
+export function tokenVersion(): number {
+  return tokens.version();
 }
 
 /** "#rrggbb" with an alpha (0..1) as an rgba() string for canvas styles. */

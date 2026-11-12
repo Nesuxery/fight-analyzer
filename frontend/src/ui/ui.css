@@ -1,9 +1,11 @@
 /* Shared interface components (src/ui). Every value comes from tokens.css.
    Cards have a 1 px border and the very light --shadow-card; floating layers
-   (tooltip, menu panel, dialog, toast) cast --shadow-float. Black (--ink) is
-   for primary buttons and the active tab line; red (--accent) for progress
-   and section bars, and it turns black on the Selection and Result screens.
-   Motion: opacity and transform only. */
+   (tooltip, menu panel, dialog, toast) sit on --surface-raised and cast
+   --shadow-float. --primary (black on light, white on dark) is for primary
+   buttons; the active tab line is --text-1; red (--accent) for progress and
+   section bars, and it turns black (white on dark) on the Selection and
+   Result screens. Fills carry white text; corner colours as text and marks
+   use the -fg tokens. Motion: opacity and transform only. */
 
 /* ---------- Button, ButtonLink, IconButton ---------- */
 .btn {
@@ -35,13 +37,13 @@
 }
 
 .btn--primary {
-  border-color: var(--text-1);
-  background: var(--text-1);
-  color: var(--text-on-fill);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: var(--text-1);
+  background: var(--primary);
   opacity: 0.86;
 }
 
@@ -87,25 +89,25 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  border-color: var(--text-1);
+  border-color: var(--primary);
   border-radius: var(--radius-pill);
-  background: var(--text-1);
-  color: var(--text-on-fill);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .btn--play:hover:not(:disabled) {
-  background: var(--text-1);
+  background: var(--primary);
   opacity: 0.86;
 }
 
 .btn--danger {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--danger-fill);
+  background: var(--danger-fill);
   color: var(--text-on-fill);
 }
 
 .btn--danger:hover:not(:disabled) {
-  background: var(--danger);
+  background: var(--danger-fill);
   opacity: 0.86;
 }
 
@@ -132,8 +134,8 @@
   z-index: 40;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-control);
-  background: var(--text-1);
-  color: var(--text-on-fill);
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: var(--fs-12);
   font-weight: var(--fw-medium);
   line-height: 1.4;
@@ -195,7 +197,7 @@
   text-align: left;
   text-transform: none;
   white-space: normal;
-  box-shadow: var(--shadow-float);
+  box-shadow: 0 0 0 1px var(--ink-edge), var(--shadow-float);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease);
@@ -425,6 +427,9 @@ a.stepper__item:hover {
 .badge {
   --tone: var(--text-2);
   --tone-soft: var(--surface-muted);
+  /* solid badges: a fill and the text on it */
+  --tone-fill: var(--primary);
+  --tone-on-fill: var(--on-primary);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -440,15 +445,15 @@ a.stepper__item:hover {
 }
 
 .badge--success { --tone: var(--success); --tone-soft: var(--success-soft); }
-.badge--warning { --tone: var(--warning); --tone-soft: var(--warning-soft); }
-.badge--danger { --tone: var(--danger); --tone-soft: var(--danger-soft); }
-.badge--red { --tone: var(--red); --tone-soft: var(--red-soft); }
-.badge--blue { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+.badge--warning { --tone: var(--warning); --tone-soft: var(--warning-soft); --tone-fill: var(--warning-fill); --tone-on-fill: var(--text-on-fill); }
+.badge--danger { --tone: var(--danger); --tone-soft: var(--danger-soft); --tone-fill: var(--danger-fill); --tone-on-fill: var(--text-on-fill); }
+.badge--red { --tone: var(--red-fg); --tone-soft: var(--red-soft); --tone-fill: var(--red); --tone-on-fill: var(--text-on-fill); }
+.badge--blue { --tone: var(--blue-fg); --tone-soft: var(--blue-soft); --tone-fill: var(--blue); --tone-on-fill: var(--text-on-fill); }
 
 /* solid: corner badges over pictures */
 .badge--solid {
-  background: var(--tone);
-  color: var(--text-on-fill);
+  background: var(--tone-fill);
+  color: var(--tone-on-fill);
 }
 
 /* job states of the history list until it uses Badge tones */
@@ -490,7 +495,7 @@ a.stepper__item:hover {
   height: 20px;
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
-  background: var(--warning);
+  background: var(--warning-fill);
   color: var(--text-on-fill);
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
@@ -517,7 +522,7 @@ a.stepper__item:hover {
 .demo-banner__tag {
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
-  background: var(--warning);
+  background: var(--warning-fill);
   color: var(--text-on-fill);
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
@@ -610,7 +615,7 @@ a.stepper__item:hover {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-stage);
-  background: var(--surface);
+  background: var(--surface-raised);
   color: var(--text-1);
   box-shadow: var(--shadow-float);
 }
@@ -668,7 +673,8 @@ a.stepper__item:hover {
   padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--surface-raised);
+  color: var(--text-1);
   box-shadow: var(--shadow-float);
   pointer-events: auto;
   animation: ui-slide-in var(--motion) var(--ease);
@@ -850,13 +856,13 @@ a.stepper__item:hover {
 .statpair__bar > span {
   display: block;
   height: 100%;
-  background: var(--red);
+  background: var(--red-fg);
   transform-origin: right center;
   transition: transform var(--motion) var(--ease);
 }
 
 .statpair__bar--blue > span {
-  background: var(--blue);
+  background: var(--blue-fg);
   transform-origin: left center;
 }
 

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { navigate } from "../../app/router";
+import { useTheme } from "../../app/useTheme";
 import type { SelectParams } from "../../app/router";
 import { useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
@@ -31,15 +32,16 @@ function DemoSelection() {
     (ctx: CanvasRenderingContext2D, time: number) => renderDemo(ctx, time, { layers: NO_LAYERS, assignment: null }),
     [],
   );
-  // The synthetic frame, drawn once per candidate: the tiles are cut from it.
+  // The synthetic frame, drawn once per candidate and theme: the tiles are cut from it.
+  const { theme } = useTheme();
   const source = useMemo<CropSource>(() => {
     const canvas = document.createElement("canvas");
     canvas.width = DEMO_FRAME.width;
     canvas.height = DEMO_FRAME.height;
     const ctx = canvas.getContext("2d");
     if (ctx) renderDemo(ctx, t, { layers: NO_LAYERS, assignment: null });
-    return { version: t, draw: (c, r, size) => c.drawImage(canvas, r.x, r.y, r.size, r.size, 0, 0, size, size) };
-  }, [t]);
+    return { version: `${t}:${theme}`, draw: (c, r, size) => c.drawImage(canvas, r.x, r.y, r.size, r.size, 0, 0, size, size) };
+  }, [t, theme]);
 
   const confirm = () => {
     if (picks.red === REFEREE || picks.blue === REFEREE) {

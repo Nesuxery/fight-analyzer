@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useTheme } from "../app/useTheme";
 import type { VideoClock } from "./clock";
 import { backingSize, canvasTransform, containFit } from "./geometry";
 import { drawOverlay } from "./overlay";
@@ -7,7 +8,7 @@ import type { OverlayLayers, OverlayScene } from "./overlay";
 /**
  * Canvas over a <video> (same box, `object-fit: contain` geometry). It draws
  * the scene of the presented frame once per frame callback of the clock, and
- * again only when the data, the layers, the size or the pixel density change:
+ * again only when the data, the layers, the theme, the size or the pixel density change:
  * a paused video gives a still overlay.
  */
 export function OverlayCanvas({ clock, width, height, sceneAt, layers, version }: {
@@ -50,8 +51,9 @@ export function OverlayCanvas({ clock, width, height, sceneAt, layers, version }
 
   // Once per presented video frame.
   useEffect(() => clock.onFrame(draw), [clock, draw]);
-  // Data or layers changed while paused.
-  useEffect(draw, [draw, sceneAt, layers, version]);
+  // Data, layers or the theme (colours read from tokens) changed while paused.
+  const { theme } = useTheme();
+  useEffect(draw, [draw, sceneAt, layers, version, theme]);
   // Size, fullscreen and pixel density changes.
   useEffect(() => {
     const canvas = canvasRef.current;

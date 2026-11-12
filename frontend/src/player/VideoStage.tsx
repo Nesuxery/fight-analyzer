@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { tokenVersion } from "../styles/tokens";
 
 export type DrawFn = (ctx: CanvasRenderingContext2D, t: number) => void;
 
@@ -16,8 +17,8 @@ interface Props {
 }
 
 /**
- * 16:9 frame that redraws a canvas whenever the time or the draw function
- * changes. The canvas backing store follows the element size and DPR so
+ * 16:9 frame that redraws a canvas whenever the time, the draw function or
+ * the theme (tokenVersion) changes. The canvas backing store follows the element size and DPR so
  * overlays stay sharp at any layout width.
  */
 export function VideoStage({ frame, getTime, draw, label, className, children }: Props) {
@@ -38,6 +39,7 @@ export function VideoStage({ frame, getTime, draw, label, className, children }:
     let lastT = Number.NaN;
     let lastDraw: DrawFn | null = null;
     let lastW = 0;
+    let lastTokens = -1;
 
     const loop = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -48,12 +50,15 @@ export function VideoStage({ frame, getTime, draw, label, className, children }:
         canvas.height = h;
       }
       const t = timeRef.current();
-      if (t !== lastT || drawRef.current !== lastDraw || w !== lastW) {
+      // tokenVersion: the theme changed, so colours read from tokens are new
+      const tokens = tokenVersion();
+      if (t !== lastT || drawRef.current !== lastDraw || w !== lastW || tokens !== lastTokens) {
         ctx.setTransform(w / frame.width, 0, 0, h / frame.height, 0, 0);
         drawRef.current(ctx, t);
         lastT = t;
         lastDraw = drawRef.current;
         lastW = w;
+        lastTokens = tokens;
       }
       raf = requestAnimationFrame(loop);
     };

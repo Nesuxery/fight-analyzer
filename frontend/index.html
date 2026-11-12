@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
+    <script>
+      // Theme before the first paint: the same rules as src/app/theme.ts
+      // (tests/theme.test.ts runs both). Falls back to the light theme.
+      (function () {
+        var choice = "system";
+        try {
+          var stored = window.localStorage.getItem("fight-analyzer.theme");
+          if (stored === "light" || stored === "dark" || stored === "system") choice = stored;
+        } catch (e) {}
+        var dark = choice === "dark";
+        if (choice === "system") {
+          try {
+            dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          } catch (e) {}
+        }
+        var theme = dark ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.setAttribute("content", theme);
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/octagon.svg" />
     <title>Fight Analyzer</title>
   </head>

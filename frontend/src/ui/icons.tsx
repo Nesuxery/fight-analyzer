@@ -69,9 +69,20 @@ export const IconHelp = (p: IconProps) => (
   <Icon {...p}><circle cx="12" cy="12" r="8.5" /><path d="M9.7 9.7a2.4 2.4 0 114 1.8c-.9.7-1.7 1.2-1.7 2.4M12 16.8v.01" /></Icon>
 );
 export const IconArrowRight = (p: IconProps) => <Icon {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Icon>;
-/** Runs on this computer. */
+/** Runs on this computer; also the "Sistem" theme (follows the computer's setting). */
 export const IconMonitor = (p: IconProps) => (
   <Icon {...p}><rect x="3" y="4.5" width="18" height="12" rx="2" /><path d="M8.5 20h7M12 16.5V20" /></Icon>
+);
+/** Light theme. */
+export const IconSun = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+  </Icon>
+);
+/** Dark theme. */
+export const IconMoon = (p: IconProps) => (
+  <Icon {...p}><path d="M20 14.2A8 8 0 019.8 4a8 8 0 1010.2 10.2z" /></Icon>
 );
 /** No internet needed. */
 export const IconWifiOff = (p: IconProps) => (

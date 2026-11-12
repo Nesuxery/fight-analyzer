@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api, urls } from "../../api/client";
 import { href, navigate } from "../../app/router";
+import { useTheme } from "../../app/useTheme";
 import type { Job, JobStatus } from "../../contracts/generated";
 import { DEMO_POST_SELECTION_S, DEMO_PRE_SELECTION_S, useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
@@ -218,16 +219,17 @@ function HistoryRow({ job }: { job: Job }) {
 const DEMO_THUMB_T = 12;
 const NO_LAYERS = { skeleton: false, strikes: false, distance: false };
 
-/** The demo has no video file: its preview frame is drawn from the synthetic scene. */
+/** The demo has no video file: its preview frame is drawn from the synthetic scene (again when the theme changes). */
 function DemoThumb() {
   const ref = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme();
   useEffect(() => {
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     ctx.setTransform(canvas.width / DEMO_FRAME.width, 0, 0, canvas.height / DEMO_FRAME.height, 0, 0);
     renderDemo(ctx, DEMO_THUMB_T, { layers: NO_LAYERS, assignment: null });
-  }, []);
+  }, [theme]);
   return (
     <span className="history__thumb" aria-hidden="true">
       <canvas ref={ref} width={224} height={126} />

@@ -1,7 +1,8 @@
 /* Result screen. Bölüm 1 only restyles it and adds explanations; its layout
    is rebuilt in Bölüm 5. Every value comes from tokens.css (overlay-tokens.css
    for marks drawn over the picture). Red here only ever means the red corner:
-   buttons, tabs and heading bars are black (--accent is --ink on this screen). */
+   buttons, tabs and heading bars are black, white on the dark page (--accent
+   is --text-1 on this screen). Corner text and marks use --red-fg / --blue-fg. */
 
 /* ---------- result layout: video centre, stat panels on both sides ---------- */
 .result {
@@ -33,6 +34,7 @@
   gap: var(--space-3) var(--space-4);
   padding: var(--space-4);
   border-radius: var(--radius-card);
+  box-shadow: 0 0 0 1px var(--ink-edge);
   /* background and text colour: .on-ink (base.css) */
 }
 
@@ -76,7 +78,8 @@
 .fname--blue .fname__input { text-align: right; }
 
 /* Momentum, interim until Bölüm 5: a dark box with small white numbers, so the names
-   stay the focus. The numbers carry the shares; the red and blue fills only picture them. */
+   stay the focus. The numbers carry the shares; the red and blue fills picture them
+   in the corner colours for ink (3:1 against --ink and --ink-2 in both themes). */
 .momentum {
   grid-area: momentum;
   display: grid;
@@ -130,8 +133,8 @@
 }
 
 .momentum__fill { height: 100%; }
-.momentum__fill--red { background: var(--red); }
-.momentum__fill--blue { background: var(--blue); }
+.momentum__fill--red { background: var(--red-on-ink); }
+.momentum__fill--blue { background: var(--blue-on-ink); }
 .momentum__none { flex: 1; background: repeating-linear-gradient(135deg, var(--ink-line) 0 6px, transparent 6px 12px); }
 
 .momentum__mid {
@@ -154,7 +157,7 @@
 
 /* ---------- stat panels ---------- */
 .stats {
-  --tone: var(--red);
+  --tone: var(--red-fg);
   border: 1px solid var(--border);
   border-top: 3px solid var(--tone);
   border-radius: var(--radius-card);
@@ -162,7 +165,7 @@
   box-shadow: var(--shadow-card);
 }
 
-.stats--blue { --tone: var(--blue); }
+.stats--blue { --tone: var(--blue-fg); }
 
 .stats__head {
   display: flex;
@@ -337,8 +340,8 @@
 
 /* filter chips (base look: Chip in ui/ui.css) */
 .chipbtn[aria-pressed="true"] { border-color: var(--text-1); color: var(--text-1); }
-.chipbtn--red[aria-pressed="true"] { border-color: var(--red); background: var(--red-soft); }
-.chipbtn--blue[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-soft); }
+.chipbtn--red[aria-pressed="true"] { border-color: var(--red-fg); background: var(--red-soft); }
+.chipbtn--blue[aria-pressed="true"] { border-color: var(--blue-fg); background: var(--blue-soft); }
 .chipbtn--significant[aria-pressed="true"] { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
 
 /* ---------- timeline: momentum curve, event marks, playhead ---------- */
@@ -372,8 +375,8 @@
   background: var(--surface-muted);
 }
 
-.tl__lane--red { --tone: var(--red); }
-.tl__lane--blue { --tone: var(--blue); }
+.tl__lane--red { --tone: var(--red-fg); }
+.tl__lane--blue { --tone: var(--blue-fg); }
 
 /* punch: thin tick */
 .tl__mark {
@@ -443,8 +446,9 @@
   height: 100%;
 }
 
-.tl__area--red { fill: var(--red); opacity: 0.22; }
-.tl__area--blue { fill: var(--blue); opacity: 0.2; }
+/* tints under the curve; the curve line and the axis labels carry the value */
+.tl__area--red { fill: var(--red-fg); opacity: 0.22; }
+.tl__area--blue { fill: var(--blue-fg); opacity: 0.2; }
 .tl__line { fill: none; stroke: var(--text-1); stroke-width: 1.25; opacity: 0.85; vector-effect: non-scaling-stroke; }
 .tl__hatch { fill: var(--warning); opacity: 0.22; }
 
@@ -455,9 +459,13 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* on a card-coloured chip: over the tinted areas the label would fall below 4.5:1 */
 .tl__axis {
   position: absolute;
   right: var(--space-1);
+  padding: 0 2px;
+  border-radius: 2px;
+  background: var(--surface);
   color: var(--text-3);
   font-size: var(--fs-label);
   line-height: 1;
@@ -632,10 +640,10 @@
   background: var(--border-strong);
 }
 
-.evt__side--red { color: var(--red); }
-.evt__side--red::before { background: var(--red); }
-.evt__side--blue { color: var(--blue); }
-.evt__side--blue::before { background: var(--blue); }
+.evt__side--red { color: var(--red-fg); }
+.evt__side--red::before { background: var(--red-fg); }
+.evt__side--blue { color: var(--blue-fg); }
+.evt__side--blue::before { background: var(--blue-fg); }
 
 .evt__type {
   display: flex;
@@ -797,14 +805,14 @@
 }
 
 .tlid__lane {
-  --tone: var(--red);
+  --tone: var(--red-fg);
   position: relative;
   height: 20px;
   border-radius: 2px;
   background: var(--surface-muted);
 }
 
-.tlid__lane--blue { --tone: var(--blue); }
+.tlid__lane--blue { --tone: var(--blue-fg); }
 
 .tlid__name {
   position: absolute;
@@ -1000,8 +1008,8 @@
 }
 
 .mpanel__side { padding-top: 6px; border-top: 2px solid var(--tone); }
-.mpanel__side--red { --tone: var(--red); }
-.mpanel__side--blue { --tone: var(--blue); }
+.mpanel__side--red { --tone: var(--red-fg); }
+.mpanel__side--blue { --tone: var(--blue-fg); }
 
 .mpanel__name { margin: 0 0 var(--space-1); font-weight: var(--fw-semibold); }
 
@@ -1158,12 +1166,12 @@
   padding: 6px var(--space-3);
   border-radius: var(--radius-control);
   background: var(--overlay-warning);
-  color: var(--text-1);
+  color: var(--stage-on-bright);
   font-size: var(--fs-13);
   font-weight: var(--fw-semibold);
   line-height: 1.2;
   white-space: nowrap;
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--stage-shadow);
 }
 
 /* only the Turkish warning is in capitals; the fighter name after it stays as written */
@@ -1178,7 +1186,7 @@
   width: 18px;
   height: 16px;
   padding-bottom: 1px;
-  background: var(--text-1);
+  background: var(--stage-on-bright);
   color: var(--overlay-warning);
   font-size: var(--fs-label);
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
@@ -1340,7 +1348,7 @@
 .xrow .tag--danger { gap: var(--space-1); }
 
 /* headings of the cards on this screen carry the same 4 × 16 px bar as SectionHeading;
-   it is black here (--accent) */
+   it is black here, white on the dark page (--accent) */
 .events__head h2,
 .xpanel__form > h2,
 .xpanel__title,

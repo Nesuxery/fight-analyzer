@@ -140,7 +140,8 @@ code,
   flex-direction: column;
 }
 
-/* black surfaces (top bar, dark bands, the fighter card): white text and a white focus ring */
+/* black surfaces (top bar, dark bands, the fighter card): white text and a white focus ring.
+   On the dark page ink is a tone above --bg; --ink-edge draws their edge (.topbar, .upband, .rhead). */
 .topbar,
 .on-ink {
   --focus-ring: var(--on-ink);
@@ -187,6 +188,7 @@ code,
   gap: var(--space-4);
   height: var(--topbar-h);
   padding: 0 var(--page-gutter);
+  box-shadow: inset 0 -1px 0 var(--ink-edge);
 }
 
 .brand {
@@ -217,7 +219,7 @@ code,
   gap: var(--space-3);
 }
 
-/* Analiz / Demo on the ink bar: the chosen mode is a white pill */
+/* Analiz / Demo on the ink bar: the chosen mode is a white pill with ink text (both themes) */
 .topbar .segmented {
   border-color: var(--ink-line);
   background: var(--ink-2);
@@ -232,9 +234,90 @@ code,
 }
 
 .topbar .segmented__item.is-active {
-  background: var(--surface);
-  color: var(--text-1);
+  background: var(--on-ink);
+  color: var(--ink);
   box-shadow: none;
+}
+
+/* theme menu: an icon button on the ink bar, the choices in a floating panel */
+.thememenu {
+  position: relative;
+}
+
+.thememenu__button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--on-ink-2);
+  cursor: pointer;
+}
+
+.thememenu__button:hover,
+.thememenu__button[aria-expanded="true"] {
+  background: var(--ink-2);
+  color: var(--on-ink);
+}
+
+.thememenu__panel {
+  --focus-ring: var(--text-1);
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 30;
+  display: grid;
+  min-width: 220px;
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
+  color: var(--text-1);
+  box-shadow: var(--shadow-float);
+}
+
+.thememenu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--fs-14);
+  text-align: left;
+  cursor: pointer;
+}
+
+.thememenu__item:hover,
+.thememenu__item:focus-visible {
+  background: var(--surface-muted);
+}
+
+.thememenu__item.is-checked {
+  font-weight: var(--fw-semibold);
+}
+
+.thememenu__icon {
+  flex: none;
+  color: var(--text-2);
+}
+
+.thememenu__hint {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-regular);
+}
+
+.thememenu__check {
+  flex: none;
+  margin-left: auto;
 }
 
 /* system status: summary in the top bar, details in a floating panel */
@@ -287,8 +370,8 @@ code,
   padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: var(--surface);
-  /* a white panel hanging from the ink bar: back to dark text and the dark focus ring */
+  background: var(--surface-raised);
+  /* a page-coloured panel hanging from the ink bar: back to page text and focus ring */
   --focus-ring: var(--text-1);
   color: var(--text-1);
   box-shadow: var(--shadow-float);
@@ -367,10 +450,11 @@ code,
 }
 
 /* On the Selection and Result screens red only ever means the red corner:
-   progress bars, section bars and other accents are black there. */
+   progress bars, section bars and other accents are the text colour there
+   (black on the light page, white on the dark one). */
 .shell__main[data-screen="select"],
 .shell__main[data-screen="result"] {
-  --accent: var(--ink);
+  --accent: var(--text-1);
 }
 
 /* result screen keeps its current width until Bölüm 5 rebuilds its layout */
@@ -389,7 +473,8 @@ code,
     padding: var(--space-2) var(--space-3);
     row-gap: var(--space-2);
   }
-  .stepper { order: 3; flex-basis: 100%; }
+  /* .topbar for weight: ui.css (loaded later) sets .stepper { flex: 1 }, which reset the basis */
+  .topbar .stepper { order: 3; flex: 0 0 100%; }
   .stepper__list { justify-content: space-between; }
   .topbar__end { margin-left: auto; }
   .sys__text { display: none; }

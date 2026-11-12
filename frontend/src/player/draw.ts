@@ -2,7 +2,7 @@
  * tokens.css (scene, stage) and shared/overlay-style.json (skeletons, effects). */
 import { OVERLAY_STYLE } from "../contracts/overlayStyle";
 import type { Point, Pose } from "../demo/scene";
-import { cssToken, withAlpha } from "../styles/tokens";
+import { cssToken, tokenVersion, withAlpha } from "../styles/tokens";
 
 /** COCO-17 limb connections. */
 export const COCO_EDGES: readonly [number, number][] = [
@@ -131,10 +131,12 @@ export function drawDistance(ctx: CanvasRenderingContext2D, a: Point, b: Point, 
 }
 
 let backdrop: HTMLCanvasElement | null = null;
+let backdropTokens = -1;
 
-/** Dark arena backdrop with an octagon floor (cached). */
+/** Dark arena backdrop with an octagon floor (cached until the size or the theme's tokens change). */
 export function drawBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  if (!backdrop || backdrop.width !== w || backdrop.height !== h) {
+  if (!backdrop || backdrop.width !== w || backdrop.height !== h || backdropTokens !== tokenVersion()) {
+    backdropTokens = tokenVersion();
     backdrop = document.createElement("canvas");
     backdrop.width = w;
     backdrop.height = h;
@@ -188,7 +190,8 @@ export function drawWatermark(ctx: CanvasRenderingContext2D, text: string) {
   const w = ctx.measureText(text).width + 20;
   ctx.fillStyle = withAlpha(OVERLAY_STYLE.colors.amber, 0.92);
   ctx.fillRect(18, 18, w, 32);
-  ctx.fillStyle = cssToken("--text-1");
+  // dark text on the amber label, the same in both themes (the page's --text-1 turns white on dark)
+  ctx.fillStyle = cssToken("--stage-on-bright");
   ctx.fillText(text, 28, 23);
   ctx.restore();
 }

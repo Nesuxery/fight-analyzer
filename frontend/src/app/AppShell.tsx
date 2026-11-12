@@ -9,6 +9,7 @@ import { IconOctagon } from "../ui/icons";
 import { href } from "./router";
 import type { Route, Screen } from "./router";
 import { StatusBar } from "./StatusBar";
+import { ThemeMenu } from "./ThemeMenu";
 
 const SCREENS: readonly Screen[] = ["upload", "processing", "select", "result"];
 
@@ -78,6 +79,7 @@ export function AppShell({ route, children }: { route: Route; children: ReactNod
             { value: "analysis", label: L.modeAnalysis, href: "#/" },
             { value: "demo", label: L.modeDemo, href: "#/demo" },
           ]} />
+          <ThemeMenu />
           <SystemStatus />
         </div>
       </header>

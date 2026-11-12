@@ -72,6 +72,16 @@ export const SHELL_LABELS = {
   modeDemo: "Demo",
   system: { pending: "Bağlanıyor", bad: "API'ye ulaşılamıyor", ok: "Sistem hazır", warn: "Sistemde sorun var" },
   systemTitle: "Sistem durumu",
+  /** Theme menu in the top bar. */
+  theme: {
+    menu: "Tema",
+    button: (current: string) => `Tema: ${current}`,
+    light: "Açık",
+    dark: "Koyu",
+    system: "Sistem",
+    /** The computer's own setting, shown next to "Sistem". */
+    now: { light: "şu an açık", dark: "şu an koyu" },
+  },
 } as const;
 
 export const UPLOAD_LABELS = {

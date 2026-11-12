@@ -26,6 +26,8 @@ CLAUDE.md geçerlidir.
   2 denemeden sonra `worker_lost`.
 - Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.6.0**);
   JSON Schema ve TS tipleri bundan üretilir, `check.cmd` güncelliğini denetler.
+  Üretilen dosyalar (şema, TS tipleri, overlay dosyaları) `.gitattributes` ile her
+  checkout'ta LF; denetim bayt bayt karşılaştırır ve gevşetilmedi.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
   (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 5`, `CAMERA_VERSION 2`,
@@ -149,8 +151,8 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   alanı Bölüm 5 yeniden kurar.
 - **Kenarlık:** `--border-strong` `#8f8f8a` yeni zeminde 2,9:1'e düştüğü için
   `#858580` (3,3:1). `--border` `#deded9`; kartlara `--shadow-card` eklendi.
-- **Üst bar adımları:** "tamamlandı" işareti, açık ekrandan önceki adımlar
-  demektir; kabuk işin gerçek durumunu sorgulamaz.
+- **Üst bar adımları:** onay işareti, açık ekrandan önceki adımlar demektir
+  (ekran okuyucu "önceki adım" der); kabuk işin gerçek durumunu sorgulamaz.
 - **Geçmiş satırı:** satır artık `<button>` değil; tek bağlantı "Aç"tır ve
   tıklama alanı satırın tamamını kaplar. Olay sayısı olay aşaması çalışana kadar
   boştur.
@@ -215,6 +217,17 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   tıkla "hareket analizini yenile" düğmesi eklenebilir.
 - [ ] Dışa aktarılan MP4'e raund skorları/hakem kartı katmanı (şu an yalnız JSON'da).
 - [ ] Analiz ve dışa aktarmaları arayüzden silme.
+
+### Bölüm 5 için arayüz notları (12 Kasım 2026)
+- [ ] Yan paneldeki uzun metrik etiketleri ("İLERLEME / GERİ ÇEKİLME", "TAHMİNİ
+  KONTROL SÜRESİ") büyük harf yerine cümle düzeninde yazılsın.
+- [ ] Olay listesindeki % sütununa "Güven" başlığı gelsin (şu an başlıksız
+  yüzde; açıklaması yalnızca fareyle üstüne gelince görünüyor).
+- [ ] Zaman çizelgesinin sağındaki "%100 kırmızı", "%50", "%100 mavi" etiketleri
+  üst üste biniyor.
+- [ ] Sonuç üst kartındaki momentum kutusu geçici olarak koyu ve küçük; alan
+  yeniden kurulurken dövüşçü adları odakta kalsın, pay kazanma olasılığı gibi
+  okunmasın.
 
 ### Altyapı
 - [ ] GPU (CUDA) yolu bu makinede denenemedi; NVIDIA kartlı bir makinede ölçülmeli.

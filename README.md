@@ -175,6 +175,12 @@ data/                   çalışma verisi (git dışı):
   MP4 dışa aktarmayla ortak). Ortak bileşenler `frontend/src/ui/`; bir test
   token dosyaları dışında renk kodu kalmadığını, bir test de metin
   kontrastının WCAG AA'yı geçtiğini denetler.
+- **Tema**: üst bardaki menüden Açık · Koyu · Sistem (varsayılan Sistem;
+  işletim sisteminin temasına uyar). Seçim tarayıcıda saklanır ve sayfa açılırken
+  ilk boyamadan önce uygulanır. Koyu temada zemin `#0b0b0d`, kartlar `#151518`;
+  kırmızı ve mavi yazılar açık tonlarda (`#ff6b7a`, `#7aa5ff`), beyaz yazılı
+  kırmızı butonlar ve video sahnesi iki temada aynıdır. Kontrast testleri iki
+  tema için çalışır.
 - **Sayfa genişliği**: en fazla 1440 px ve 24 px kenar boşluğu; sonuç ekranı
   düzeni Bölüm 5'te yenilenene kadar 1640 px.
 - **Duyarlı yerleşim**: ≥1100 px'de üç sütun (panel · video ve altında zaman

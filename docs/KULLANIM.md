@@ -46,6 +46,12 @@ ve analiz GPU'da çalışır; yoksa CPU kullanılır. `FA_DEVICE=cpu` CPU'yu zor
 `FA_DEVICE=cuda` istenip GPU yoksa CPU'ya geçilir ve bu durum sağlık
 ekranında ("Sistem hazır" düğmesi) yazar. Ölçülen hızlar için bölüm 6'ya bakın.
 
+### Tema
+
+Üst bardaki güneş/ay/ekran simgesi Açık, Koyu ve Sistem seçeneklerini açar.
+Sistem (varsayılan) bilgisayarın açık/koyu ayarını izler. Seçim bu tarayıcıda
+saklanır. Video ve üzerindeki iskelet ve efekt renkleri iki temada aynıdır.
+
 ## 2. Analiz adımları
 
 1. **Yükleme:** Videoyu sürükleyip bırakın ya da seçin (MP4, MOV, MKV, AVI,

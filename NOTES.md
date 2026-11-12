@@ -142,13 +142,14 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   ekranda kırmızı logo ve kırmızı aktif adım taşır.
 - **Siyah üstünde kırmızı:** 3,5:1; yalnızca dolgu, çizgi ve ikon. Bir test,
   oran 4,5:1'i geçerse kuralın güncellenmesi için uyarır. İkinci bir açık kırmızı
-  ya da mavi eklenmedi.
+  ya da mavi eklenmedi (koyu temayla değişti; aşağıdaki "Tema" bölümü).
 - **Sonuç üst kartındaki momentum (geçici):** koyu (`--ink-2`) kutuda, küçük beyaz
   yüzdelerle; büyük ve beyaz bir kutu sayfanın odağı oluyor ve kazanma olasılığı
   gibi okunuyordu. Dikkat dövüşçü adlarında kalsın diye orta sütun daraltıldı.
-  Payı metin olarak yüzdeler verir; çubuktaki kırmızı ve mavi yalnızca görseldir
-  (mavi `--ink-2` üstünde 2,6:1, kırmızı 3,1:1). Momentum hesabı değişmedi; bu
-  alanı Bölüm 5 yeniden kurar.
+  Payı metin olarak yüzdeler verir; çubuktaki kırmızı ve mavi yalnızca görseldir.
+  Mavi `--ink-2` üstünde 2,6:1 kalıyordu; tema çalışmasında `--blue-on-ink` ile
+  iki temada da 3:1'in üstüne çıktı. Momentum hesabı değişmedi; bu alanı Bölüm 5
+  yeniden kurar.
 - **Kenarlık:** `--border-strong` `#8f8f8a` yeni zeminde 2,9:1'e düştüğü için
   `#858580` (3,3:1). `--border` `#deded9`; kartlara `--shadow-card` eklendi.
 - **Üst bar adımları:** onay işareti, açık ekrandan önceki adımlar demektir
@@ -175,6 +176,46 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   kısaltmalar, İngilizce terimler ("grappling", "Submission") ve dövüşçü adları
   yazıldığı gibi gösterilir; kodda yerele bağlı büyük harf dönüşümü yok (aynı test
   denetler). Adlar yalnızca baştaki ve sondaki boşluklar kırpılarak saklanır.
+
+### Tema: Açık · Koyu · Sistem (v2/tema, 13 Kasım 2026)
+Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
+- **Seçim:** üst barda Analiz/Demo'nun yanındaki menü; varsayılan Sistem (işletim
+  sisteminin teması, değişince sayfa yenilenmeden uyar). Seçim localStorage'da
+  `fight-analyzer.theme` anahtarıyla saklanır; okuma ve yazma hata atarsa seçim o
+  oturumda geçerli kalır. Mantık `frontend/src/app/theme.ts`; `index.html`
+  içindeki küçük betik aynı kuralla `data-theme`'i ilk boyamadan önce yazar ve
+  `<meta name="color-scheme">`'i günceller (dev sunucusunda CSS JS ile geldiği
+  için stil yüklenmeden önceki ekran da doğru renkte). İkisini bir test aynı
+  girdilerle karşılaştırır.
+- **Renk rolleri:** aynı tokenın hem beyaz yazılı dolgu hem sayfadaki yazı/işaret
+  olarak kullanılması koyu temada imkânsızdı (bir renk beyaza ve koyu karta aynı
+  anda 4,5:1 veremez). Roller ayrıldı: dolgular (`--red`, `--red-strong`,
+  `--blue`, `--warning-fill`, `--danger-fill`) iki temada aynı ve beyaz yazı
+  taşır; sayfadaki köşe yazıları ve işaretleri `--red-fg` / `--blue-fg` (koyuda
+  `#ff6b7a` / `#7aa5ff`); koyu yüzeydeki çubuklar `--red-on-ink` /
+  `--blue-on-ink`; nötr dolgu `--primary` / `--on-primary` (açıkta siyah buton,
+  koyuda beyaz buton ve siyah yazı); menü, diyalog ve bildirimler
+  `--surface-raised`. Sürükle-bırak kartı da bant üstünde öne çıksın diye
+  `--surface-raised`.
+- **Koyu tema değerleri:** zemin `#0b0b0d`, kart `#151518`, yükseltilmiş yüzey
+  `#1e1e22`; siyah bantlar (`--ink` `#141417`) zeminden bir ton açık ve
+  `--ink-edge` kenarıyla ayrılır. Açık temada değişen tek renk momentum
+  kutusundaki mavi (`#5b8cff`).
+- **Video katmanı:** sahne, Demo sahnesi ve overlay renkleri iki temada aynıdır;
+  koyu blok bunları tanımlamaz. Video üstündeki sarı uyarının ve Demo filigranının
+  yazısı `--stage-on-bright`. Tema değişince canvas token önbelleği temizlenir
+  (`tokenVersion`) ve sahne, kırpıntılar ve önizleme sayfa yenilenmeden yeniden
+  çizilir; zaman çizelgesi SVG ve CSS olduğu için kendiliğinden güncellenir.
+- **Testler:** kontrast testleri iki tema için ayrı çalışır; yazı 4,5:1, köşe
+  renkli grafikler (momentum çubuğu, zaman çizelgesi, ilerleme ve istatistik
+  çubukları) 3:1. `tests/semantic-tokens.test.ts` aynı kuralda verilen yazı ve
+  zemin çiftlerini iki temada, tanımsız `var()` kullanımını ve video sahnesinde
+  temaya bağlı token kullanılmadığını denetler.
+- **Zaman çizelgesi ekseni:** "%100 kırmızı", "%50", "%100 mavi" yazıları renkli
+  alanın üstünde 4,5:1'in altına düşüyordu (açık temada da ≈3,3:1); kart renginde
+  küçük bir zemin aldılar.
+- **Skor kartı dışa aktarımı:** PNG/PDF henüz yok; geldiğinde her zaman açık
+  temada üretilir (CLAUDE.md).
 
 ### Yerel güvenlik
 - Yol sınırlama (`fsutil.inside`), en fazla 20 aktif analiz, analiz başına tek

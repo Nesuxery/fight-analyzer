@@ -45,7 +45,7 @@
   opacity: 0.86;
 }
 
-/* red call to action: Upload screen only */
+/* red: the main actions of the Upload screen only (Dosya seç, Analizi başlat, Demo analizini başlat) */
 .btn--brand {
   border-color: var(--red);
   background: var(--red);

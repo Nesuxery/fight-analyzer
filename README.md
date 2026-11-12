@@ -158,7 +158,10 @@ data/                   çalışma verisi (git dışı):
   yarıçapı, gölge, hareket). Siyah (`#0e0e10`): üst bar, koyu bantlar, ana
   butonlar, aktif sekme çizgisi. Tek kırmızı (`#d0142c`) hem marka hem kırmızı
   köşedir: logo, üst bardaki aktif adım, ilerleme çubukları, bölüm başlığı
-  çizgileri ve Yükleme ekranındaki "Dosya seç". Mavi (`#2457c5`) yalnızca mavi
+  çizgileri, sürükle-bırak vurgusu, Yükleme ekranının giriş bandındaki not
+  ikonları ve Yükleme ekranının ana eylemleri ("Dosya seç", "Analizi başlat",
+  "Demo analizini başlat"; başka ekranda kırmızı buton yok). Siyah zeminde kırmızı
+  yalnızca dolgu, çizgi ve ikondur, metin değil. Mavi (`#2457c5`) yalnızca mavi
   köşe verisinde. Seçim ve Sonuç ekranlarında kırmızı yalnızca kırmızı köşeyi
   anlatır; oralarda buton, sekme, çubuk ve bölüm çizgileri siyahtır. Durum
   renkleri (başarı, uyarı, hata) ayrıdır ve hata her zaman ikon ve metinle

@@ -119,7 +119,7 @@ export function DropZone() {
             <Button onClick={state.abort}>{L.cancelUpload}</Button>
           ) : (
             <>
-              <Button variant="primary" disabled={state.kind !== "ready" || !!problem}
+              <Button variant="brand" disabled={state.kind !== "ready" || !!problem}
                       onClick={() => state.kind === "ready" && start(file, meta)}>
                 {L.start}
               </Button>

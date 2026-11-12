@@ -8,8 +8,9 @@ export type ButtonSize = "sm" | "md";
 interface Look {
   /**
    * primary: black fill; secondary: outlined; ghost: no frame. brand: red fill,
-   * only for the one call to action of the Upload screen. Never on the Selection
-   * or Result screens, where red means the red corner.
+   * only for the main actions of the Upload screen ("Dosya seç", "Analizi başlat",
+   * "Demo analizini başlat"). Never on the Selection or Result screens, where red
+   * means the red corner.
    */
   variant?: ButtonVariant;
   size?: ButtonSize;

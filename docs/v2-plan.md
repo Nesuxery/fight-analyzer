@@ -98,7 +98,7 @@ Görev: Arayüzü koyu temadan aydınlık, minimalist ve premium bir görünüme
 
 - Ana renkler siyah, beyaz ve kırmızıdır. Tek kırmızı vardır: marka kırmızısı ile kırmızı köşe aynı tondur. Mavi yalnızca mavi köşe verisinde kullanılır.
 - Siyah: üst bar, koyu bantlar, ana butonlar, aktif sekme çizgisi.
-- Kırmızı (marka): logo, üst bardaki aktif adım, ilerleme çubukları, bölüm başlığı çizgileri, sürükle-bırak vurgusu ve Yükleme ekranındaki "Dosya seç" butonu.
+- Kırmızı (marka): logo, üst bardaki aktif adım, ilerleme çubukları, bölüm başlığı çizgileri, sürükle-bırak vurgusu, Yükleme ekranının giriş bandındaki not ikonları ve Yükleme ekranının ana eylemleri ("Dosya seç", "Analizi başlat", "Demo analizini başlat"). Başka ekranda kırmızı buton yoktur.
 - Seçim ve Sonuç ekranlarında kırmızı yalnızca kırmızı köşeyi anlatır. Buralarda buton, sekme, ilerleme çubuğu ve bölüm çizgileri siyahtır (`--accent` bu ekranlarda `--ink` olur). Üst bar ortak çerçevedir ve her ekranda aynı kalır.
 - Siyah zeminde kırmızı yalnızca dolgu, çizgi ve ikondur; küçük metin olarak kullanılmaz (3,5:1).
 - Hata rengi (`--danger`) her zaman ikon ve metinle gösterilir; kırmızı köşeyle karışmaz.
@@ -176,7 +176,7 @@ Ortak bir `ui/` klasöründe topla ve mevcut bileşenleri bunlara taşı:
 ### Ekranlar
 
 1. Üst bar: siyah, yazılar beyaz. Solda kırmızı oktagon işareti ve "Fight Analyzer", ortada adımlar (aktif adımda kırmızı numara rozeti ve kırmızı alt çizgi; önceki adımlar onay ikonlu), sağda Analiz/Demo seçici ve küçük bir durum noktasıyla "Sistem hazır".
-2. Yükleme: tam genişlikte siyah giriş bandı (44 px beyaz başlık, açıklama, ikonlu üç not, çok silik oktagon çizgi deseni). Sürükle-bırak alanı bandın alt kenarına yarı taşan beyaz bir kart: 1.5 px kesikli --border-strong çerçeve, 16 px yarıçap. Sürüklerken çerçeve --red, zemin --red-soft olur. "Dosya seç" kırmızı (marka) buton; biçimler ve sınırlar tek satır, --text-3. Altında dört adımlı "Nasıl çalışır" şeridi.
+2. Yükleme: tam genişlikte siyah giriş bandı (44 px beyaz başlık, açıklama, ikonlu üç not, çok silik oktagon çizgi deseni). Sürükle-bırak alanı bandın alt kenarına yarı taşan beyaz bir kart: 1.5 px kesikli --border-strong çerçeve, 16 px yarıçap. Sürüklerken çerçeve --red, zemin --red-soft olur. "Dosya seç", "Analizi başlat" ve Demo'daki "Demo analizini başlat" kırmızı (marka) buton; biçimler ve sınırlar tek satır, --text-3. Banttaki üç notun ikonları kırmızı, metinleri beyaz. Altında dört adımlı "Nasıl çalışır" şeridi.
 3. Geçmiş analizler: başlıkta toplam sayı. Satırda küçük 16:9 önizleme, dosya adı, tarih · çözünürlük · süre, olay sayısı, durum rozeti ve "Aç" butonu; satırın tamamı tıklanabilir. Hover'da --surface-muted. Analiz yoksa açıklayıcı boş durum. Sonuç özetini Bölüm 5 ekleyecek.
 4. İşlem: aşamalar dikey bir listede (ad, durum ikonu, ilerleme), altında toplam ilerleme, tahmini kalan süre ve "İptal" ikincil butonu.
 5. Seçim: dövüşçü adayları büyük karelerle. Seçili aday köşe renginde 2 px çerçeve ve köşe rozeti alır; isimler satır içinde düzenlenir.

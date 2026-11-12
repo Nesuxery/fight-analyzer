@@ -194,9 +194,10 @@
   gap: var(--space-2);
 }
 
+/* red icons on ink are marks (3.5:1); the note text stays white */
 .upband__notes svg {
   flex: none;
-  color: var(--on-ink-2);
+  color: var(--red);
 }
 
 /* concentric octagon lines, decoration only */

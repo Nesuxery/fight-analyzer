@@ -16,7 +16,8 @@ export function validateVideoFile(file: File): string | null {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const extOk = (ACCEPTED_EXTENSIONS as readonly string[]).includes(ext);
   if (!extOk && !file.type.startsWith("video/")) {
-    return L.notVideo(file.name, ACCEPTED_EXTENSIONS.join(", ").toLocaleUpperCase("tr-TR"));
+    // toUpperCase follows no locale: "avi" becomes "AVI" (Turkish rules would give "AVİ")
+    return L.notVideo(file.name, ACCEPTED_EXTENSIONS.map((e) => e.toUpperCase()).join(", "));
   }
   if (file.size === 0) return L.emptyFile;
   if (file.size > MAX_FILE_BYTES) return L.overMax;

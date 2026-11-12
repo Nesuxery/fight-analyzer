@@ -471,6 +471,13 @@ a.stepper__item:hover {
   white-space: nowrap;
 }
 
+/* Tags whose text is not a fixed Turkish word (scorecard terms with English parts such as
+   "grappling" or "Submission"): shown as written, because capitals under lang="tr" turn i into İ */
+.tag--plain {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .tag--muted { background: var(--surface-muted); color: var(--text-2); }
 .tag--amber { background: var(--warning-soft); color: var(--warning); }
 .tag--ok { background: var(--success-soft); color: var(--success); }

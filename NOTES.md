@@ -154,6 +154,12 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   `TrackingResult`, `ExportPanel`) `labels.ts`'e taşındı; diğerleri Bölüm 5'te.
   Demo'da "Veri kalitesi" grubu ve momentum kartı yok (veri yok).
 - **Hitap:** yeni metinler ve dokunulan ekranlardaki yönergeler "sen" biçiminde.
+- **Büyük harf:** sayfa `lang="tr"` olduğu için CSS büyük harfi Türkçe kurala göre
+  çevirir (i → İ). Bu yalnızca sabit Türkçe arayüz etiketlerinde kullanılır; izinli
+  seçiciler `frontend/tests/case-conversion.test.ts`'te. Dosya uzantıları,
+  kısaltmalar, İngilizce terimler ("grappling", "Submission") ve dövüşçü adları
+  yazıldığı gibi gösterilir; kodda yerele bağlı büyük harf dönüşümü yok (aynı test
+  denetler). Adlar yalnızca baştaki ve sondaki boşluklar kırpılarak saklanır.
 
 ### Yerel güvenlik
 - Yol sınırlama (`fsutil.inside`), en fazla 20 aktif analiz, analiz başına tek

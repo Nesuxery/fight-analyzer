@@ -274,7 +274,9 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
                 return (
                   <span key={e.event_id} className="majorwarn__item" style={{ opacity: strength }}>
                     <span className="majorwarn__icon" aria-hidden="true">!</span>
-                    {R.majorWarning[e.type]}{side ? ` · ${names[side]}` : ""}
+                    <span className="majorwarn__type">{R.majorWarning[e.type]}</span>
+                    {/* the name as written: it is not upper-cased with the warning */}
+                    {side && <span>· {names[side]}</span>}
                   </span>
                 );
               })}

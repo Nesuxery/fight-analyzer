@@ -108,7 +108,9 @@ function RoundDetails({ round, sc, names, clock }: {
             <div className="jjudge__head">
               <strong>{judge.name}</strong>
               <span className="num">{score.scored ? `${score.red}-${score.blue}` : "puanlanmadı"}</span>
-              {score.deciding_criterion && <span className="tag tag--muted">{CRITERION_LABELS[score.deciding_criterion]}</span>}
+              {score.deciding_criterion && (
+                <span className="tag tag--muted tag--plain">{CRITERION_LABELS[score.deciding_criterion]}</span>
+              )}
             </div>
             <ul>{score.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
           </div>
@@ -149,9 +151,9 @@ export function JudgingPanel({ job, sc, problem, frame, clock, onSaved }: {
         <>
           <div className={`jverdict jverdict--${v!.status}`}>
             <div className="jverdict__row">
-              <span className="tag tag--muted">{STATUS_LABELS[v!.status]}</span>
-              {v!.decision_type && <span className="tag tag--amber">{DECISION_LABELS[v!.decision_type]}</span>}
-              {v!.status === "finish" && <span className="tag tag--amber">{FINISH_LABELS[v!.method]}</span>}
+              <span className="tag tag--muted tag--plain">{STATUS_LABELS[v!.status]}</span>
+              {v!.decision_type && <span className="tag tag--amber tag--plain">{DECISION_LABELS[v!.decision_type]}</span>}
+              {v!.status === "finish" && <span className="tag tag--amber tag--plain">{FINISH_LABELS[v!.method]}</span>}
               <Confidence value={v!.confidence} level={v!.confidence_level} />
             </div>
             <p className="jverdict__summary">{v!.summary}</p>

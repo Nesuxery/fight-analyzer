@@ -1,0 +1,10 @@
+# Generated files are always checked out with LF line endings, so the "up to date"
+# checks in check.cmd (contracts.export --check, npm run check:types) compare the
+# same bytes on every machine and after every checkout, whatever core.autocrlf is.
+# Regenerate them, do not edit them:
+#   backend:  python -m fight_analyzer.contracts.export
+#   frontend: npm run gen:types
+shared/schemas/*.schema.json text eol=lf
+frontend/src/contracts/generated.ts text eol=lf
+frontend/src/contracts/overlayStyle.ts text eol=lf
+frontend/src/styles/overlay-tokens.css text eol=lf

@@ -180,7 +180,7 @@ Ortak bir `ui/` klasöründe topla ve mevcut bileşenleri bunlara taşı:
 3. Geçmiş analizler: başlıkta toplam sayı. Satırda küçük 16:9 önizleme, dosya adı, tarih · çözünürlük · süre, olay sayısı, durum rozeti ve "Aç" butonu; satırın tamamı tıklanabilir. Hover'da --surface-muted. Analiz yoksa açıklayıcı boş durum. Sonuç özetini Bölüm 5 ekleyecek.
 4. İşlem: aşamalar dikey bir listede (ad, durum ikonu, ilerleme), altında toplam ilerleme, tahmini kalan süre ve "İptal" ikincil butonu.
 5. Seçim: dövüşçü adayları büyük karelerle. Seçili aday köşe renginde 2 px çerçeve ve köşe rozeti alır; isimler satır içinde düzenlenir.
-6. Sonuç: yalnızca stil ve açıklama; yerleşim Bölüm 5'te değişir. Üstteki dövüşçü kartı siyah (adlar beyaz, köşe etiketleri kırmızı ve mavi rozet; momentum çubuğu beyaz iç panelde). Yan panellerde metrikler gruplu (Vuruş, Hareket ve baskı, Kontrol, Veri kalitesi) ve "?" tanımlı. Momentum kartında tek cümlelik açıklama; formül "Nasıl hesaplanır?" altında. Video sahnesi koyu, paneller beyaz.
+6. Sonuç: yalnızca stil ve açıklama; yerleşim Bölüm 5'te değişir. Üstteki dövüşçü kartı siyah (adlar beyaz ve büyük, köşe etiketleri kırmızı ve mavi rozet). Ortadaki momentum kutusu geçici olarak koyu (--ink-2) zeminde ve küçük beyaz yüzdelerle durur; dikkat adlarda kalır ve pay kazanma olasılığı gibi okunmaz. Bu alanı Bölüm 5 yeniden kurar. Yan panellerde metrikler gruplu (Vuruş, Hareket ve baskı, Kontrol, Veri kalitesi) ve "?" tanımlı. Momentum kartında tek cümlelik açıklama; formül "Nasıl hesaplanır?" altında. Video sahnesi koyu, paneller beyaz.
 
 ### Kabul ölçütleri
 

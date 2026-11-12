@@ -26,7 +26,8 @@
 /* ---------- fighter card: black, white names, red and blue corner badges ---------- */
 .rhead {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 1.5fr) minmax(0, 1fr);
+  /* the names get the room; the momentum box in the middle stays modest */
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr) minmax(0, 1fr);
   grid-template-areas: "red momentum blue" "actions actions actions";
   align-items: center;
   gap: var(--space-3) var(--space-4);
@@ -74,16 +75,16 @@
 
 .fname--blue .fname__input { text-align: right; }
 
-/* the momentum bar on a white inset: red and blue keep their contrast */
+/* Momentum, interim until Bölüm 5: a dark box with small white numbers, so the names
+   stay the focus. The numbers carry the shares; the red and blue fills only picture them. */
 .momentum {
-  --focus-ring: var(--text-1);
   grid-area: momentum;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-control);
-  background: var(--surface);
-  color: var(--text-1);
+  background: var(--ink-2);
+  color: var(--on-ink);
 }
 
 .momentum__label {
@@ -91,40 +92,47 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  color: var(--text-2);
-  font-size: var(--fs-14);
+  color: var(--on-ink-2);
+  font-size: var(--fs-13);
+}
+
+/* neutral tags on the dark box */
+.momentum .tag--muted {
+  background: var(--ink);
+  color: var(--on-ink-2);
+  box-shadow: inset 0 0 0 1px var(--ink-line);
 }
 
 .momentum__bar {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
   align-items: center;
   gap: var(--space-2);
 }
 
 .momentum__num {
-  font-family: var(--font-display);
-  font-size: var(--fs-24);
+  color: var(--on-ink);
+  font-size: var(--fs-14);
   font-weight: var(--fw-semibold);
   line-height: 1;
 }
 
-.momentum__num--red { color: var(--red); text-align: right; }
-.momentum__num--blue { color: var(--blue); }
+.momentum__num--red { text-align: right; }
 
 .momentum__track {
   position: relative;
   display: flex;
-  height: 12px;
+  height: 8px;
   overflow: hidden;
   border-radius: var(--radius-pill);
-  background: var(--border);
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink-line);
 }
 
 .momentum__fill { height: 100%; }
 .momentum__fill--red { background: var(--red); }
 .momentum__fill--blue { background: var(--blue); }
-.momentum__none { flex: 1; background: repeating-linear-gradient(135deg, var(--border) 0 6px, var(--surface-muted) 6px 12px); }
+.momentum__none { flex: 1; background: repeating-linear-gradient(135deg, var(--ink-line) 0 6px, transparent 6px 12px); }
 
 .momentum__mid {
   position: absolute;
@@ -133,7 +141,7 @@
   bottom: -2px;
   width: 2px;
   margin-left: -1px;
-  background: var(--surface);
+  background: var(--on-ink);
 }
 
 .rhead__actions {
@@ -909,7 +917,7 @@
 /* ---------- measured events and experimental momentum ---------- */
 .momentum__caption {
   margin: 2px 0 0;
-  color: var(--text-3);
+  color: var(--on-ink-2);
   font-size: var(--fs-12);
   text-align: center;
 }

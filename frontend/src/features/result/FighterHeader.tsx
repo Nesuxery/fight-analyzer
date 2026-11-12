@@ -54,8 +54,10 @@ function FighterName({ side, name, onRename }: {
 
 /**
  * red: displayed red share in whole percent (blue = 100 - red), null without data.
- * The bar sits on a white inset of the black card, so the red and the blue keep
- * their contrast.
+ * Interim until Bölüm 5 rebuilds this area: a dark (--ink-2) box with small white
+ * percentages, so the fighter names stay the focus of the card and the share is not
+ * read as a win probability. The numbers give the shares as text; the red and blue
+ * fills only picture them (blue on --ink-2 is 2.6:1).
  */
 function Momentum({ red, demo, insufficient, excluded }: {
   red: number | null;

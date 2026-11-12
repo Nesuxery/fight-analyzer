@@ -131,9 +131,14 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   kırmızı yalnızca kırmızı köşeyi anlatır. Üst bar ortak çerçeve olduğu için her
   ekranda kırmızı logo ve kırmızı aktif adım taşır.
 - **Siyah üstünde kırmızı:** 3,5:1; yalnızca dolgu, çizgi ve ikon. Bir test,
-  oran 4,5:1'i geçerse kuralın güncellenmesi için uyarır. Siyah dövüşçü kartında
-  mavi 3:1'in altında kaldığı için momentum çubuğu beyaz bir iç panelde durur;
-  ikinci bir açık kırmızı ya da mavi eklenmedi.
+  oran 4,5:1'i geçerse kuralın güncellenmesi için uyarır. İkinci bir açık kırmızı
+  ya da mavi eklenmedi.
+- **Sonuç üst kartındaki momentum (geçici):** koyu (`--ink-2`) kutuda, küçük beyaz
+  yüzdelerle; büyük ve beyaz bir kutu sayfanın odağı oluyor ve kazanma olasılığı
+  gibi okunuyordu. Dikkat dövüşçü adlarında kalsın diye orta sütun daraltıldı.
+  Payı metin olarak yüzdeler verir; çubuktaki kırmızı ve mavi yalnızca görseldir
+  (mavi `--ink-2` üstünde 2,6:1, kırmızı 3,1:1). Momentum hesabı değişmedi; bu
+  alanı Bölüm 5 yeniden kurar.
 - **Kenarlık:** `--border-strong` `#8f8f8a` yeni zeminde 2,9:1'e düştüğü için
   `#858580` (3,3:1). `--border` `#deded9`; kartlara `--shadow-card` eklendi.
 - **Üst bar adımları:** "tamamlandı" işareti, açık ekrandan önceki adımlar

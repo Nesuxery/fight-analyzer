@@ -164,6 +164,20 @@ code,
   color: var(--on-ink);
 }
 
+/* "?" on ink, and a hairline so its dark bubble stands out from the dark surface */
+.on-ink .helptip__btn {
+  color: var(--on-ink-2);
+}
+
+.on-ink .helptip__btn:hover,
+.on-ink .helptip__btn:focus-visible {
+  color: var(--on-ink);
+}
+
+.on-ink .helptip__bubble {
+  box-shadow: 0 0 0 1px var(--ink-line), var(--shadow-float);
+}
+
 .topbar {
   position: sticky;
   top: 0;

@@ -8,8 +8,8 @@ import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME } from "../../demo/script";
 import { useJob } from "../../hooks/useJob";
 import { useNow } from "../../hooks/useNow";
 import {
-  COMMON_LABELS, ERROR_LABELS, HISTORY_LABELS, JOB_STATUS_LABELS, PROCESSING_LABELS as L, PROCESS_STEP_DESCRIPTIONS,
-  UI_LABELS, formatBytes, formatDateTime, formatDuration, formatNumber,
+  COMMON_LABELS, DEMO_STEP_DESCRIPTIONS, ERROR_LABELS, HISTORY_LABELS, JOB_STATUS_LABELS, PROCESSING_LABELS as L,
+  PROCESS_STEP_DESCRIPTIONS, UI_LABELS, formatBytes, formatDateTime, formatDuration, formatNumber,
 } from "../../labels";
 import { formatClock } from "../../player/clock";
 import { VideoStage } from "../../player/VideoStage";
@@ -22,6 +22,7 @@ import { PosePreviewPanel } from "./PosePreviewPanel";
 import { PoseReview } from "./PoseReview";
 import { demoProcess, jobProcess } from "./steps";
 import type { ProcessView, StepStatus, StepView } from "./steps";
+import type { StepId } from "../../labels";
 
 const NO_LAYERS = { skeleton: false, strikes: false, distance: false };
 const SKELETON_ONLY = { skeleton: true, strikes: false, distance: false };
@@ -57,6 +58,7 @@ function DemoProcessing() {
   return (
     <ProcessLayout
       view={view}
+      descriptions={DEMO_STEP_DESCRIPTIONS}
       title={<>{HISTORY_LABELS.demoName} <DemoTag small /></>}
       meta={[
         [L.meta.source, L.demoSource],
@@ -226,7 +228,7 @@ function CancelButton({ jobId }: { jobId: string }) {
                 </>
               }>
         <p>{L.cancelBody}</p>
-        {error && <p className="dialog__error" role="alert">{error}</p>}
+        {error && <div className="alert" role="alert"><IconAlert /><span>{error}</span></div>}
       </Dialog>
     </>
   );
@@ -234,7 +236,7 @@ function CancelButton({ jobId }: { jobId: string }) {
 
 function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale = false,
                         previewTitle = L.previewTitle, previewDescription = L.previewDescription,
-                        errorDetail = null }: {
+                        errorDetail = null, descriptions = PROCESS_STEP_DESCRIPTIONS }: {
   view: ProcessView;
   title: ReactNode;
   meta: [string, string][];
@@ -245,6 +247,8 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
   previewTitle?: string;
   previewDescription?: string;
   errorDetail?: string | null;
+  /** What each step does; the demo has its own where its result differs. */
+  descriptions?: Record<StepId, string>;
 }) {
   const previewId = useId();
   const pct = Math.round(view.overall * 100);
@@ -269,7 +273,7 @@ function ProcessLayout({ view, title, meta, preview, frameLabel, actions, stale 
           )}
           {view.phase === "queued" && <p className="proc__note">{L.queued}</p>}
           <ol className="vsteps">
-            {view.steps.map((s) => <StepRow key={s.id} step={s} />)}
+            {view.steps.map((s) => <StepRow key={s.id} step={s} description={descriptions[s.id]} />)}
           </ol>
           <div className="proc__overall">
             <div className="proc__overallhead">
@@ -315,7 +319,7 @@ const STEP_ICON: Record<StepStatus, ComponentType<IconProps>> = {
 };
 
 /** One stage: status icon, name, status or percentage, what the stage does, its own progress and details. */
-function StepRow({ step }: { step: StepView }) {
+function StepRow({ step, description }: { step: StepView; description: string }) {
   const Icon = STEP_ICON[step.status];
   const pct = step.status === "active" && step.progress !== null ? Math.round(step.progress * 100) : null;
   return (
@@ -326,7 +330,7 @@ function StepRow({ step }: { step: StepView }) {
           <span className="vsteps__label">{step.label}</span>
           <span className="vsteps__status num">{pct !== null ? `%${pct}` : L.status[step.status]}</span>
         </div>
-        <p className="vsteps__desc">{PROCESS_STEP_DESCRIPTIONS[step.id]}</p>
+        <p className="vsteps__desc">{description}</p>
         {pct !== null && <Progress value={step.progress} label={step.label} />}
         {step.detail && <p className="vsteps__detail">{step.detail}</p>}
       </div>

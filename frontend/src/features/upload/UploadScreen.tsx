@@ -16,7 +16,7 @@ import { formatClock } from "../../player/clock";
 import { Badge, Button, ButtonLink, DemoTag, EmptyState, Progress, SectionHeading, Skeleton } from "../../ui";
 import type { BadgeTone } from "../../ui";
 import {
-  IconArrowRight, IconCpu, IconFilm, IconLock, IconMonitor, IconScorecard, IconUpload, IconUsers, IconWifiOff,
+  IconAlert, IconArrowRight, IconCpu, IconFilm, IconLock, IconMonitor, IconScorecard, IconUpload, IconUsers, IconWifiOff,
 } from "../../ui/icons";
 import { OctagonPattern } from "../../ui/OctagonPattern";
 import { DropZone } from "./DropZone";
@@ -37,14 +37,15 @@ const NOTES = [
   { icon: <IconLock />, text: L.notes.private },
 ];
 
-const HOW_STEPS = [
+const howSteps = (demo: boolean) => [
   { icon: <IconUpload />, ...L.how.upload },
   { icon: <IconCpu />, ...L.how.process },
   { icon: <IconUsers />, ...L.how.select },
-  { icon: <IconScorecard />, ...L.how.result },
+  { icon: <IconScorecard />, ...(demo ? L.how.resultDemo : L.how.result) },
 ];
 
 export function UploadScreen({ demo }: { demo: boolean }) {
+  const steps = howSteps(demo);
   return (
     <div className="upload">
       {/* black intro band; the drop card overlaps its bottom edge */}
@@ -64,13 +65,13 @@ export function UploadScreen({ demo }: { demo: boolean }) {
         <section className="how" aria-labelledby="how-title">
           <SectionHeading id="how-title" title={L.how.title} description={L.how.description} />
           <ol className="how__list">
-            {HOW_STEPS.map((step, i) => (
+            {steps.map((step, i) => (
               <li key={step.title} className="how__step">
                 <span className="how__icon" aria-hidden="true">{step.icon}</span>
                 <span className="how__num num">{L.how.step(i + 1)}</span>
                 <h3 className="how__title">{step.title}</h3>
                 <p className="how__text">{step.text}</p>
-                {i < HOW_STEPS.length - 1 && <IconArrowRight className="how__arrow" size={16} />}
+                {i < steps.length - 1 && <IconArrowRight className="how__arrow" size={16} />}
               </li>
             ))}
           </ol>
@@ -195,14 +196,18 @@ function HistoryRow({ job }: { job: Job }) {
     <li className="history__row">
       <Thumb key={thumbKey} job={job} />
       <span className="history__main">
-        <span className="history__name" title={job.source?.filename}>{name}</span>
+        <span className="history__name">{name}</span>
         <span className="history__meta num">{meta}</span>
         {detail && <span className="history__detail">{detail}</span>}
         {active && <Progress value={job.progress} label={H.progress} className="history__progress" />}
       </span>
       <EventCount count={job.outputs.events?.events ?? null} />
-      <Badge tone={STATUS_TONE[job.status]}>{JOB_STATUS_LABELS[job.status]}</Badge>
-      <ButtonLink size="sm" className="history__open" aria-label={H.openNamed(name)}
+      {/* a failure carries an icon with its text, so it is not read as brand red */}
+      <Badge tone={STATUS_TONE[job.status]} icon={job.status === "failed" ? <IconAlert size={16} /> : undefined}>
+        {JOB_STATUS_LABELS[job.status]}
+      </Badge>
+      {/* the link covers the row, so the full file name is its tooltip */}
+      <ButtonLink size="sm" className="history__open" aria-label={H.openNamed(name)} title={job.source?.filename}
                   href={href({ mode: "analysis", screen: jobScreen(job), jobId: job.job_id })}>
         {H.open}
       </ButtonLink>

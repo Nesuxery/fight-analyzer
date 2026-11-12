@@ -81,7 +81,7 @@ test("colour tokens have the specified values", () => {
     "--text-2": "#52524c",
     "--text-3": "#6e6e68",
     "--red": "#d0142c",
-    "--red-soft": "#fdecee",
+    "--red-soft": "#fdeef0",
     "--red-strong": "#b01025",
     "--blue": "#2457c5",
     "--blue-soft": "#edf2fc",
@@ -112,6 +112,8 @@ const TEXT_PAIRS: [string, string][] = [
   ["--text-on-fill", "--warning"], // DEMO tag
   ["--text-on-fill", "--danger"],
   ["--red", "--surface"], ["--red", "--bg"], ["--red", "--red-soft"],
+  // the drop card while a file is dragged over it
+  ["--text-1", "--red-soft"], ["--text-2", "--red-soft"], ["--text-3", "--red-soft"],
   ["--blue", "--surface"], ["--blue", "--bg"], ["--blue", "--blue-soft"],
   ["--success", "--surface"], ["--success", "--success-soft"],
   ["--warning", "--surface"], ["--warning", "--bg"], ["--warning", "--warning-soft"],

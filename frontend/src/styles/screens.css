@@ -196,7 +196,7 @@
 
 .upband__notes svg {
   flex: none;
-  color: var(--red);
+  color: var(--on-ink-2);
 }
 
 /* concentric octagon lines, decoration only */
@@ -269,10 +269,10 @@
   font-size: var(--fs-13);
 }
 
+/* .alert: icon and text, never the colour alone */
 .dropzone__error {
   max-width: 520px;
-  color: var(--danger);
-  font-size: var(--fs-13);
+  text-align: left;
 }
 
 .filecard {
@@ -325,8 +325,6 @@
 
 .filecard__problem {
   grid-column: 1 / -1;
-  color: var(--danger);
-  font-size: var(--fs-13);
 }
 
 .filecard__upload {
@@ -676,11 +674,6 @@
   color: var(--text-3);
   font-size: var(--fs-12);
   font-variant-numeric: tabular-nums;
-}
-
-.dialog__error {
-  color: var(--danger);
-  font-size: var(--fs-13);
 }
 
 /* pose review player (awaiting selection) */

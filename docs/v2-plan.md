@@ -128,7 +128,7 @@ Tek kaynak CSS değişkenleridir; Tailwind kullanılıyorsa config bu değişken
 | --text-2 | #52524C | İkincil metin |
 | --text-3 | #6E6E68 | Etiketler, yardımcı metin |
 | --red | #D0142C | Tek kırmızı: marka ve kırmızı köşe |
-| --red-soft | #FDECEE | Kırmızı zemin tonu |
+| --red-soft | #FDEEF0 | Kırmızı zemin tonu |
 | --red-strong | #B01025 | Kırmızı dolgunun hover tonu |
 | --blue | #2457C5 | Yalnızca mavi köşe |
 | --blue-soft | #EDF2FC | Mavi köşe zemin tonu |

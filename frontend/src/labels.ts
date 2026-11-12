@@ -65,7 +65,8 @@ export const SHELL_LABELS = {
   stepsLabel: "Ekranlar",
   steps: { upload: "Yükleme", processing: "İşlem", select: "Seçim", result: "Sonuç" } satisfies Record<Screen, string>,
   stepDisabled: "Önce bir analiz seç veya video yükle",
-  stepDone: "tamamlandı",
+  // steps before the open screen get a check mark; the shell does not know the job's real state
+  stepDone: "önceki adım",
   modeLabel: "Mod",
   modeAnalysis: "Analiz",
   modeDemo: "Demo",
@@ -91,6 +92,8 @@ export const UPLOAD_LABELS = {
     process: { title: "İşlenir", text: "Her karede görünen kişilerin iskelet noktaları çıkarılır." },
     select: { title: "Dövüşçüleri seç", text: "Kırmızı ve mavi köşedeki dövüşçüleri işaretle." },
     result: { title: "Sonuç ve hakem kartları", text: "Olaylar, istatistikler ve AI tahmini hakem kartları açılır." },
+    // the demo result has no scorecards
+    resultDemo: { title: "Sonuç", text: "Olaylar, istatistikler ve zaman çizelgesi açılır." },
   },
   dropLead: "Videoyu buraya sürükleyip bırak",
   chooseFile: "Dosya seç",
@@ -613,7 +616,13 @@ export const PROCESS_STEP_DESCRIPTIONS: Record<StepId, string> = {
   pose: "Her karede görünen herkesin iskelet noktaları bulunuyor; ardından kamera kesimleri ve aday kareler hazırlanıyor.",
   select: "Kırmızı ve mavi köşedeki dövüşçüleri sen işaretlersin; analiz bu seçimle sürer.",
   motion: "Seçilen dövüşçüler video boyunca izleniyor; olaylar ve deneysel momentum hesaplanıyor.",
-  results: "Zaman çizelgesi, istatistikler ve hakem kartları sonuç ekranında açılır.",
+  results: "Zaman çizelgesi, istatistikler ve AI tahmini hakem kartları sonuç ekranında açılır.",
+};
+
+/** Demo differs where its synthetic result has less to show (no scorecards). */
+export const DEMO_STEP_DESCRIPTIONS: Record<StepId, string> = {
+  ...PROCESS_STEP_DESCRIPTIONS,
+  results: "Zaman çizelgesi ve istatistikler sonuç ekranında açılır.",
 };
 
 export function formatDateTime(iso: string): string {

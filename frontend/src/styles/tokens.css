@@ -41,7 +41,7 @@
   /* the one red: brand and red corner share it. On ink it is a fill, a line
      or an icon, never small text (3.5:1). */
   --red: #d0142c;
-  --red-soft: #fdecee;
+  --red-soft: #fdeef0;
   /* hover of a red fill */
   --red-strong: #b01025;
   /* blue: blue-corner data only */

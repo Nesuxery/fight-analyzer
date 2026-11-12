@@ -7,7 +7,7 @@ import { usePolling } from "../../hooks/usePolling";
 import { UI_LABELS, UPLOAD_LABELS as L, formatBytes, formatNumber } from "../../labels";
 import { formatClock } from "../../player/clock";
 import { Button, Progress, cx } from "../../ui";
-import { IconFilm } from "../../ui/icons";
+import { IconAlert, IconFilm } from "../../ui/icons";
 import { ACCEPT_ATTR, readLocalMetadata, validateVideoFile } from "./videoFile";
 import type { LocalVideoMeta } from "./videoFile";
 
@@ -88,7 +88,9 @@ export function DropZone() {
         <p className="dropzone__lead">{L.dropLead}</p>
         <Button variant="brand" onClick={pick}>{L.chooseFile}</Button>
         <p className="dropzone__hint">{hint}</p>
-        {state.kind === "rejected" && <p className="dropzone__error" role="alert">{state.reason}</p>}
+        {state.kind === "rejected" && (
+          <div className="alert dropzone__error" role="alert"><IconAlert /><span>{state.reason}</span></div>
+        )}
       </>
     );
   } else {
@@ -125,7 +127,7 @@ export function DropZone() {
             </>
           )}
         </div>
-        {problem && <p className="filecard__problem" role="alert">{problem}</p>}
+        {problem && <div className="alert filecard__problem" role="alert"><IconAlert /><span>{problem}</span></div>}
         {state.kind === "uploading" && (
           <div className="filecard__upload">
             <Progress value={file.size ? state.loaded / file.size : null} label={L.uploadProgress} />

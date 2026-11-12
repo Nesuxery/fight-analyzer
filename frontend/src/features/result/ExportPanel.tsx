@@ -53,7 +53,7 @@ function ExportRow({ exp, current, onCancel }: { exp: Job; current: Job; onCance
         </div>
       )}
       {exp.status === "failed" && exp.error && (
-        <p className="xrow__error" role="alert">
+        <p className="xrow__error">
           <IconAlert size={16} />
           <span>{ERROR_LABELS[exp.error.code] ?? exp.error.message}</span>
         </p>

@@ -47,6 +47,17 @@
   color: var(--stage-text-2);
 }
 
+/* links without a fill on an empty stage ("Yükleme ekranına dön"): stage colours in both themes */
+.stage .btn--ghost,
+.stage .btn--quiet {
+  color: var(--stage-text);
+}
+
+.stage .btn--ghost:hover:not(:disabled),
+.stage .btn--quiet:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--stage-text) 14%, transparent);
+}
+
 .stage__img,
 .stage__video {
   position: absolute;

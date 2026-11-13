@@ -198,12 +198,16 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
   `--surface-raised`. Sürükle-bırak kartı da bant üstünde öne çıksın diye
   `--surface-raised`.
 - **Koyu tema değerleri:** zemin `#0b0b0d`, kart `#151518`, yükseltilmiş yüzey
-  `#1e1e22`; siyah bantlar (`--ink` `#141417`) zeminden bir ton açık ve
-  `--ink-edge` kenarıyla ayrılır. Açık temada değişen tek renk momentum
+  `#1e1e22`, soluk dolgu ve hover `#242428` (yükseltilmiş yüzeyle aynı olunca
+  menü ve diyaloglarda hover görünmüyordu); siyah bantlar (`--ink` `#141417`)
+  zeminden bir ton açık ve `--ink-edge` kenarıyla ayrılır. Açık temada değişen tek renk momentum
   kutusundaki mavi (`#5b8cff`).
 - **Video katmanı:** sahne, Demo sahnesi ve overlay renkleri iki temada aynıdır;
   koyu blok bunları tanımlamaz. Video üstündeki sarı uyarının ve Demo filigranının
-  yazısı `--stage-on-bright`. Tema değişince canvas token önbelleği temizlenir
+  yazısı `--stage-on-bright`. Sahne koyu zeminle aynı renkte olduğu için
+  resmin dışında `--ink-edge` kenarı alır. Boş sahnedeki dolgusuz bağlantılar
+  ("Yükleme ekranına dön") sahne yazı rengini kullanır; açık temada siyah sahne
+  üstünde siyah yazıydı (1,02:1). Tema değişince canvas token önbelleği temizlenir
   (`tokenVersion`) ve sahne, kırpıntılar ve önizleme sayfa yenilenmeden yeniden
   çizilir; zaman çizelgesi SVG ve CSS olduğu için kendiliğinden güncellenir.
 - **Testler:** kontrast testleri iki tema için ayrı çalışır; yazı 4,5:1, köşe

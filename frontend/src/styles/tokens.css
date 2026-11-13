@@ -199,7 +199,8 @@
 
   --bg: #0b0b0d;
   --surface: #151518;
-  --surface-muted: #1e1e22;
+  /* a step above the raised surface too, so hover shows in menus and dialogs */
+  --surface-muted: #242428;
   --surface-raised: #1e1e22;
   --border: #2c2c32;
   --border-strong: #6e6e75;

@@ -30,7 +30,8 @@ function SystemStatus() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const details = ref.current;
-      if (e.key !== "Escape" || !details?.open) return;
+      // defaultPrevented: another popup (the theme menu) already handled this Esc
+      if (e.key !== "Escape" || e.defaultPrevented || !details?.open) return;
       details.open = false;
       details.querySelector("summary")?.focus();
     };

@@ -59,7 +59,8 @@ test("dark theme: page, cards and raised surfaces have the specified values", ()
     "--bg": "#0b0b0d",
     "--surface": "#151518",
     "--surface-raised": "#1e1e22",
-    "--surface-muted": "#1e1e22",
+    // hover and muted fills: different from the raised surface, or hover in menus disappears
+    "--surface-muted": "#242428",
     // ink is a tone above the page; the edge token draws its hairline
     "--ink": "#141417",
     "--text-1": "#f4f4f2",
@@ -72,6 +73,11 @@ test("dark theme: page, cards and raised surfaces have the specified values", ()
   };
   for (const [name, value] of Object.entries(spec)) assert.equal(hex("dark", name), value, name);
   assert.notEqual(TOKENS.dark.get("--ink-edge"), "transparent");
+  for (const theme of THEMES) {
+    for (const bg of ["--surface", "--surface-raised"]) {
+      assert.ok(contrast(hex(theme, "--surface-muted"), hex(theme, bg)) >= 1.05, `hover on ${bg} is visible (${theme})`);
+    }
+  }
   assert.equal(TOKENS.light.get("--ink-edge"), "transparent");
 });
 

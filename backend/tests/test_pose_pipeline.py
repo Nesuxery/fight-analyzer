@@ -75,13 +75,16 @@ def test_poses_extracted_and_job_waits_for_selection(first: dict):
     assert not pose["cache_hit"] and pose["frame_count"] == 5
     assert pose["max_persons"] >= 2 and pose["detection_count"] >= 10
     assert pose["model"]["name"] == MODEL and len(pose["model"]["weights_sha256"]) == 64
-    detail = first["progress_detail"]
-    assert detail["stage"] == "tracking_prep" and detail["unit"] == "frames"
+    detail = first["progress_detail"]  # the broadcast analysis is the last stage before the selection
+    assert detail["stage"] == "broadcast" and detail["unit"] == "frames"
     assert detail["done"] == detail["total"] == 5
-    assert first["progress"] == pytest.approx(0.7)
+    assert first["progress"] == pytest.approx(0.74)
     prep = first["outputs"]["tracking_prep"]
     assert prep["shots"] == 1 and prep["cuts"] == [] and prep["candidates"] >= 1
     assert "ocsort" in prep["tracker"]
+    broadcast = first["outputs"]["broadcast"]  # no scorebug in this clip: nothing claimed
+    assert broadcast["rounds"] == [] and broadcast["roi"] is None
+    assert first["rounds"] == [] and first["outdated"] == []
 
 
 def test_pose_chunks_have_everyone_without_identities(env: Env, first: dict):

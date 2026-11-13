@@ -9,6 +9,8 @@ from fastapi.responses import FileResponse
 
 from fight_analyzer.contracts import (
     TERMINAL_STATUSES,
+    BoutConfig,
+    BroadcastTimeline,
     DataOrigin,
     EventTimeline,
     ExportFileKind,
@@ -24,7 +26,9 @@ from fight_analyzer.contracts import (
     MotionTimeline,
     PoseChunk,
     PosePreview,
+    RoundEdits,
     Scorecards,
+    ScorebugRegion,
     SegmentExclusions,
     SelectionCandidate,
     SelectionCandidates,
@@ -34,6 +38,9 @@ from fight_analyzer.contracts.common import JOB_ID_PATTERN
 from fight_analyzer.media.analysis_video import video_path
 from fight_analyzer.media.thumbnail import ensure_thumbnail, thumbnail_frame
 from fight_analyzer import judging
+from fight_analyzer import rounds as rounds_mod
+from fight_analyzer.broadcast import clock as clock_mod
+from fight_analyzer.broadcast import store as broadcast_store
 from fight_analyzer.motion import exclusions as excl
 from fight_analyzer.motion import store as motion_store
 from fight_analyzer.pipeline import export as export_job
@@ -309,16 +316,113 @@ def momentum_timeline(store: StoreDep, settings: SettingsDep, job_id: JobId) -> 
     return motion_store.momentum_timeline(job_id, sc.parameters, m, settings.motion.sample_hz, sc.exclusions)
 
 
+def _with_bout(job: Job, setup: dict) -> MatchSetup:
+    """The setup with round count and length from the bout format (their source since 1.7.0)."""
+    try:
+        return MatchSetup.model_validate({**setup, "scheduled_rounds": job.bout.scheduled_rounds,
+                                          "round_length_s": job.bout.round_length_s})
+    except ValueError as exc:
+        raise ApiProblem(422, "invalid_match", f"Maç bilgileri geçersiz: {exc}") from exc
+
+
 @router.put("/{job_id}/match", response_model=Job)
 def set_match(store: StoreDep, job_id: JobId, body: MatchSetup) -> Job:
-    """Rounds, how the bout ended and point deductions (user input; nothing is recomputed)."""
+    """Rounds, how the bout ended and point deductions (user input; nothing is recomputed).
+    Round count and length come from the bout format (PUT /bout)."""
     job = _job(store, job_id)
     av = job.outputs.analysis_video
     if av is None:
         raise ApiProblem(409, "video_not_ready", "Analiz videosu henüz hazır değil.")
     if any(r.start_frame >= av.video.frame_count for r in body.rounds):
-        raise ApiProblem(422, "invalid_match", "Raund başlangıcı videonun dışında.")
-    return store.update_params(job_id, {"match": body.model_dump(mode="json")})
+        raise ApiProblem(422, "invalid_match", "Raunt başlangıcı videonun dışında.")
+    setup = _with_bout(job, body.model_dump(mode="json"))
+    return store.update_params(job_id, {"match": setup.model_dump(mode="json")})
+
+
+@router.put("/{job_id}/rounds", response_model=Job)
+def set_rounds(store: StoreDep, job_id: JobId, body: RoundEdits) -> Job:
+    """The user's round marks (each replaces the automatic round of its number) and the
+    automatic rounds they removed; the ending and deductions are kept."""
+    job = _job(store, job_id)
+    av = job.outputs.analysis_video
+    if av is None:
+        raise ApiProblem(409, "video_not_ready", "Analiz videosu henüz hazır değil.")
+    if any(r.end_frame >= av.video.frame_count for r in body.rounds):
+        raise ApiProblem(422, "invalid_match", "Raunt videonun dışında.")
+    current = job.match.model_dump(mode="json") if job.match else {}
+    setup = _with_bout(job, {**current, "rounds": [r.model_dump(mode="json") for r in body.rounds],
+                             "cleared_rounds": sorted(set(body.cleared_rounds))})
+    return store.update_params(job_id, {"match": setup.model_dump(mode="json")})
+
+
+@router.put("/{job_id}/bout", response_model=Job)
+def set_bout(store: StoreDep, settings: SettingsDep, job_id: JobId, body: BoutConfig) -> Job:
+    """Bout format ("Maç ayarları"), and the names when given. Nothing is recomputed."""
+    job = _job(store, job_id)
+    if body.scheduled_rounds not in settings.ruleset.round_options:
+        options = " / ".join(str(n) for n in settings.ruleset.round_options)
+        raise ApiProblem(422, "invalid_bout", f"Raunt sayısı {options} olabilir.")
+    if job.match is not None:
+        n = body.scheduled_rounds
+        used = ([r.number for r in job.match.rounds] + [d.round for d in job.match.deductions]
+                + ([job.match.ending.round] if job.match.ending.round else []))
+        if any(x > n for x in used):
+            raise ApiProblem(409, "bout_conflict",
+                             f"{n}. rauntun sonrasına girilmiş raunt, kesinti ya da bitiş var; önce onları kaldır.")
+    patch: dict = {"bout": body.model_dump(mode="json", exclude={"names"})}
+    if body.names is not None:
+        patch["names"] = {"red": body.names.red.strip(), "blue": body.names.blue.strip()}
+    if job.match is not None:
+        patch["match"] = {**job.match.model_dump(mode="json"), "scheduled_rounds": body.scheduled_rounds,
+                          "round_length_s": body.round_length_s}
+    return store.update_params(job_id, patch)
+
+
+@router.put("/{job_id}/scorebug", response_model=Job, status_code=202)
+def set_scorebug(store: StoreDep, job_id: JobId, body: ScorebugRegion) -> Job:
+    """The user's clock rectangle (null: find it automatically); the clock is read again."""
+    job = _job(store, job_id)
+    if job.outputs.tracking_prep is None:
+        raise ApiProblem(409, "video_not_ready", "Önce poz ve takip hazırlığı tamamlanmalı.")
+    roi = body.clock.model_dump(mode="json") if body.clock else None
+    updated = store.resubmit(job_id, allowed=("awaiting_selection", "completed", "failed"),
+                             params_patch={"scorebug_roi": roi}, clear_outputs=("broadcast",),
+                             message="Scorebug alanı güncellendi; saat yeniden okunuyor.")
+    if updated is None:
+        raise ApiProblem(409, "job_busy", "Analiz şu anda işleniyor; bitince yeniden dene.")
+    return updated
+
+
+@router.post("/{job_id}/reprocess", response_model=Job, status_code=202)
+def reprocess(store: StoreDep, job_id: JobId) -> Job:
+    """Run the parts an older version did not make (poses and preparation come from the cache)."""
+    job = _job(store, job_id)
+    if job.outputs.tracking_prep is None:
+        raise ApiProblem(409, "video_not_ready", "Önce poz ve takip hazırlığı tamamlanmalı.")
+    clear = ("broadcast", "tracking", "events", "scoring") if job.selection else ("broadcast",)
+    updated = store.resubmit(job_id, allowed=("awaiting_selection", "completed", "failed"), clear_outputs=clear,
+                             message="Analiz yeni sürümle yeniden işleniyor (pozlar önbellekten).")
+    if updated is None:
+        raise ApiProblem(409, "job_busy", "Analiz şu anda işleniyor; bitince yeniden dene.")
+    return updated
+
+
+@router.get("/{job_id}/broadcast", response_model=BroadcastTimeline)
+def broadcast_timeline(store: StoreDep, settings: SettingsDep, job_id: JobId) -> BroadcastTimeline:
+    """The fight clock read from the scorebug (one sample per second) and the automatic rounds."""
+    job = _job(store, job_id)
+    b, av = job.outputs.broadcast, job.outputs.analysis_video
+    if b is None or av is None:
+        raise ApiProblem(409, "broadcast_not_ready", "Raunt bilgisi henüz hazır değil.")
+    data = broadcast_store.read(settings.cache_dir, b.cache_key)
+    if data is None:
+        raise ApiProblem(410, "broadcast_missing", "Raunt bilgisi önbellekte bulunamadı.")
+    duration = av.video.frame_count / av.video.fps
+    found, _ = clock_mod.infer(data.reads, duration, settings.broadcast, settings.ruleset)
+    hz = settings.broadcast.ocr_hz
+    ts, rnd, rem, conf = clock_mod.timeline(found, duration, hz, settings.broadcast.max_interpolate_s)
+    return BroadcastTimeline(job_id=job_id, fps=av.video.fps, sample_hz=hz, t_s=ts, round=rnd, remaining_s=rem,
+                             confidence=conf, roi=data.roi, rounds=data.rounds)
 
 
 @router.get("/{job_id}/scorecards", response_model=Scorecards)
@@ -335,7 +439,8 @@ def scorecards(store: StoreDep, settings: SettingsDep, job_id: JobId) -> Scoreca
         events=data.events, runs=data.runs, signals=data.signals, sample_hz=settings.motion.sample_hz,
         ident_state=ident["state"] if ident is not None else None, fps=av.video.fps,
         frame_count=av.video.frame_count, exclusions=list(exclusions), names=names)
-    return judging.compute(job_id, job.fighters, job.match or MatchSetup(), inputs)
+    setup = rounds_mod.judging_setup(job.match, job.bout, job.rounds)
+    return judging.compute(job_id, job.fighters, setup, inputs)
 
 
 @router.put("/{job_id}/exclusions", response_model=Job, status_code=202)

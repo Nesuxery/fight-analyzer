@@ -765,7 +765,7 @@
   }
  ],
  "motion": {
-  "schema_version": "1.6.0",
+  "schema_version": "1.7.0",
   "job_id": "ffffffffffffffffffffffffffffffff",
   "data_origin": "measured",
   "sample_hz": 10.0,
@@ -5930,7 +5930,7 @@
   ]
  },
  "momentum": {
-  "schema_version": "1.6.0",
+  "schema_version": "1.7.0",
   "job_id": "ffffffffffffffffffffffffffffffff",
   "data_origin": "measured",
   "experimental": true,

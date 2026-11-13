@@ -42,3 +42,6 @@ Thumbs.db
 .DS_Store
 .vscode/
 .idea/
+
+# Local test material derived from user videos (clips, frames, scratch data dirs): never committed
+/local/

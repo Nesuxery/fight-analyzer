@@ -5,6 +5,24 @@ The JSON Schema in shared/schemas/ is generated from these models
 are generated from that schema (npm run gen:types).
 """
 
+from .broadcast import (
+    BoutConfig,
+    BroadcastNote,
+    BroadcastNoteCode,
+    BroadcastSummary,
+    BroadcastTimeline,
+    NameSuggestion,
+    RoiSource,
+    RoundEdits,
+    RoundNote,
+    RoundNoteCode,
+    RoundSegment,
+    RoundSource,
+    Ruleset,
+    ScorebugRegion,
+    ScorebugRoi,
+    ScreenRect,
+)
 from .common import SCHEMA_VERSION, DataOrigin
 from .events import EventTimeline, EventType, FightEvent, ImagePoint, Limb
 from .fighters import Fighter, FighterFrameState, FighterId, TrackState
@@ -16,6 +34,7 @@ from .jobs import (
     JobOutputs,
     JobStatus,
     JobType,
+    OutdatedReason,
     PipelineStage,
     ProgressUnit,
     StageProgress,
@@ -227,5 +246,22 @@ __all__ = [
     "TranscodeInfo",
     "UploadLimits",
     "VideoInfo",
+    "BoutConfig",
+    "BroadcastNote",
+    "BroadcastNoteCode",
+    "BroadcastSummary",
+    "BroadcastTimeline",
+    "NameSuggestion",
+    "RoiSource",
+    "RoundEdits",
+    "RoundNote",
+    "RoundNoteCode",
+    "RoundSegment",
+    "RoundSource",
+    "Ruleset",
+    "ScorebugRegion",
+    "ScorebugRoi",
+    "ScreenRect",
+    "OutdatedReason",
     "WorkerInfo",
 ]

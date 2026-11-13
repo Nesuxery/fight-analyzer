@@ -73,6 +73,10 @@ Step 'Poz modeli (resmi Ultralytics surumu, SHA-256 dogrulamali)'
 Push-Location (Join-Path $Root 'backend')
 try { Invoke-Checked $VenvPy @('-m', 'fight_analyzer.pose.models') } finally { Pop-Location }
 
+Step 'Scorebug OCR modeli (PaddleOCR PP-OCRv5, Apache-2.0, SHA-256 dogrulamali)'
+Push-Location (Join-Path $Root 'backend')
+try { Invoke-Checked $VenvPy @('-m', 'fight_analyzer.broadcast.ocr_model') } finally { Pop-Location }
+
 Step 'Arayuz paketleri (npm ci)'
 Push-Location (Join-Path $Root 'frontend')
 try { Invoke-Checked 'npm' @('ci', '--no-audit') } finally { Pop-Location }

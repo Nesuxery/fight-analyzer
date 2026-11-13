@@ -151,6 +151,49 @@ class MomentumSettings:
 
 
 @dataclass(frozen=True)
+class RulesetSettings:
+    """Bout format of the ruleset. Commissions differ, so these are configuration,
+    not code: ABC Unified Rules (2025 judging criteria clarification)."""
+
+    name: str = "abc_2025"
+    round_options: tuple[int, ...] = (3, 5)  # scheduled rounds the user can pick
+    default_rounds: int = 3
+    championship_rounds: int = 5  # title fights
+    round_length_s: float = 300.0
+    rest_s: float = 60.0
+    # Clock lengths seen in broadcasts; a clock run is matched to the shortest one
+    # that is not below its highest reading.
+    standard_round_lengths_s: tuple[float, ...] = (120.0, 180.0, 240.0, 300.0)
+
+
+@dataclass(frozen=True)
+class BroadcastSettings:
+    """Scorebug clock reading (OCR), round boundaries and round-break detection.
+    Starting design values, tuned on the sample broadcast only."""
+
+    sample_hz: float = 2.0  # band samples per second of video (scorebug presence)
+    ocr_hz: float = 1.0  # clock reads per second of video, inside the clock area only
+    roi_frames: int = 48  # frames spread over the video, searched for the clock area
+    band_share: float = 0.24  # height share of the top and bottom bands searched
+    min_text_px: int = 9  # text line height bounds, in pixels of a 1080-line frame
+    max_text_px: int = 90
+    min_presence: float = 0.2  # a scorebug text box is persistent in this share of frames
+    min_clock_share: float = 0.5  # its reads that must parse as a clock
+    min_read_conf: float = 0.6  # OCR confidence for a usable read
+    min_round_conf: float = 0.3  # the short "R1" box reads with less confidence; numbers are voted per run
+    run_tolerance_s: float = 2.0  # clock vs video time disagreement inside one run
+    min_round_s: float = 20.0  # shorter clock runs are not rounds
+    min_run_reads: int = 5
+    start_snap_s: float = 6.0  # first running read this close to the top: the round started there
+    end_snap_s: float = 3.0  # last read this close to 0:00: the round ran out
+    max_interpolate_s: float = 12.0  # clock gaps longer than this stay unknown
+    # Without a readable clock: a long quiet stretch with people sitting / many people in view.
+    break_min_s: float = 45.0
+    break_quiet_share: float = 0.6
+    break_max_confidence: float = 0.5
+
+
+@dataclass(frozen=True)
 class Settings:
     data_dir: Path
     api_host: str = "127.0.0.1"
@@ -175,6 +218,8 @@ class Settings:
     tracking: TrackingSettings = field(default_factory=TrackingSettings)
     motion: MotionSettings = field(default_factory=MotionSettings)
     momentum: MomentumSettings = field(default_factory=MomentumSettings)
+    ruleset: RulesetSettings = field(default_factory=RulesetSettings)
+    broadcast: BroadcastSettings = field(default_factory=BroadcastSettings)
 
     @property
     def db_path(self) -> Path:

@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 12 Kasım 2026 (v2 Bölüm 1: siyah-beyaz-kırmızı kimlik). Ayrıntılı
+Son güncelleme: 13 Kasım 2026 (v2 Bölüm 2a: maç ayarları ve raunt tespiti). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -24,15 +24,15 @@ CLAUDE.md geçerlidir.
   fight_analyzer.jobs`), Vite/React arayüzü. Hepsi `127.0.0.1`; `start.cmd` tek komut.
 - İş kaydı SQLite (WAL); işçi kalp atışı, 30 sn sonra yarım iş yeniden kuyruğa,
   2 denemeden sonra `worker_lost`.
-- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.6.0**);
+- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.7.0**);
   JSON Schema ve TS tipleri bundan üretilir, `check.cmd` güncelliğini denetler.
   Üretilen dosyalar (şema, TS tipleri, overlay dosyaları) `.gitattributes` ile her
   checkout'ta LF; denetim bayt bayt karşılaştırır ve gevşetilmedi.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
   (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 5`, `CAMERA_VERSION 2`,
-  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`); mantık değişince ilgili sürüm artırılır,
-  şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
+  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`, `BROADCAST_VERSION 1`); mantık değişince
+  ilgili sürüm artırılır, şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
 
 ### Video ve poz
 - Yüklenen video sabit kare hızlı, tarayıcıda oynatılabilir bir analiz kopyasına
@@ -80,6 +80,53 @@ CLAUDE.md geçerlidir.
 - Otomatik ayırt edilemediği için kullanıcı işaretler. Dışlanan bölüm maç süresi
   değildir: olaylar sayılmaz/puanlanmaz, süreye bağlı puan ve ölçüm birikmez,
   momentum donar (maç zamanıyla söner).
+
+### Maç ayarları ve raunt tespiti (v2 Bölüm 2a, 13 Kasım 2026)
+Bölüm 2 üç aşamada yapılıyor (a: maç ayarları ve raunt tespiti, b: yayın
+kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
+- **Raunt kaynağı ve önceliği:** elle > scorebug saati (OCR) > raunt arası
+  (pozlar). Elle girilen raunt (`MatchSetup.rounds`) aynı numaralı otomatiği ezer
+  ve otomatik tespit onu asla değiştirmez; silinen otomatik raunt
+  `cleared_rounds`'ta tutulur; elle rauntla çakışan ya da sırası tutmayan otomatik
+  raunt notla dışarıda kalır. Birleştirme tek yerde: `fight_analyzer/rounds.py`;
+  sonuç `Job.rounds`, hakem kartları da bunu kullanır. Raunt işaretleri kişiye ait
+  değildir; taraf değiştirmede dokunulmaz.
+- **Maç ayarları (`BoutConfig`):** raunt sayısı ve süresinin kaynağı artık burası;
+  `MatchSetup`'taki aynı alanlar kopyalanır (eski analizlerde varsayılan olarak
+  oradan okunur). Adlar tek kaynak olarak `params.names`'te kalır. Raunt
+  seçenekleri ve süreler `RulesetSettings`'te (koda gömülü değil).
+- **Saat alanı:** model kullanılmadan, ekranda sabit kalan ve videoyla geri sayan
+  metin kutusu seçilir (arena ekranlarındaki saat kamerayla kaydığı için elenir).
+  Raunt kutusunun okuma alanı saatten uzağa doğru genişletildi: örnek yayında
+  R2'de "R2"nin önüne çubuk geliyor ve yazı kayıyordu (dar kutu boş okuyordu).
+  Kısa "R1" kutusu düşük güvenle okunduğu için ayrı eşik (0,3) ve raunt başına oy.
+- **Saat okuma kuralları:** okuma = (video zamanı, kalan saniye; ekran yukarı
+  yuvarlar). Koşu yalnızca saat yukarı sıçrayınca biter (okunan raunt numarası
+  tek başına bölmez); üç okumaya kadar tutarsız blok ve koşu kenarındaki tutarsız
+  okuma atılır; 20 sn'den kısa koşu raunt değildir. Başlangıç tepeden geriye
+  hesaplanır; 0:00'da biten tam, üstünde donan erken biten (`partial`), kaybolan
+  son okumada kesilen sayılır.
+- **OCR:** PaddleOCR `en_PP-OCRv5_mobile_rec` + `onnxruntime` 1.31.1 (kullanıcı
+  onayıyla). OpenCV 4.14 DNN modeli yükleyemedi (dinamik `Reshape`). Model yalnızca
+  kurulumda/açık komutla, sabit commit ve SHA-256 ile iner; yoksa saat okunmaz,
+  analiz durmaz. Kaynak ve lisans README'de.
+- **OCR'sız raunt arası tespiti:** pozlardan, düşük güvenle (≤ 0,5); ara
+  bulunamazsa raunt iddia edilmez. Gerçek raunt arası içeren görüntü olmadığı için
+  yalnızca kurallar sentetik testlerle denendi.
+- **Ad önerisi:** yalnızca öneri; onaysız uygulanmaz ve dolu bir adın üstüne
+  yazmaz (scorebug çoğunlukla soyadını gösterir); soldaki ad kırmızıya önerilir;
+  büyük harften dönüşüm yerelden bağımsız (`ILIA` → `Ilia`).
+- **Eski analizler:** açılır; `Job.outdated` doluysa "Bu analiz eski sürümle
+  yapıldı — yeniden işle" bandı. Yeniden işleme kaynak video dosyasını ister
+  (`video_prep` onu denetler).
+- **Ölçüm (örnek yayın topuria-volkanovski.mp4, 9:00, ayar için kullanıldı;
+  doğruluk değildir):** R1 10,5–310,5 sn (tam), R2 317,5–530,5 sn (kısmi, saat
+  1:28'de durdu = resmi 3:32 KO); karelerden okunan saatle dört sınır da ±1 sn
+  içinde. Yayın aşaması işçide 71,7 sn (tek başına 40–50 sn); poz 3091 sn'ye göre
+  ≈ %2 ek süre. OCR'sız elle kurulum ≈ 6–8 etkileşim (bir dakikanın altında).
+- **Yerel test malzemesi:** örnek videodan türetilen klip/kare ve karalama veri
+  dizinleri yalnızca `local/` altında (`.gitignore`); repodaki testler tamamen
+  sentetik (Pillow'un gömülü fontu ve Windows fontları).
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →
@@ -259,8 +306,12 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
   karşılaştırılarak ayarlanmalı (şu an tasarım değerleri).
 
 ### Ürün
-- [ ] Raund sınırlarını önerme (skor tabelası saati / raund arası tespiti), yine
-  kullanıcı onayıyla.
+- [x] Raunt sınırlarını önerme (scorebug saati / raunt arası tespiti), elle
+  düzeltme her zaman geçerli (v2 Bölüm 2a).
+- [ ] OCR'sız raunt arası tespitini gerçek bir yayın arasıyla denemek (örnek
+  videoda aralar kesilmiş).
+- [ ] Farklı yayıncıların scorebug'larıyla (üst bant, farklı saat biçimleri,
+  onda bir saniye gösterimi) denemek; yalnızca UFC yayınıyla denendi.
 - [ ] Tek seçimle kamera yakın çekime geçince kimlik uzun süre belirsiz kalıyor;
   uygulama bu durumda düzeltme noktası önermiyor.
 - [ ] Submission girişimi, pozisyon geçişleri ve kafes konumu ölçülmüyor.

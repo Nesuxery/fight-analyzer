@@ -9,16 +9,12 @@ are moved into place. Nothing else is downloaded.
 
 from __future__ import annotations
 
-import hashlib
-import os
 import sys
-import tempfile
-import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from fight_analyzer.fsutil import sha256_file
+from fight_analyzer import download
 
 RELEASE = "v8.4.0"
 _BASE = f"https://github.com/ultralytics/assets/releases/download/{RELEASE}"
@@ -64,41 +60,21 @@ def weights_for(name: str) -> PoseWeights:
         ) from None
 
 
+def _pinned(weights: PoseWeights) -> download.PinnedFile:
+    return download.PinnedFile(weights.name, weights.url, weights.size, weights.sha256)
+
+
 def verify(path: Path, weights: PoseWeights) -> bool:
-    return path.is_file() and path.stat().st_size == weights.size and \
-        sha256_file(path) == weights.sha256
+    return download.verify(path, _pinned(weights))
 
 
 def fetch(name: str, models_dir: Path,
           on_progress: Callable[[int, int], None] | None = None) -> Path:
     """Return the verified local weights file, downloading it if needed."""
-    weights = weights_for(name)
-    target = models_dir / name
-    if verify(target, weights):
-        return target
-    models_dir.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{name}.", suffix=".part", dir=models_dir)
-    tmp = Path(tmp_name)
     try:
-        h = hashlib.sha256()
-        done = 0
-        with os.fdopen(fd, "wb") as out, urllib.request.urlopen(weights.url, timeout=60) as resp:
-            while block := resp.read(1 << 20):
-                out.write(block)
-                h.update(block)
-                done += len(block)
-                if done > weights.size:
-                    raise ModelError(f"{name}: download larger than expected")
-                if on_progress:
-                    on_progress(done, weights.size)
-        if done != weights.size or h.hexdigest() != weights.sha256:
-            raise ModelError(f"{name}: downloaded file does not match the pinned SHA-256")
-        os.replace(tmp, target)
-        return target
-    except OSError as exc:
-        raise ModelError(f"{name}: download failed ({exc})") from exc
-    finally:
-        tmp.unlink(missing_ok=True)
+        return download.fetch(_pinned(weights_for(name)), models_dir, on_progress)
+    except download.DownloadError as exc:
+        raise ModelError(str(exc)) from exc
 
 
 def main(argv: list[str]) -> int:

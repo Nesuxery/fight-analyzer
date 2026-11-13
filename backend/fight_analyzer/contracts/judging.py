@@ -9,6 +9,7 @@ and reported as such.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Annotated
 
 from pydantic import Field, model_validator
 
@@ -76,10 +77,14 @@ class MatchEnding(Contract):
 
 
 class MatchSetup(Contract):
-    scheduled_rounds: int = Field(default=3, ge=1, le=5, description="3 for most bouts, 5 for title/main events.")
-    round_length_s: float = Field(default=300, gt=0, le=600)
+    scheduled_rounds: int = Field(default=3, ge=1, le=5,
+                                  description="Mirrors BoutConfig (Job.bout), which is the source since 1.7.0.")
+    round_length_s: float = Field(default=300, gt=0, le=600, description="Mirrors BoutConfig.")
     rounds: list[RoundMark] = Field(default_factory=list, max_length=5,
-                                    description="Empty: the whole video is treated as one unmarked round.")
+                                    description="The user's round marks; each replaces the automatic round of "
+                                                "the same number. Effective rounds: Job.rounds.")
+    cleared_rounds: list[Annotated[int, Field(ge=1, le=5)]] = Field(
+        default_factory=list, max_length=5, description="Automatic rounds the user removed (by number).")
     ending: MatchEnding = Field(default_factory=MatchEnding)
     deductions: list[PointDeduction] = Field(default_factory=list, max_length=20)
 

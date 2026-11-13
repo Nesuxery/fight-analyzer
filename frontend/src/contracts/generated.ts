@@ -92,6 +92,21 @@ export type DecisionType =
 export type VerdictStatus = "decision" | "finish" | "no_contest" | "not_computed";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "Ruleset".
+ */
+export type Ruleset = "abc_2025";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "RoiSource".
+ */
+export type RoiSource = "auto" | "manual";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "RoundSource".
+ */
+export type RoundSource = "ocr" | "break" | "manual";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "CheckStatus".
  */
 export type CheckStatus = "ok" | "degraded" | "unavailable";
@@ -102,12 +117,35 @@ export type CheckStatus = "ok" | "degraded" | "unavailable";
  * via the `definition` "PipelineStage".
  */
 export type PipelineStage =
-  "video_prep" | "pose" | "tracking_prep" | "tracking" | "events" | "scoring" | "export";
+  | "video_prep"
+  | "pose"
+  | "tracking_prep"
+  | "broadcast"
+  | "tracking"
+  | "events"
+  | "scoring"
+  | "export";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "JobType".
  */
 export type JobType = "analysis" | "export";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "OutdatedReason".
+ */
+export type OutdatedReason = "broadcast_missing";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "BroadcastNoteCode".
+ */
+export type BroadcastNoteCode =
+  | "ocr_unavailable"
+  | "clock_not_found"
+  | "roi_unreadable"
+  | "no_rounds"
+  | "round_number_inferred"
+  | "rounds_from_breaks";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "ExportFileKind".
@@ -123,6 +161,11 @@ export type UncertainReason = "camera_cut" | "overlap" | "lost" | "ambiguous" | 
  * via the `definition` "ProgressUnit".
  */
 export type ProgressUnit = "frames" | "seconds" | "bytes";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "RoundNoteCode".
+ */
+export type RoundNoteCode = "auto_conflicts_manual" | "beyond_scheduled" | "out_of_order";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "JobStatus".
@@ -178,10 +221,12 @@ export type TrackState = "tracked" | "occluded" | "uncertain";
 export type SkeletonFormat = "coco17";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.6.0.
+ * MMA Fight Analyzer data contracts, schema version 1.7.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
+  BoutConfig?: BoutConfig;
+  BroadcastTimeline?: BroadcastTimeline;
   ErrorResponse?: ErrorResponse;
   EventTimeline?: EventTimeline;
   ExportRequest?: ExportRequest;
@@ -197,6 +242,8 @@ export interface FightAnalyzerContracts {
   PoseChunk?: PoseChunk;
   PosePreview?: PosePreview;
   PoseSequence?: PoseSequence;
+  RoundEdits?: RoundEdits;
+  ScorebugRegion?: ScorebugRegion;
   Scorecards?: Scorecards;
   SegmentExclusions?: SegmentExclusions;
   SelectionCandidates?: SelectionCandidates;
@@ -647,19 +694,28 @@ export interface KeyMoment {
  */
 export interface MatchSetup {
   /**
+   * Automatic rounds the user removed (by number).
+   *
+   * @maxItems 5
+   */
+  cleared_rounds: number[];
+  /**
    * @maxItems 20
    */
   deductions: PointDeduction[];
   ending: MatchEnding;
+  /**
+   * Mirrors BoutConfig.
+   */
   round_length_s: number;
   /**
-   * Empty: the whole video is treated as one unmarked round.
+   * The user's round marks; each replaces the automatic round of the same number. Effective rounds: Job.rounds.
    *
    * @maxItems 5
    */
   rounds: RoundMark[];
   /**
-   * 3 for most bouts, 5 for title/main events.
+   * Mirrors BoutConfig (Job.bout), which is the source since 1.7.0.
    */
   scheduled_rounds: number;
 }
@@ -814,6 +870,120 @@ export interface VideoInfo {
   width: number;
 }
 /**
+ * Bout format confirmed by the user ("Maç ayarları").
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "BoutConfig".
+ */
+export interface BoutConfig {
+  /**
+   * Corner names. Always filled in Job.bout; in a request null keeps them.
+   */
+  names: FighterNames | null;
+  /**
+   * Break between rounds.
+   */
+  rest_s: number;
+  round_length_s: number;
+  ruleset: Ruleset;
+  /**
+   * 3 for most bouts, 5 for title fights.
+   */
+  scheduled_rounds: number;
+  title_fight: boolean;
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "FighterNames".
+ */
+export interface FighterNames {
+  blue: string;
+  red: string;
+}
+/**
+ * The fight clock read from the scorebug, one sample per second of video
+ * (null: no usable read and no safe interpolation).
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "BroadcastTimeline".
+ */
+export interface BroadcastTimeline {
+  confidence: number[];
+  fps: number;
+  job_id: string;
+  remaining_s: (number | null)[];
+  roi: ScorebugRoi | null;
+  round: (number | null)[];
+  /**
+   * Automatic rounds (before the user's edits).
+   */
+  rounds: RoundSegment[];
+  sample_hz: number;
+  /**
+   * Semantic version of the contract this document follows.
+   */
+  schema_version: string;
+  t_s: number[];
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "ScorebugRoi".
+ */
+export interface ScorebugRoi {
+  clock: ScreenRect;
+  /**
+   * Automatic: share of reads there that parsed as a clock in the frames searched; manual: share of seconds of video it read as a clock.
+   */
+  confidence: number;
+  source: RoiSource;
+}
+/**
+ * Rectangle in the analysis video as shares of its width and height (0..1).
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "ScreenRect".
+ */
+export interface ScreenRect {
+  h: number;
+  w: number;
+  x: number;
+  y: number;
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "RoundSegment".
+ */
+export interface RoundSegment {
+  /**
+   * Seconds left at the end: 0 = ran out; more = stopped early or cut off.
+   */
+  clock_end: number | null;
+  /**
+   * Fight clock (seconds left) when the round starts in the video.
+   */
+  clock_start: number | null;
+  confidence: number;
+  /**
+   * Last frame of the round (inclusive).
+   */
+  end_frame: number;
+  /**
+   * Round number.
+   */
+  index: number;
+  /**
+   * Not the full round length in the recording (finish, or cut off).
+   */
+  partial: boolean;
+  source: RoundSource;
+  start_frame: number;
+  /**
+   * End of the last frame: (end_frame + 1) / fps.
+   */
+  video_end_s: number;
+  video_start_s: number;
+}
+/**
  * Body of every 4xx/5xx response produced by the API itself.
  *
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -877,14 +1047,6 @@ export interface ExportOptions {
    */
   others: boolean;
   skeleton: boolean;
-}
-/**
- * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
- * via the `definition` "FighterNames".
- */
-export interface FighterNames {
-  blue: string;
-  red: string;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -983,6 +1145,7 @@ export interface Job {
    * How many times a worker started this job.
    */
   attempts: number;
+  bout: BoutConfig;
   cancel_requested: boolean;
   created_at: string;
   error: JobError | null;
@@ -1002,12 +1165,24 @@ export interface Job {
    */
   match: MatchSetup | null;
   message: string | null;
+  /**
+   * Parts made by an older version of the analysis ('yeniden işle').
+   */
+  outdated: OutdatedReason[];
   outputs: JobOutputs;
   /**
    * Overall progress, 0..1.
    */
   progress: number;
   progress_detail: StageProgress | null;
+  /**
+   * Automatic rounds left out, and why.
+   */
+  round_notes: RoundNote[];
+  /**
+   * Effective rounds: the user's marks over the automatic ones.
+   */
+  rounds: RoundSegment[];
   /**
    * Semantic version of the contract this document follows.
    */
@@ -1044,6 +1219,7 @@ export interface JobError {
  */
 export interface JobOutputs {
   analysis_video: AnalysisVideo | null;
+  broadcast: BroadcastSummary | null;
   events: EventsSummary | null;
   export: ExportSummary | null;
   pose: PoseSummary | null;
@@ -1083,6 +1259,56 @@ export interface TranscodeInfo {
    * Bumped whenever the FFmpeg recipe changes.
    */
   version: number;
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "BroadcastSummary".
+ */
+export interface BroadcastSummary {
+  cache_hit: boolean;
+  cache_key: string;
+  /**
+   * Share of seconds with a usable clock read.
+   */
+  clock_share: number;
+  method: string;
+  names: NameSuggestion | null;
+  notes: BroadcastNote[];
+  ocr_available: boolean;
+  ocr_model: string | null;
+  processing_s: number;
+  roi: ScorebugRoi | null;
+  /**
+   * Automatic rounds; Job.rounds applies the user's edits.
+   */
+  rounds: RoundSegment[];
+}
+/**
+ * Names read from the scorebug. A suggestion only: never applied without the user.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "NameSuggestion".
+ */
+export interface NameSuggestion {
+  blue: string | null;
+  confidence: number;
+  /**
+   * As read left of the clock, e.g. 'VOLKANOVSKI'.
+   */
+  left: string | null;
+  /**
+   * Suggested red corner name (left by broadcast convention), title case.
+   */
+  red: string | null;
+  right: string | null;
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "BroadcastNote".
+ */
+export interface BroadcastNote {
+  code: BroadcastNoteCode;
+  round: number | null;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1339,6 +1565,18 @@ export interface StageProgress {
   stage: PipelineStage;
   total: number | null;
   unit: ProgressUnit;
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "RoundNote".
+ */
+export interface RoundNote {
+  code: RoundNoteCode;
+  /**
+   * The other round involved, if any.
+   */
+  other: number | null;
+  round: number;
 }
 /**
  * The file the user uploaded, as probed by FFmpeg.
@@ -1672,6 +1910,32 @@ export interface PoseSequence {
   video: VideoInfo;
 }
 /**
+ * Request body of PUT /jobs/{id}/rounds. A mark replaces the automatic round of
+ * the same number; cleared numbers are automatic rounds the user removed.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "RoundEdits".
+ */
+export interface RoundEdits {
+  /**
+   * @maxItems 5
+   */
+  cleared_rounds: number[];
+  /**
+   * @maxItems 5
+   */
+  rounds: RoundMark[];
+}
+/**
+ * Request body of PUT /jobs/{id}/scorebug: the user's clock rectangle; null = automatic.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "ScorebugRegion".
+ */
+export interface ScorebugRegion {
+  clock: ScreenRect | null;
+}
+/**
  * Request body: the complete list of excluded parts (replaces the previous one).
  *
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1765,4 +2029,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.6.0";
+export const SCHEMA_VERSION = "1.7.0";

@@ -17,6 +17,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from fight_analyzer import rounds as rounds_mod
+from fight_analyzer.config import RulesetSettings
 from fight_analyzer.contracts import (
     Job,
     JobError,
@@ -24,8 +26,10 @@ from fight_analyzer.contracts import (
     JobStatus,
     JobType,
     MatchSetup,
+    OutdatedReason,
     PipelineStage,
     StageProgress,
+    VideoInfo,
 )
 from fight_analyzer.contracts.common import utcnow
 from fight_analyzer.contracts.fighters import swap_fighter_ids
@@ -455,8 +459,29 @@ def _fighters(params: dict[str, Any]) -> list[dict[str, str]]:
             for fid, side in (("fighter_a", "red"), ("fighter_b", "blue"))]
 
 
+RULESET = RulesetSettings()
+
+
+def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | None,
+             status: str) -> dict[str, Any]:
+    """Bout format, effective rounds and what an older analysis lacks (no disk reads)."""
+    names = {**DEFAULT_NAMES, **(params.get("names") or {})}
+    bout = rounds_mod.bout_config(params, RULESET, names)
+    match = MatchSetup.model_validate(params["match"]) if params.get("match") else None
+    rounds, notes = [], []
+    if video is not None:
+        auto = outputs.broadcast.rounds if outputs.broadcast else []
+        rounds, notes = rounds_mod.effective(auto, match, bout.scheduled_rounds, video.fps, bout.round_length_s)
+    outdated = []
+    if outputs.tracking_prep is not None and outputs.broadcast is None and status not in ("queued", "running"):
+        outdated.append(OutdatedReason.broadcast_missing)
+    return {"bout": bout, "rounds": rounds, "round_notes": notes, "outdated": outdated}
+
+
 def _row_to_job(row: sqlite3.Row) -> Job:
     params = json.loads(row["params_json"] or "{}")
+    outputs = JobOutputs.model_validate_json(row["outputs_json"]) if row["outputs_json"] else JobOutputs()
+    video = VideoInfo.model_validate_json(row["video_json"]) if row["video_json"] else None
     return Job(
         job_id=row["job_id"],
         job_type=row["job_type"],
@@ -470,8 +495,8 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         exclusions=params.get("exclusions") or [],
         match=params.get("match"),
         fighters=_fighters(params),
-        video=row["video_json"] and json.loads(row["video_json"]),
-        outputs=json.loads(row["outputs_json"]) if row["outputs_json"] else {},
+        video=video,
+        outputs=outputs,
         error=row["error_json"] and json.loads(row["error_json"]),
         attempts=row["attempts"],
         cancel_requested=bool(row["cancel_requested"]),
@@ -479,4 +504,5 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         updated_at=row["updated_at"],
         started_at=row["started_at"],
         finished_at=row["finished_at"],
+        **_derived(params, outputs, video, row["status"]),
     )

@@ -13,9 +13,10 @@ STAGE_WEIGHTS: dict[PipelineStage, float] = {
     PipelineStage.video_prep: 0.10,
     PipelineStage.pose: 0.50,
     PipelineStage.tracking_prep: 0.10,
-    PipelineStage.tracking: 0.05,
-    PipelineStage.events: 0.10,
-    PipelineStage.scoring: 0.10,
+    PipelineStage.broadcast: 0.04,
+    PipelineStage.tracking: 0.04,
+    PipelineStage.events: 0.09,
+    PipelineStage.scoring: 0.08,
     PipelineStage.export: 0.05,
 }
 

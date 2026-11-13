@@ -11,6 +11,9 @@ import type {
 } from "../../contracts/generated";
 import type { Clock } from "../../player/clock";
 import { formatClock } from "../../player/clock";
+import { api } from "../../api/client";
+import { MatchSettings } from "../match/MatchSettings";
+import { editsOf, removeRound, revertToAuto } from "../match/roundEdit";
 import { FINISH_LABELS, MatchEditor } from "./MatchEditor";
 
 const CRITERION_LABELS: Record<Criterion, string> = {
@@ -126,16 +129,30 @@ function RoundDetails({ round, sc, names, clock }: {
 }
 
 /** AI scorecards of three virtual judges and the decision estimate (never an official result). */
-export function JudgingPanel({ job, sc, problem, frame, clock, onSaved }: {
+export function JudgingPanel({ job, sc, problem, frame, clock, onSaved, onJob }: {
   job: Job;
   sc: Scorecards | null;
   problem: string | null;
   frame: number;
   clock: Clock;
+  /** Scorecards should be computed again. */
   onSaved: () => void;
+  /** The job as saved by the API (bout format, rounds): shown at once. */
+  onJob: (job: Job) => void;
 }) {
   const [open, setOpen] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [settingsProblem, setSettingsProblem] = useState<string | null>(null);
   const video = job.outputs.analysis_video!.video;
+  const edits = editsOf(job.match);
+  const auto = job.outputs.broadcast?.rounds ?? [];
+  const saveJob = (p: Promise<Job>) => {
+    setBusy(true);
+    setSettingsProblem(null);
+    p.then((updated) => { onJob(updated); onSaved(); },
+           (e: unknown) => setSettingsProblem(e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  };
   const names: Record<FighterId, string> = {
     fighter_a: job.fighters[0]?.display_name ?? "Kırmızı", fighter_b: job.fighters[1]?.display_name ?? "Mavi",
   };
@@ -222,9 +239,23 @@ export function JudgingPanel({ job, sc, problem, frame, clock, onSaved }: {
           </details>
         </>
       )}
-      <MatchEditor jobId={job.job_id} saved={job.match ?? null} frame={frame} fps={video.fps}
-                   frameCount={video.frame_count} clock={clock}
-                   names={{ red: names.fighter_a, blue: names.fighter_b }} onSaved={onSaved} />
+      <MatchSettings bout={job.bout} rounds={job.rounds} broadcast={job.outputs.broadcast ?? null}
+                     roundNotes={job.round_notes} headingLevel={3} busy={busy} problem={settingsProblem}
+                     onBout={(b) => saveJob(api.setBout(job.job_id, { ...b, names: null }))}
+                     actions={{
+                       onSeek: (r) => clock.seek((r.start_frame + 0.5) / video.fps),
+                       onRemove: (r) => saveJob(api.setRounds(job.job_id, removeRound(edits, r.index, auto))),
+                       canRevert: (r) => r.source === "manual" && auto.some((a) => a.index === r.index),
+                       onRevert: (r) => saveJob(api.setRounds(job.job_id, revertToAuto(edits, r.index))),
+                     }}
+                     restore={{
+                       numbers: edits.cleared_rounds.filter((n) => !job.rounds.some((r) => r.index === n)),
+                       onRestore: (n) => saveJob(api.setRounds(job.job_id, revertToAuto(edits, n))),
+                     }} />
+      <MatchEditor jobId={job.job_id} saved={job.match ?? null} scheduled={job.bout.scheduled_rounds} frame={frame}
+                   fps={video.fps} frameCount={video.frame_count}
+                   names={{ red: names.fighter_a, blue: names.fighter_b }}
+                   onSaved={(updated) => { onJob(updated); onSaved(); }} />
     </section>
   );
 }

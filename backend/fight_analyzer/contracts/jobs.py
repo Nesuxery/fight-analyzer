@@ -7,6 +7,7 @@ from enum import StrEnum
 
 from pydantic import Field
 
+from .broadcast import BoutConfig, BroadcastSummary, RoundNote, RoundSegment
 from .common import JOB_ID_PATTERN, Contract, VersionedContract
 from .fighters import Fighter
 from .judging import MatchSetup
@@ -40,10 +41,15 @@ class PipelineStage(StrEnum):
     video_prep = "video_prep"
     pose = "pose"
     tracking_prep = "tracking_prep"  # cuts, tracklets, appearance, selection candidates
+    broadcast = "broadcast"  # scorebug clock (OCR), rounds, round breaks
     tracking = "tracking"  # identity assignment after the user's selection
     events = "events"
     scoring = "scoring"
     export = "export"
+
+
+class OutdatedReason(StrEnum):
+    broadcast_missing = "broadcast_missing"  # analysed before rounds were read from the scorebug
 
 
 class JobError(Contract):
@@ -77,6 +83,7 @@ class JobOutputs(Contract):
     analysis_video: AnalysisVideo | None = None
     pose: PoseSummary | None = None
     tracking_prep: TrackingPrepSummary | None = None
+    broadcast: BroadcastSummary | None = None
     tracking: TrackingSummary | None = None
     events: EventsSummary | None = None
     scoring: ScoringSummary | None = None
@@ -98,6 +105,12 @@ class Job(VersionedContract):
     exclusions: list[ExcludedSegment] = Field(
         default_factory=list, description="Parts excluded from the analysis by the user (e.g. replays).")
     match: MatchSetup | None = Field(default=None, description="Rounds, ending and deductions entered by the user.")
+    bout: BoutConfig = Field(default_factory=BoutConfig, description="Bout format and names (defaults until set).")
+    rounds: list[RoundSegment] = Field(
+        default_factory=list, description="Effective rounds: the user's marks over the automatic ones.")
+    round_notes: list[RoundNote] = Field(default_factory=list, description="Automatic rounds left out, and why.")
+    outdated: list[OutdatedReason] = Field(
+        default_factory=list, description="Parts made by an older version of the analysis ('yeniden işle').")
     outputs: JobOutputs = Field(default_factory=JobOutputs)
     error: JobError | None = None
     attempts: int = Field(ge=0, description="How many times a worker started this job.")

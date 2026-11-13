@@ -1,4 +1,6 @@
 import type {
+  BoutConfig,
+  BroadcastTimeline,
   ErrorResponse,
   EventTimeline,
   ExportFileKind,
@@ -13,6 +15,8 @@ import type {
   MotionTimeline,
   PoseChunk,
   PosePreview,
+  RoundEdits,
+  ScorebugRegion,
   Scorecards,
   SegmentExclusions,
   SelectionCandidates,
@@ -104,6 +108,30 @@ export const api = {
       method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
+  /** Bout format ("Maç ayarları"); names too when given (nothing is recomputed). */
+  setBout: (jobId: string, body: BoutConfig) =>
+    request<Job>(`/jobs/${encodeURIComponent(jobId)}/bout`, {
+      method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  /** The user's round marks and the automatic rounds they removed (ending and deductions stay). */
+  setRounds: (jobId: string, body: RoundEdits) =>
+    request<Job>(`/jobs/${encodeURIComponent(jobId)}/rounds`, {
+      method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  /** The user's scorebug clock rectangle (null: automatic); the clock is read again. */
+  setScorebug: (jobId: string, body: ScorebugRegion) =>
+    request<Job>(`/jobs/${encodeURIComponent(jobId)}/scorebug`, {
+      method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  /** Run what an older version of the analysis did not make (poses come from the cache). */
+  reprocess: (jobId: string) =>
+    request<Job>(`/jobs/${encodeURIComponent(jobId)}/reprocess`, { method: "POST", headers: CLIENT_HEADER }),
+  /** Fight clock read from the scorebug, one sample per second, and the automatic rounds. */
+  broadcast: (jobId: string, signal?: AbortSignal) =>
+    request<BroadcastTimeline>(`/jobs/${encodeURIComponent(jobId)}/broadcast`, { signal }),
   /** AI round scoring by three virtual judges (an estimate, not an official result). */
   scorecards: (jobId: string, signal?: AbortSignal) =>
     request<Scorecards>(`/jobs/${encodeURIComponent(jobId)}/scorecards`, { signal }),

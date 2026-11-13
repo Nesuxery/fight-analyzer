@@ -1630,3 +1630,68 @@
 @media (max-width: 900px) {
   .jround__cols { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- rounds on the timeline: automatic (dashed) and the user's (solid), draggable edges ---------- */
+.tl__track { position: relative; }
+.tl__round--manual { border-left-style: solid; border-left-color: var(--text-1); }
+.tl__round--manual .tl__round-label { color: var(--text-1); }
+.tl__edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.tl__edge {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 12px;
+  margin-left: -6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+.tl__edge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  background: var(--text-2);
+  opacity: 0.55;
+}
+.tl__edge--manual::before { background: var(--text-1); opacity: 0.85; }
+.tl__edge:hover::before,
+.tl__edge:focus-visible::before { opacity: 1; background: var(--accent); }
+.tl__edge:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: 1px; border-radius: 2px; }
+.tl__key--round-auto { border-left: 2px dashed var(--text-3); background: none; }
+.tl__key--round-manual { border-left: 2px solid var(--text-1); background: none; }
+
+.roundbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+}
+.roundbar__help { color: var(--text-2); font-size: var(--fs-12); }
+
+/* older analysis: "yeniden işle" */
+.outdated {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-control);
+  background: var(--warning-soft);
+  color: var(--text-1);
+  font-size: var(--fs-13);
+}
+.outdated > svg { flex: none; color: var(--warning); }
+.outdated__text { display: grid; gap: 2px; flex: 1 1 260px; }

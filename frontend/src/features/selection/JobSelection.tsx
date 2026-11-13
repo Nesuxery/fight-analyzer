@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, urls } from "../../api/client";
 import { navigate } from "../../app/router";
 import type { SelectParams } from "../../app/router";
-import type { FighterAnchor, Job, PersonDetection, SelectionCandidates } from "../../contracts/generated";
+import type { FighterAnchor, Job, PersonDetection, ScreenRect, SelectionCandidates } from "../../contracts/generated";
 import { useJob } from "../../hooks/useJob";
-import { COMMON_LABELS, SELECTION_LABELS as L, formatNumber } from "../../labels";
+import { COMMON_LABELS, MATCH_LABELS, SELECTION_LABELS as L, formatNumber } from "../../labels";
+import { MatchSettings } from "../match/MatchSettings";
+import { RoiPicker } from "../match/RoiPicker";
+import { applyNameSuggestion, suggestionTargets } from "../match/roundEdit";
 import { NOT_IN_VIEW } from "../../model/analysis";
 import type { Assignment, Detection, Side } from "../../model/analysis";
 import { formatClock } from "../../player/clock";
@@ -33,6 +36,13 @@ function savedNames(job: Job): Record<Side, string> {
  */
 export function JobSelection({ jobId, params }: { jobId: string; params?: SelectParams }) {
   const job = useJob(jobId, 2000);
+  // A save returns the updated job: shown at once, until polling brings it too.
+  const [fresh, setFresh] = useState<Job | null>(null);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [settingsProblem, setSettingsProblem] = useState<string | null>(null);
+  const [roiEditing, setRoiEditing] = useState(false);
+  const [roiDraft, setRoiDraft] = useState<ScreenRect | null>(null);
+  const [rereading, setRereading] = useState(false);
   const [cands, setCands] = useState<SelectionCandidates | null>(null);
   const [candError, setCandError] = useState<string | null>(null);
   const [frame, setFrame] = useState<number | null>(params?.frame ?? null);
@@ -45,7 +55,9 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   /** Frame the <video> is showing (after the seek finished): the tiles are cut from it. */
   const [shown, setShown] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const data = job.data;
+  const polled = job.data;
+  const data = polled && fresh && fresh.job_id === polled.job_id &&
+    Date.parse(fresh.updated_at) >= Date.parse(polled.updated_at) ? fresh : polled;
   const prepKey = data?.outputs.tracking_prep?.cache_key;
   const video = data?.outputs.analysis_video?.video;
 
@@ -118,7 +130,7 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
     return (
       <EmptyState tone="loading" title={L.processingTitle}
                   action={<ButtonLink href={`#/analyses/${jobId}/processing`}>{L.openProcessing}</ButtonLink>}>
-        {L.processingText}
+        {rereading ? MATCH_LABELS.roi.rereading : L.processingText}
       </EmptyState>
     );
   }
@@ -178,6 +190,43 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
     }
   };
 
+  const saveSettings = (p: Promise<Job>, after?: () => void) => {
+    setSettingsBusy(true);
+    setSettingsProblem(null);
+    p.then((updated) => { setFresh(updated); after?.(); },
+           (e: unknown) => setSettingsProblem(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSettingsBusy(false));
+  };
+  const broadcast = data.outputs.broadcast ?? null;
+  const suggestion = broadcast?.names ?? null;
+  const settings = (
+    <MatchSettings
+      bout={data.bout} rounds={data.rounds} broadcast={broadcast} roundNotes={data.round_notes}
+      busy={settingsBusy} problem={settingsProblem}
+      onBout={(b) => saveSettings(api.setBout(jobId, { ...b, names: null }))}
+      roi={broadcast ? {
+        editing: roiEditing,
+        source: broadcast.roi?.source ?? null,
+        canSave: roiDraft !== null,
+        busy: settingsBusy,
+        onStart: () => {
+          setRoiDraft(broadcast.roi?.clock ?? null);
+          setRoiEditing(true);
+        },
+        onSave: () => saveSettings(api.setScorebug(jobId, { clock: roiDraft }), () => {
+          setRoiEditing(false);
+          setRereading(true);
+        }),
+        onCancel: () => setRoiEditing(false),
+        onReset: () => saveSettings(api.setScorebug(jobId, { clock: null }), () => setRereading(true)),
+      } : undefined}
+      names={suggestion ? {
+        suggestion,
+        canApply: suggestionTargets(shownNames, L.defaultNames, suggestion).length > 0,
+        onApply: () => setNames(applyNameSuggestion(shownNames, L.defaultNames, suggestion)),
+      } : undefined} />
+  );
+
   const step = (n: number) => (
     <Button size="sm" onClick={() => goTo(current + n)} aria-label={L.frameStep(n)} title={L.frameStep(n)}>
       {n > 0 ? `+${n}` : n}
@@ -200,11 +249,12 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
       stage={(boxes) => (
         <div className="stage" style={{ aspectRatio: `${video.width} / ${video.height}` }}>
           <video ref={videoRef} className="stage__video" src={urls.video(jobId)} muted playsInline preload="auto" />
-          {boxes}
-          {!detsLoaded && <div className="stage__veil">{L.peopleLoading}</div>}
-          {detsLoaded && frameDets.length === 0 && <div className="stage__veil">{L.noPeople}</div>}
+          {roiEditing ? <RoiPicker value={roiDraft} onChange={setRoiDraft} /> : boxes}
+          {!roiEditing && !detsLoaded && <div className="stage__veil">{L.peopleLoading}</div>}
+          {!roiEditing && detsLoaded && frameDets.length === 0 && <div className="stage__veil">{L.noPeople}</div>}
         </div>
       )}
+      settings={settings}
       candidateLabel={label}
       onPrev={prevCand !== undefined ? () => goTo(prevCand) : undefined}
       onNext={nextCand !== undefined ? () => goTo(nextCand) : undefined}

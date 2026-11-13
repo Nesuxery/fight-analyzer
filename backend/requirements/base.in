@@ -10,3 +10,4 @@ imageio-ffmpeg==0.6.0
 ultralytics==8.4.163
 lap==0.5.13  # linear assignment for Ultralytics trackers (OC-SORT)
 pillow==12.3.0  # text with Turkish characters on the exported MP4
+onnxruntime==1.31.1  # scorebug text recognition (PP-OCRv5 ONNX model), CPU only, offline

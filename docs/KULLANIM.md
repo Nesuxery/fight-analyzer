@@ -28,6 +28,11 @@ analiz sırasında hiçbir dış bağlantı kurulmaz (Ultralytics çevrimdışı
 
 - Varsayılan model: `yolo26s-pose.pt` (resmi Ultralytics sürümü, SHA-256 ile
   doğrulanır). Kurulum bunu `data/models/` klasörüne indirir.
+- Raunt saatini okuyan OCR modeli (PaddleOCR PP-OCRv5, Apache-2.0) de kurulumda
+  `data/models/ocr/` klasörüne indirilir; elle:
+  `..\.venv\Scripts\python.exe -m fight_analyzer.broadcast.ocr_model`
+  (`backend` klasöründe). Yoksa analiz durmaz; saat okunmaz ve raunt
+  sınırlarını elle girersin.
 - Model eksik ya da bozuksa analiz "Poz modeli … bulunamadı" hatasıyla durur;
   analiz sırasında kendiliğinden indirme yapılmaz. Elle indirmek için:
 
@@ -70,6 +75,15 @@ saklanır. Video ve üzerindeki iskelet ve efekt renkleri iki temada aynıdır.
    vazgeçer); adlar seçimle birlikte kaydedilir. Kamera değişiminden sonra
    kimlik karışırsa o karede düzeltme seçimi ekleyin ("Bu karede görünmüyor"
    da seçilebilir).
+   **Maç ayarları** kartı (kişilerin altında): raunt sayısını (3 / 5) ve
+   şampiyonluk maçını seç. Kart, yayın grafiğindeki (scorebug) saatten bulunan
+   raunt sınırlarını kaynağı ve güveniyle gösterir; bunlar AI tahminidir.
+   Saat bulunamazsa ya da yanlış yer okunduysa "Saat alanını düzelt" ile karede
+   saatin etrafına dar bir dikdörtgen çiz (klavyede ok tuşları kaydırır, Alt+ok
+   boyutu değiştirir) ve kaydet; yalnızca saat yeniden okunur, seçimlerin
+   korunur. Scorebug'da okunan adlar yalnızca öneridir: "Öneriyi uygula" yalnızca
+   adı girilmemiş köşeyi doldurur, yazdığın adın üstüne yazmaz (soldaki ad
+   kırmızı köşeye önerilir).
 4. **Sonuç:** Üstte deneysel momentum, iki yanda istatistikler, ortada video ve
    iskeletler, altta zaman çizelgesi bulunur. Olay listesinde bir olaya
    tıklayınca video olaydan 1 sn önceye gider. Kısayollar: Boşluk oynat/duraklat,
@@ -121,11 +135,20 @@ Sonuç ekranındaki **"Hakem kartları (AI)"** sekmesi her raundu MMA Unified Ru
 resmi hakem kararı ya da resmi maç sonucu değildir.** Momentum puanlamada
 kullanılmaz.
 
-**Önce maç bilgilerini girin** (sekmenin altındaki "Maç bilgileri"):
-- *Planlanan raund* (çoğu maçta 3, şampiyonluk/ana maçta 5) ve raund süresi.
-- *Raund sınırları:* videoyu raundun ilk saniyesine getirip "Başlangıç = şimdiki
-  kare", son saniyesine getirip "Bitiş = şimdiki kare". Raund aralarını ve
-  tekrarları dışarıda bırakın. İşaretlenmezse tüm video tek raund sayılır.
+**Önce maç bilgilerini kontrol edin** (sekmenin altındaki "Maç ayarları" ve
+"Maç bilgileri"):
+- *Raunt sayısı* (çoğu maçta 3, şampiyonluk maçında 5): "Maç ayarları"nda.
+- *Raunt sınırları:* scorebug saati okunabildiyse otomatik bulunur
+  ("scorebug saatinden", güven yüzdesiyle). Düzeltmek için sınırı zaman
+  çizelgesinde sürükle ya da tutamacı seçip ok tuşlarıyla kaydır (Shift ile
+  5 sn, Delete rauntu siler); "Raunt ekle (şu andan)" oynatma anından bir
+  raunt ekler. Dokunduğun raunt "elle girildi" olur ve **otomatiği her zaman
+  ezer**; "Otomatiğe dön" geri alır. Saat okunamadıysa rauntları buradan ya da
+  "Maç bilgileri"ndeki "Başlangıç / Bitiş = şimdiki kare" ile işaretle.
+  Raunt yoksa tüm video tek raunt sayılır.
+- Eski bir analiz açılınca "Bu analiz eski sürümle yapıldı — yeniden işle"
+  bandı çıkar; "Yeniden işle" raunt tespitini ekler (pozlar önbellekten gelir,
+  kaynak video dosyası gerekir).
 - *Maç nasıl bitti?* KO, TKO, submission, diskalifiye, hakem/doktor durdurması,
   no contest ya da puan kararı. Sistem bitiş şeklini videodan belirlemez.
 - *Puan kesintileri* (faul nedeniyle hakemin aldığı puanlar).
@@ -199,6 +222,7 @@ model girişi 640 px. GPU bu bilgisayarda olmadığı için GPU süresi ölçül
 | Poz, `yolo26s-pose.pt` (varsayılan) | 148–172 ms/kare (327 karelik klip, 5 koşu); 30 fps'lik 1 dakika ≈ 4,5–5 dk |
 | Poz, `yolo26n-pose.pt` | 68 ms/kare; 30 fps'lik 1 dakika ≈ 2 dk |
 | 5 dk 28 sn video (9842 kare), varsayılan model | poz ≈ 30 dk (başka işlerle aynı anda), kimlik + olaylar + momentum 2,3–2,7 dk, MP4 dışa aktarma 4–4,5 dk |
+| Raunt tespiti (scorebug saati, 9 dk 1080p yayın, 13 Kasım 2026) | ≈ 40–75 sn (poz süresinin ≈ %2'si); eski analizi yeniden işleme toplam ≈ 75 sn |
 | Aynı videoyu yeniden yükleme | 0,1 sn (video kopyası ve pozlar önbellekten) |
 | Dövüşçüleri yeniden seçme / taraf değiştirme / bölüm dışlama | saniyeler (pozlar yeniden çıkarılmaz) |
 | Bellek (5,5 dk video) | en yüksek ≈ 780 MB (poz aşaması, model yüklü) |

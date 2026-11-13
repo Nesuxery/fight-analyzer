@@ -124,7 +124,11 @@ function doneDetail(job: Job, id: StepId): string | null {
     const prep = job.outputs.tracking_prep;
     return L.poseDone(formatNumber(pose.detection_count), pose.max_persons) +
       (pose.cache_hit ? L.fromCache : pose.processing_s != null ? ` · ${formatDuration(pose.processing_s)}` : "") +
-      (prep ? L.prepSummary(prep.cuts.length, prep.candidates) : "");
+      (prep ? L.prepSummary(prep.cuts.length, prep.candidates) : "") +
+      (job.outputs.broadcast
+        ? L.roundsSummary(job.outputs.broadcast.rounds.length,
+                          job.outputs.broadcast.rounds.some((r) => r.source === "ocr"))
+        : "");
   }
   if (id === "select" && job.selection) {
     return L.anchors(job.selection.anchors.length);

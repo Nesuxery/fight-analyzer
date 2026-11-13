@@ -15,6 +15,10 @@ from pydantic.json_schema import models_json_schema
 
 from . import (
     COCO17_KEYPOINT_NAMES,
+    BoutConfig,
+    BroadcastTimeline,
+    RoundEdits,
+    ScorebugRegion,
     ErrorResponse,
     AnalysisExport,
     EventTimeline,
@@ -43,7 +47,8 @@ TOP_LEVEL_MODELS = (HealthResponse, Job, JobList, PoseSequence, PoseChunk, PoseP
                     PoseCacheManifest, UploadLimits, ErrorResponse, EventTimeline,
                     SelectionCandidates, FighterSelection, FighterNames, TrackingTimeline,
                     MotionTimeline, MomentumTimeline, ExportRequest, AnalysisExport,
-                    SegmentExclusions, MatchSetup, Scorecards)
+                    SegmentExclusions, MatchSetup, Scorecards, BoutConfig, RoundEdits, ScorebugRegion,
+                    BroadcastTimeline)
 
 SCHEMA_PATH = (
     Path(__file__).resolve().parents[3]

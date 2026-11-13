@@ -74,7 +74,7 @@
           "$ref": "#/$defs/MomentumParameters"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -205,6 +205,304 @@
         "y2"
       ],
       "title": "BoundingBox",
+      "type": "object"
+    },
+    "BoutConfig": {
+      "additionalProperties": false,
+      "description": "Bout format confirmed by the user (\"Maç ayarları\").",
+      "properties": {
+        "names": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FighterNames"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Corner names. Always filled in Job.bout; in a request null keeps them."
+        },
+        "rest_s": {
+          "default": 60,
+          "description": "Break between rounds.",
+          "maximum": 600,
+          "minimum": 0,
+          "title": "Rest S",
+          "type": "number"
+        },
+        "round_length_s": {
+          "default": 300,
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Round Length S",
+          "type": "number"
+        },
+        "ruleset": {
+          "$ref": "#/$defs/Ruleset",
+          "default": "abc_2025"
+        },
+        "scheduled_rounds": {
+          "default": 3,
+          "description": "3 for most bouts, 5 for title fights.",
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Scheduled Rounds",
+          "type": "integer"
+        },
+        "title_fight": {
+          "default": false,
+          "title": "Title Fight",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "scheduled_rounds",
+        "round_length_s",
+        "rest_s",
+        "title_fight",
+        "ruleset",
+        "names"
+      ],
+      "title": "BoutConfig",
+      "type": "object"
+    },
+    "BroadcastNote": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/BroadcastNoteCode"
+        },
+        "round": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Round"
+        }
+      },
+      "required": [
+        "code",
+        "round"
+      ],
+      "title": "BroadcastNote",
+      "type": "object"
+    },
+    "BroadcastNoteCode": {
+      "enum": [
+        "ocr_unavailable",
+        "clock_not_found",
+        "roi_unreadable",
+        "no_rounds",
+        "round_number_inferred",
+        "rounds_from_breaks"
+      ],
+      "title": "BroadcastNoteCode",
+      "type": "string"
+    },
+    "BroadcastSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit": {
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "cache_key": {
+          "title": "Cache Key",
+          "type": "string"
+        },
+        "clock_share": {
+          "description": "Share of seconds with a usable clock read.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Clock Share",
+          "type": "number"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "names": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NameSuggestion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "notes": {
+          "items": {
+            "$ref": "#/$defs/BroadcastNote"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "ocr_available": {
+          "title": "Ocr Available",
+          "type": "boolean"
+        },
+        "ocr_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ocr Model"
+        },
+        "processing_s": {
+          "minimum": 0,
+          "title": "Processing S",
+          "type": "number"
+        },
+        "roi": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScorebugRoi"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rounds": {
+          "description": "Automatic rounds; Job.rounds applies the user's edits.",
+          "items": {
+            "$ref": "#/$defs/RoundSegment"
+          },
+          "title": "Rounds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cache_key",
+        "cache_hit",
+        "method",
+        "ocr_available",
+        "ocr_model",
+        "roi",
+        "clock_share",
+        "rounds",
+        "names",
+        "notes",
+        "processing_s"
+      ],
+      "title": "BroadcastSummary",
+      "type": "object"
+    },
+    "BroadcastTimeline": {
+      "additionalProperties": false,
+      "description": "The fight clock read from the scorebug, one sample per second of video\n(null: no usable read and no safe interpolation).",
+      "properties": {
+        "confidence": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Confidence",
+          "type": "array"
+        },
+        "fps": {
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "remaining_s": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Remaining S",
+          "type": "array"
+        },
+        "roi": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScorebugRoi"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "round": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Round",
+          "type": "array"
+        },
+        "rounds": {
+          "description": "Automatic rounds (before the user's edits).",
+          "items": {
+            "$ref": "#/$defs/RoundSegment"
+          },
+          "title": "Rounds",
+          "type": "array"
+        },
+        "sample_hz": {
+          "exclusiveMinimum": 0,
+          "title": "Sample Hz",
+          "type": "number"
+        },
+        "schema_version": {
+          "default": "1.7.0",
+          "description": "Semantic version of the contract this document follows.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "t_s": {
+          "items": {
+            "type": "number"
+          },
+          "title": "T S",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "job_id",
+        "fps",
+        "sample_hz",
+        "t_s",
+        "round",
+        "remaining_s",
+        "confidence",
+        "roi",
+        "rounds"
+      ],
+      "title": "BroadcastTimeline",
       "type": "object"
     },
     "CheckStatus": {
@@ -426,7 +724,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -468,7 +766,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1594,7 +1892,7 @@
           "$ref": "#/$defs/PoseModelInfo"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1656,6 +1954,10 @@
           "minimum": 0,
           "title": "Attempts",
           "type": "integer"
+        },
+        "bout": {
+          "$ref": "#/$defs/BoutConfig",
+          "description": "Bout format and names (defaults until set)."
         },
         "cancel_requested": {
           "default": false,
@@ -1739,6 +2041,14 @@
           "default": null,
           "title": "Message"
         },
+        "outdated": {
+          "description": "Parts made by an older version of the analysis ('yeniden işle').",
+          "items": {
+            "$ref": "#/$defs/OutdatedReason"
+          },
+          "title": "Outdated",
+          "type": "array"
+        },
         "outputs": {
           "$ref": "#/$defs/JobOutputs"
         },
@@ -1760,8 +2070,24 @@
           ],
           "default": null
         },
+        "round_notes": {
+          "description": "Automatic rounds left out, and why.",
+          "items": {
+            "$ref": "#/$defs/RoundNote"
+          },
+          "title": "Round Notes",
+          "type": "array"
+        },
+        "rounds": {
+          "description": "Effective rounds: the user's marks over the automatic ones.",
+          "items": {
+            "$ref": "#/$defs/RoundSegment"
+          },
+          "title": "Rounds",
+          "type": "array"
+        },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1850,6 +2176,10 @@
         "selection",
         "exclusions",
         "match",
+        "bout",
+        "rounds",
+        "round_notes",
+        "outdated",
         "outputs",
         "error",
         "attempts",
@@ -1956,7 +2286,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1984,6 +2314,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/AnalysisVideo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "broadcast": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BroadcastSummary"
             },
             {
               "type": "null"
@@ -2062,6 +2403,7 @@
         "analysis_video",
         "pose",
         "tracking_prep",
+        "broadcast",
         "tracking",
         "events",
         "scoring",
@@ -2419,6 +2761,17 @@
     "MatchSetup": {
       "additionalProperties": false,
       "properties": {
+        "cleared_rounds": {
+          "description": "Automatic rounds the user removed (by number).",
+          "items": {
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "maxItems": 5,
+          "title": "Cleared Rounds",
+          "type": "array"
+        },
         "deductions": {
           "items": {
             "$ref": "#/$defs/PointDeduction"
@@ -2432,13 +2785,14 @@
         },
         "round_length_s": {
           "default": 300,
+          "description": "Mirrors BoutConfig.",
           "exclusiveMinimum": 0,
           "maximum": 600,
           "title": "Round Length S",
           "type": "number"
         },
         "rounds": {
-          "description": "Empty: the whole video is treated as one unmarked round.",
+          "description": "The user's round marks; each replaces the automatic round of the same number. Effective rounds: Job.rounds.",
           "items": {
             "$ref": "#/$defs/RoundMark"
           },
@@ -2448,7 +2802,7 @@
         },
         "scheduled_rounds": {
           "default": 3,
-          "description": "3 for most bouts, 5 for title/main events.",
+          "description": "Mirrors BoutConfig (Job.bout), which is the source since 1.7.0.",
           "maximum": 5,
           "minimum": 1,
           "title": "Scheduled Rounds",
@@ -2459,6 +2813,7 @@
         "scheduled_rounds",
         "round_length_s",
         "rounds",
+        "cleared_rounds",
         "ending",
         "deductions"
       ],
@@ -2867,7 +3222,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2947,7 +3302,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2974,6 +3329,80 @@
         "neutral"
       ],
       "title": "Movement",
+      "type": "string"
+    },
+    "NameSuggestion": {
+      "additionalProperties": false,
+      "description": "Names read from the scorebug. A suggestion only: never applied without the user.",
+      "properties": {
+        "blue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Blue"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "left": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "As read left of the clock, e.g. 'VOLKANOVSKI'.",
+          "title": "Left"
+        },
+        "red": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Suggested red corner name (left by broadcast convention), title case.",
+          "title": "Red"
+        },
+        "right": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Right"
+        }
+      },
+      "required": [
+        "left",
+        "right",
+        "red",
+        "blue",
+        "confidence"
+      ],
+      "title": "NameSuggestion",
+      "type": "object"
+    },
+    "OutdatedReason": {
+      "enum": [
+        "broadcast_missing"
+      ],
+      "title": "OutdatedReason",
       "type": "string"
     },
     "PersonDetection": {
@@ -3048,6 +3477,7 @@
         "video_prep",
         "pose",
         "tracking_prep",
+        "broadcast",
         "tracking",
         "events",
         "scoring",
@@ -3242,7 +3672,7 @@
           "title": "Processing S"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3306,7 +3736,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3371,7 +3801,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3431,7 +3861,7 @@
           "$ref": "#/$defs/ModelInfo"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3575,6 +4005,14 @@
       "title": "ReviewPoint",
       "type": "object"
     },
+    "RoiSource": {
+      "enum": [
+        "auto",
+        "manual"
+      ],
+      "title": "RoiSource",
+      "type": "string"
+    },
     "RoundAssessment": {
       "additionalProperties": false,
       "description": "Evidence and confidence of one round; the same for all judges.",
@@ -3702,6 +4140,36 @@
       "title": "RoundAssessment",
       "type": "object"
     },
+    "RoundEdits": {
+      "additionalProperties": false,
+      "description": "Request body of PUT /jobs/{id}/rounds. A mark replaces the automatic round of\nthe same number; cleared numbers are automatic rounds the user removed.",
+      "properties": {
+        "cleared_rounds": {
+          "items": {
+            "maximum": 5,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "maxItems": 5,
+          "title": "Cleared Rounds",
+          "type": "array"
+        },
+        "rounds": {
+          "items": {
+            "$ref": "#/$defs/RoundMark"
+          },
+          "maxItems": 5,
+          "title": "Rounds",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rounds",
+        "cleared_rounds"
+      ],
+      "title": "RoundEdits",
+      "type": "object"
+    },
     "RoundMark": {
       "additionalProperties": false,
       "description": "A round in the analysis video, marked by the user.",
@@ -3731,6 +4199,147 @@
       ],
       "title": "RoundMark",
       "type": "object"
+    },
+    "RoundNote": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RoundNoteCode"
+        },
+        "other": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The other round involved, if any.",
+          "title": "Other"
+        },
+        "round": {
+          "minimum": 1,
+          "title": "Round",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "code",
+        "round",
+        "other"
+      ],
+      "title": "RoundNote",
+      "type": "object"
+    },
+    "RoundNoteCode": {
+      "enum": [
+        "auto_conflicts_manual",
+        "beyond_scheduled",
+        "out_of_order"
+      ],
+      "title": "RoundNoteCode",
+      "type": "string"
+    },
+    "RoundSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Seconds left at the end: 0 = ran out; more = stopped early or cut off.",
+          "title": "Clock End"
+        },
+        "clock_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fight clock (seconds left) when the round starts in the video.",
+          "title": "Clock Start"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "end_frame": {
+          "description": "Last frame of the round (inclusive).",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "index": {
+          "description": "Round number.",
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Index",
+          "type": "integer"
+        },
+        "partial": {
+          "description": "Not the full round length in the recording (finish, or cut off).",
+          "title": "Partial",
+          "type": "boolean"
+        },
+        "source": {
+          "$ref": "#/$defs/RoundSource"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "video_end_s": {
+          "description": "End of the last frame: (end_frame + 1) / fps.",
+          "minimum": 0,
+          "title": "Video End S",
+          "type": "number"
+        },
+        "video_start_s": {
+          "minimum": 0,
+          "title": "Video Start S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "index",
+        "start_frame",
+        "end_frame",
+        "video_start_s",
+        "video_end_s",
+        "clock_start",
+        "clock_end",
+        "source",
+        "confidence",
+        "partial"
+      ],
+      "title": "RoundSegment",
+      "type": "object"
+    },
+    "RoundSource": {
+      "enum": [
+        "ocr",
+        "break",
+        "manual"
+      ],
+      "title": "RoundSource",
+      "type": "string"
     },
     "RoundSummary": {
       "additionalProperties": false,
@@ -3798,6 +4407,61 @@
       "title": "RoundSummary",
       "type": "object"
     },
+    "Ruleset": {
+      "enum": [
+        "abc_2025"
+      ],
+      "title": "Ruleset",
+      "type": "string"
+    },
+    "ScorebugRegion": {
+      "additionalProperties": false,
+      "description": "Request body of PUT /jobs/{id}/scorebug: the user's clock rectangle; null = automatic.",
+      "properties": {
+        "clock": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScreenRect"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "clock"
+      ],
+      "title": "ScorebugRegion",
+      "type": "object"
+    },
+    "ScorebugRoi": {
+      "additionalProperties": false,
+      "properties": {
+        "clock": {
+          "$ref": "#/$defs/ScreenRect",
+          "description": "Area read for the clock (and the round number next to it)."
+        },
+        "confidence": {
+          "description": "Automatic: share of reads there that parsed as a clock in the frames searched; manual: share of seconds of video it read as a clock.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "source": {
+          "$ref": "#/$defs/RoiSource"
+        }
+      },
+      "required": [
+        "clock",
+        "source",
+        "confidence"
+      ],
+      "title": "ScorebugRoi",
+      "type": "object"
+    },
     "Scorecards": {
       "additionalProperties": false,
       "properties": {
@@ -3855,7 +4519,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3937,6 +4601,44 @@
       "title": "ScoringSummary",
       "type": "object"
     },
+    "ScreenRect": {
+      "additionalProperties": false,
+      "description": "Rectangle in the analysis video as shares of its width and height (0..1).",
+      "properties": {
+        "h": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "H",
+          "type": "number"
+        },
+        "w": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "W",
+          "type": "number"
+        },
+        "x": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "title": "ScreenRect",
+      "type": "object"
+    },
     "SegmentExclusions": {
       "additionalProperties": false,
       "description": "Request body: the complete list of excluded parts (replaces the previous one).",
@@ -4015,7 +4717,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4506,7 +5208,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4661,7 +5363,7 @@
           "type": "integer"
         },
         "schema_version": {
-          "default": "1.6.0",
+          "default": "1.7.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4867,10 +5569,16 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "MMA Fight Analyzer data contracts, schema version 1.6.0.",
+  "description": "MMA Fight Analyzer data contracts, schema version 1.7.0.",
   "properties": {
     "AnalysisExport": {
       "$ref": "#/$defs/AnalysisExport"
+    },
+    "BoutConfig": {
+      "$ref": "#/$defs/BoutConfig"
+    },
+    "BroadcastTimeline": {
+      "$ref": "#/$defs/BroadcastTimeline"
     },
     "ErrorResponse": {
       "$ref": "#/$defs/ErrorResponse"
@@ -4917,6 +5625,12 @@
     "PoseSequence": {
       "$ref": "#/$defs/PoseSequence"
     },
+    "RoundEdits": {
+      "$ref": "#/$defs/RoundEdits"
+    },
+    "ScorebugRegion": {
+      "$ref": "#/$defs/ScorebugRegion"
+    },
     "Scorecards": {
       "$ref": "#/$defs/Scorecards"
     },
@@ -4954,5 +5668,5 @@
     "left_ankle",
     "right_ankle"
   ],
-  "x-schema-version": "1.6.0"
+  "x-schema-version": "1.7.0"
 }

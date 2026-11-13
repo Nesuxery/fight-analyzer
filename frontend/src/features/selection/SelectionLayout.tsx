@@ -38,6 +38,8 @@ interface LayoutProps {
   navExtra?: ReactNode;
   /** Extra content in the side panel (earlier selections...). */
   extra?: ReactNode;
+  /** "Maç ayarları" card under the people on the frame. */
+  settings?: ReactNode;
   confirmLabel?: string;
   busy?: boolean;
   /** Offer "not in the picture on this frame" for a corner (corrections on close-ups). */
@@ -224,6 +226,7 @@ export function SelectionLayout(p: LayoutProps) {
             </ul>
           </section>
         )}
+        {p.settings}
       </section>
 
       <Card tag="aside" className="select__side" aria-label={L.cornersLabel}>

@@ -73,8 +73,8 @@ edilir (`backend/tests/test_responsiveness.py`).
 - İşçi Ctrl+C/Ctrl+Break ile durursa çalışan iş kuyruğa geri döner.
   İşçi çökerse 30 sn kalp atışı gelmeyen iş yeniden kuyruğa alınır; 2 denemeden
   sonra `worker_lost` hatasıyla başarısız sayılır.
-- Poz çıkarımı ve takip hazırlığı bitince iş `awaiting_selection` olur ve
-  işçiyi serbest bırakır; bu durumdaki iş de iptal edilebilir. Seçim gönderilince
+- Poz çıkarımı, takip hazırlığı ve yayın analizi (scorebug saati, rauntlar;
+  `broadcast`) bitince iş `awaiting_selection` olur ve işçiyi serbest bırakır; bu durumdaki iş de iptal edilebilir. Seçim gönderilince
   iş yeniden kuyruğa girer; video, poz ve hazırlık önbellekten okunur; kimlik
   takibi, hareket/olay analizi ve momentum çalışır. Tamamlanmış işte yeniden
   seçim/düzeltme de aynı yolu izler.
@@ -625,6 +625,63 @@ Python hesabıyla, ön yüz testi tarayıcı hesabıyla aynı olduğunu denetler
   iki tarafta da "OLASI KNOCKDOWN · Topuria" uyarısı görüldü. Çıktıda 327 kare
   ve AAC ses akışı bulundu.
 
+## Maç ayarları ve raunt tespiti (v2 Bölüm 2a)
+
+`backend/fight_analyzer/broadcast/`, boru hattında `broadcast` aşaması (takip
+hazırlığından sonra, seçimden önce), `GET /jobs/{id}/broadcast`. Seçim ekranında
+ve "Hakem kartları (AI)" sekmesinde "Maç ayarları" kartı. Raunt sınırları ve
+okunan adlar yayın grafiğinden çıkarılan **AI tahminidir**, resmi zamanlama değildir.
+
+- **Maç ayarları (`BoutConfig`, `PUT /jobs/{id}/bout`):** raunt sayısı (3 / 5),
+  raunt süresi (300 sn), dinlenme (60 sn), şampiyonluk, kural seti `abc_2025`,
+  köşe adları. Varsayılanlar `config.py` → `RulesetSettings` içindedir (komisyona
+  göre değişir, koda gömülü değildir). `MatchSetup.scheduled_rounds` ve
+  `round_length_s` artık buradan kopyalanır; eski analizlerde varsayılan
+  olarak `MatchSetup`'taki değerler okunur. Kaydetmek hiçbir şeyi yeniden hesaplatmaz.
+- **Saat alanı (ROI):** videoya yayılmış 48 karede üst ve alt bantta metin
+  satırı adayları bulunur (OpenCV, model yok). Ekranda aynı yerde kalan, `m:ss`
+  okunan ve videoyla birlikte geri sayan kutu saattir; kamerayla kayan arena
+  ekranları bu yüzden seçilmez. Yanındaki `R1` kutusu raunt numarası, saatin
+  solu ve sağı ad önerisidir. Kullanıcı Seçim ekranında dikdörtgen çizerek alanı
+  düzeltebilir (`PUT /jobs/{id}/scorebug`; yalnızca bu aşama yeniden çalışır).
+- **Okuma:** tek sıralı geçişte yalnızca saat alanı (ve raunt kutusu) saniyede
+  bir kez okunur. Geri sayım koşuları: saat yukarı sıçrarsa yeni raunt; video
+  ilerlerken saat duruyorsa durma; üç okumaya kadar tutarsız okuma OCR hatası
+  sayılıp atılır. Başlangıç, ilk okumalardan saatin tepeden (5:00) çıktığı ana
+  geri çekilir; saat 0:00'a inerse raunt tamamdır, üstünde donarsa erken bitmiştir
+  (ör. nakavt, `partial`), kaybolursa son okumada kesilir.
+- **OCR yoksa:** pozlardan raunt arası tespiti (≥45 sn dövüşsüz, oturan kişi ya
+  da kafeste çok kişi). Güveni en fazla 0,5'tir; ara bulunamazsa raunt iddia
+  edilmez (tüm video "R1" sayılmaz).
+- **Elle düzenleme her zaman geçerlidir:** elle girilen raunt (`MatchSetup.rounds`)
+  aynı numaralı otomatiği ezer; silinen otomatik raunt `cleared_rounds`'ta tutulur
+  ve yeniden tespitte geri gelmez; çakışan otomatik raunt notla dışarıda kalır.
+  Etkin liste `Job.rounds`'ta (`source: ocr | break | manual`, güven, `partial`),
+  hakem kartları bu listeyi kullanır. Sonuç ekranında sınırlar zaman çizelgesinde
+  sürüklenir ya da ok tuşlarıyla kaydırılır (`PUT /jobs/{id}/rounds`).
+- **Eski analizler** açılır; "Bu analiz eski sürümle yapıldı — yeniden işle"
+  bandı `POST /jobs/{id}/reprocess` çağırır (poz ve hazırlık önbellekten gelir;
+  kaynak video dosyası gerekir).
+- **OCR modeli:** PaddleOCR `en_PP-OCRv5_mobile_rec` (ONNX, 7,85 MB, Apache-2.0,
+  © PaddlePaddle Authors). Kaynak:
+  [huggingface.co/PaddlePaddle/en_PP-OCRv5_mobile_rec_onnx](https://huggingface.co/PaddlePaddle/en_PP-OCRv5_mobile_rec_onnx),
+  commit `3fafbc3b5dcf93dd72add9f48368be8a3a2cd33b`; `inference.onnx` SHA-256
+  `b5f833dfc5d0eb71da397b4efa06ebeee9b431b690a47d6af40d77d8eabc557f`,
+  `inference.yml` (karakter sözlüğü) SHA-256
+  `27e91d0582f40168aa218303c76e184bc78fa7a5d105aad0cfbad8458b441067`. Yalnızca
+  kurulumda (`setup.cmd`) ya da `python -m fight_analyzer.broadcast.ocr_model`
+  ile indirilir, boyut ve SHA-256 tutmazsa yerine konmaz; `data/models/ocr/`'da
+  durur. Analiz sırasında indirme ve ağ bağlantısı yoktur (test denetler).
+- **Çalıştırıcı:** `onnxruntime` 1.31.1 (MIT, yalnızca CPU; yan bağımlılıklar
+  `protobuf` 7.36.2 BSD-3, `flatbuffers` 25.12.19 Apache-2.0). OpenCV 4.14'ün DNN
+  modülü bu modeli yükleyemediği (dinamik `Reshape`) için eklendi. RapidOCR
+  kullanılmadı: mevcut `opencv-python` ile çakışan `opencv-python-headless`
+  getiriyor ve modelleri ilk çalıştırmada indiriyor.
+- **Ölçüm (örnek yayın, 9 dk, 1080p, bu makinede CPU):** yayın aşaması ≈40–50 sn
+  (rastgele 48 kare ≈3 sn, sıralı okuma ve OCR geri kalanı); raunt sınırları
+  karelerden okunan saatle ±1 sn içinde. Bu video yöntem ayarlanırken kullanıldı;
+  doğruluk değeri değildir.
+
 ## AI hakemlik (Aşama 9)
 
 `backend/fight_analyzer/judging/`, `GET /jobs/{id}/scorecards`, sonuç ekranında
@@ -820,7 +877,12 @@ başlat" düğmesi eklendi (önceden yalnızca API'de vardı); hareket analizi s
 önizleme alanı "Video analiz kopyasına dönüştürülüyor" yerine çalışan aşamayı
 yazıyor; CUDA uyarısı Türkçe.
 
-## Veri sözleşmeleri (şema v1.6.0)
+## Veri sözleşmeleri (şema v1.7.0)
+
+1.7.0 (v2 Bölüm 2a): `BoutConfig`, `RoundSegment`, `RoundEdits`, `ScreenRect`,
+`ScorebugRegion`, `BroadcastSummary`, `BroadcastTimeline`; `Job.bout`,
+`Job.rounds`, `Job.round_notes`, `Job.outdated`; `MatchSetup.cleared_rounds`;
+`PipelineStage.broadcast`.
 
 Kaynak: `backend/fight_analyzer/contracts/`. JSON Schema
 `python -m fight_analyzer.contracts.export` ile, TypeScript tipleri
@@ -871,6 +933,7 @@ Node 24.16.0. Sistemde FFmpeg yoktu.
 | PyTorch / torchvision | 2.14.0 / 0.29.0 | resmi PyTorch dizininden; CPU, CUDA 13.0 veya 12.6 |
 | Ultralytics | 8.4.163 | resmi pose modelleri (YOLO11/YOLO26 `-pose`) ve OC-SORT izleyicisi |
 | lap | 0.5.13 | Ultralytics izleyicilerinin doğrusal atama kütüphanesi |
+| onnxruntime | 1.31.1 | scorebug OCR (PP-OCRv5 ONNX); 13 Kasım 2026'da eklendi, cp314 Windows tekerleği var |
 | OpenCV | 4.14.0.94 | 5.0 yerine olgun 4.x hattı (Ultralytics `opencv-python` ister) |
 | NumPy | 2.5.3 | |
 | FastAPI / uvicorn / Pydantic | 0.141.1 / 0.54.0 / 2.13.5 | |
@@ -904,7 +967,8 @@ edilebildi.
   `ULTRALYTICS_SAFE_LOAD=1` (torch `weights_only`) ile yüklenir.
 - Dış bağlantı yok: Ultralytics `YOLO_OFFLINE=1` ile çevrimdışıdır, telemetri
   ve eğitim entegrasyonları ayar dosyasında da kapatılır (`data/ultralytics/`);
-  analiz sırasında model indirilmez (yalnızca kurulum ya da açık komut);
+  analiz sırasında model indirilmez (yalnızca kurulum ya da açık komut; poz ve
+  scorebug OCR modelleri aynı sabitli, SHA-256 doğrulamalı yoldan gelir);
   Swagger sayfası (CDN) kapalıdır; arayüz harici font/betik yüklemez. Bir test,
   Ultralytics'i içe aktarıp modeli çalıştıran ayrı bir süreçte loopback dışı her
   bağlantı ve DNS denemesini yakalar ve sıfır deneme bekler (kontrol olarak

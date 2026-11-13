@@ -33,6 +33,7 @@ from fight_analyzer.contracts import (
     SourceKeys,
 )
 from fight_analyzer import judging
+from fight_analyzer import rounds as rounds_mod
 from fight_analyzer.contracts import MatchSetup
 from fight_analyzer.contracts.common import Contract, utcnow
 from fight_analyzer.export import files, frames, render, video
@@ -79,7 +80,8 @@ def snapshot_params(job: Job, options: ExportOptions) -> dict:
     return {"source_job_id": job.job_id, "options": options.model_dump(mode="json"), "names": names,
             "selection": job.selection.model_dump(mode="json") if job.selection else None,
             "source": job.source.model_dump(mode="json") if job.source else None,
-            "match": job.match.model_dump(mode="json") if job.match else None,
+            # the setup the judges use on screen: bout format and effective rounds (manual over automatic)
+            "match": rounds_mod.judging_setup(job.match, job.bout, job.rounds).model_dump(mode="json"),
             "snapshot": snap.model_dump(mode="json")}
 
 

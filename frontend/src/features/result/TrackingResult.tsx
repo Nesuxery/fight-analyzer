@@ -7,10 +7,14 @@ import type {
   Job,
   MomentumTimeline,
   MotionTimeline,
+  RoundEdits,
   TrackingTimeline,
 } from "../../contracts/generated";
 import { usePoseFrames } from "../../hooks/usePoseFrames";
-import { RESULT_LABELS, SELECTION_LABELS } from "../../labels";
+import { OUTDATED_LABELS, RESULT_LABELS, ROUND_EDIT_LABELS, SELECTION_LABELS } from "../../labels";
+import { Button } from "../../ui";
+import { IconAlert } from "../../ui/icons";
+import { addRound, editsOf, moveEdge, removeRound } from "../match/roundEdit";
 import { EMPTY_STATS } from "../../model/analysis";
 import type { Side } from "../../model/analysis";
 import { OVERLAY_STYLE } from "../../contracts/overlayStyle";
@@ -45,7 +49,7 @@ import { MomentumPanel } from "./MomentumPanel";
 import { PlaybackBar } from "./PlaybackBar";
 import { StatPanel } from "./StatPanel";
 import { Timeline } from "./Timeline";
-import type { MomentumSeries } from "./Timeline";
+import type { MomentumSeries, RoundEditing } from "./Timeline";
 import { TrackingLanes } from "./TrackingLanes";
 import { TrackingLog } from "./TrackingLog";
 import { TrackQuality } from "./TrackQuality";
@@ -69,7 +73,11 @@ function toggleFullscreen(el: HTMLElement | null) {
 
 /** Result screen for a real analysis: identities, measured events, statistics and the
  * experimental momentum on the real video. Missing measurements show "—". */
-export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate?: () => void }) {
+export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRecalculate?: () => void }) {
+  // A save (bout format, rounds) returns the updated job: shown at once, until polling brings it too.
+  const [fresh, setFresh] = useState<Job | null>(null);
+  const job = fresh && fresh.job_id === polled.job_id && Date.parse(fresh.updated_at) >= Date.parse(polled.updated_at)
+    ? fresh : polled;
   const av = job.outputs.analysis_video!;
   const tracking = job.outputs.tracking!;
   const video = av.video;
@@ -125,8 +133,9 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
     return () => c.abort();
   }, [job.job_id, scoringKey]);
 
-  // AI scorecards: computed by the server from the cached analysis and the match details
-  const matchKey = JSON.stringify(job.match ?? null);
+  // AI scorecards: computed by the server from the cached analysis, the match details and the rounds in effect
+  const matchKey = JSON.stringify([job.match ?? null, job.bout.scheduled_rounds, job.bout.round_length_s,
+                                   job.rounds.map((r) => [r.index, r.start_frame, r.end_frame])]);
   useEffect(() => {
     if (!eventsKey) return;
     const c = new AbortController();
@@ -238,6 +247,38 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
   // One request: corners, names and selection change together on the server and every
   // result (identities, events, statistics, momentum) is derived again from the swapped
   // fighter ids, so no panel or drawing can disagree.
+  // Rounds: the timeline edges and "add a round" save at once (manual always wins over automatic).
+  const [roundBusy, setRoundBusy] = useState(false);
+  const [roundProblem, setRoundProblem] = useState<string | null>(null);
+  const [reprocessing, setReprocessing] = useState(false);
+  const autoRounds = job.outputs.broadcast?.rounds ?? [];
+  const saveRounds = (edits: RoundEdits) => {
+    setRoundBusy(true);
+    setRoundProblem(null);
+    api.setRounds(job.job_id, edits).then((updated) => {
+      setFresh(updated);
+      setScVersion((n) => n + 1);
+    }, (e: unknown) => setRoundProblem(e instanceof Error ? e.message : String(e))).finally(() => setRoundBusy(false));
+  };
+  const roundEditing: RoundEditing = {
+    onEdge: (index, edge, seconds) => saveRounds(moveEdge(editsOf(job.match), job.rounds, index, edge,
+                                                          edge === "end" ? seconds * video.fps - 1 : seconds * video.fps,
+                                                          video.fps, video.frame_count)),
+    onRemove: (index) => saveRounds(removeRound(editsOf(job.match), index, autoRounds)),
+  };
+  const addRoundHere = () => {
+    const next = addRound(editsOf(job.match), job.rounds, frame, video.fps, video.frame_count, job.bout.round_length_s,
+                          job.bout.scheduled_rounds);
+    if (next) saveRounds(next);
+    else setRoundProblem(ROUND_EDIT_LABELS.noRoom);
+  };
+  const reprocess = () => {
+    setReprocessing(true);
+    api.reprocess(job.job_id).then(() => onRecalculate?.(),
+                                   (e: unknown) => setProblem(e instanceof Error ? e.message : String(e)))
+      .finally(() => setReprocessing(false));
+  };
+
   const swap = () => {
     api.swapCorners(job.job_id).then(() => onRecalculate?.(),
                                      (e: unknown) => setProblem(e instanceof Error ? e.message : String(e)));
@@ -260,6 +301,18 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
                                 onExport: eventsKey && scoringKey ? () => setTab("export") : undefined }} />
       <div className="result__left">{panel("red")}</div>
       <div className="result__stage">
+        {job.outdated.length > 0 && (
+          <div className="outdated" role="status">
+            <IconAlert />
+            <div className="outdated__text">
+              <strong>{OUTDATED_LABELS.title}</strong>
+              <span>{OUTDATED_LABELS.text}</span>
+            </div>
+            <Button size="sm" variant="primary" disabled={reprocessing} onClick={reprocess}>
+              {reprocessing ? OUTDATED_LABELS.busy : OUTDATED_LABELS.action}
+            </Button>
+          </div>
+        )}
         <div ref={stageRef} className="stage stage--synced" style={{ aspectRatio: `${video.width} / ${video.height}` }}>
           <video ref={clock.attach} className="stage__video stage__video--contain" src={urls.video(job.job_id)}
                  playsInline preload="auto" onClick={() => clock.toggle()}
@@ -321,8 +374,16 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
                      } />
         <Timeline clock={clock} time={snap.time} events={tEvents} momentum={series} names={names} disabled={false}
                   excluded={segments.map((x) => [x.start_frame / video.fps, (x.end_frame + 1) / video.fps])}
-                  rounds={(job.match?.rounds ?? []).map((r) => ({ number: r.number, startS: r.start_frame / video.fps,
-                                                                  endS: (r.end_frame + 1) / video.fps }))} />
+                  rounds={job.rounds.map((r) => ({ index: r.index, startS: r.video_start_s, endS: r.video_end_s,
+                                                   source: r.source }))}
+                  roundEditing={roundBusy ? undefined : roundEditing} />
+        <div className="roundbar">
+          <button type="button" className="btn btn--sm" disabled={roundBusy} onClick={addRoundHere}>
+            {roundBusy ? ROUND_EDIT_LABELS.saving : ROUND_EDIT_LABELS.add}
+          </button>
+          <span className="roundbar__help">{ROUND_EDIT_LABELS.help}</span>
+          {roundProblem && <span className="inline-warn" role="alert">{roundProblem}</span>}
+        </div>
         {eventsKey && (
           <ExclusionEditor jobId={job.job_id} frame={frame} fps={video.fps} frameCount={video.frame_count}
                            saved={job.exclusions} clock={clock} onSaved={() => onRecalculate?.()} />
@@ -358,7 +419,7 @@ export function TrackingResult({ job, onRecalculate }: { job: Job; onRecalculate
           </div>
         ) : tab === "judging" ? (
           <JudgingPanel job={job} sc={scorecards} problem={scProblem} frame={frame} clock={clock}
-                        onSaved={() => setScVersion((n) => n + 1)} />
+                        onSaved={() => setScVersion((n) => n + 1)} onJob={setFresh} />
         ) : (
           <ExportPanel job={job} />
         )}

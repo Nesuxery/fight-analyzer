@@ -1,7 +1,16 @@
 // All interface texts (Turkish). Components keep no text of their own; texts of
 // components not reworked yet move here when they are touched.
 import type { Screen } from "./app/router";
-import type { EventType, Job, JobStatus, PipelineStage } from "./contracts/generated";
+import type {
+  BroadcastNoteCode,
+  EventType,
+  FinishMethod,
+  Job,
+  JobStatus,
+  PipelineStage,
+  RoundNoteCode,
+  RoundSource,
+} from "./contracts/generated";
 import type { Side } from "./model/analysis";
 
 /** Corner names ("Kırmızı köşe", "Mavi köşe" in full). */
@@ -177,6 +186,7 @@ export const PROCESSING_LABELS = {
     video_prep: "Video analiz kopyasına dönüştürülüyor…",
     pose: "Poz modeli hazırlanıyor…",
     tracking_prep: "Kamera kesimleri ve iz parçaları hazırlanıyor…",
+    broadcast: "Scorebug'daki saat ve raunt sınırları okunuyor…",
     tracking: "Dövüşçü kimlikleri video boyunca eşleniyor…",
     events: "Hareketler ve olaylar ölçülüyor…",
     scoring: "Deneysel momentum hesaplanıyor…",
@@ -250,6 +260,8 @@ export const STEP_LABELS = {
   prepDone: (w: number, h: number, fps: string, frames: string) => `${w}×${h} · ${fps} fps · ${frames} kare`,
   poseDone: (detections: string, maxPersons: number) => `${detections} kişi tespiti · en fazla ${maxPersons} kişi/kare`,
   prepSummary: (cuts: number, candidates: number) => ` · ${cuts} kamera kesimi · ${candidates} aday kare`,
+  roundsSummary: (rounds: number, fromClock: boolean) =>
+    rounds === 0 ? " · raunt bulunamadı" : ` · ${rounds} raunt bulundu${fromClock ? " (saatten)" : ""}`,
   anchors: (n: number) => `${n} seçim noktası`,
   trackingDone: (red: string, blue: string, switches: number) =>
     `Kimlik takibi: belirsiz ${red} / ${blue} · olası kimlik değişimi ${switches}`,
@@ -342,6 +354,7 @@ export const STAGE_LABELS: Record<PipelineStage, string> = {
   video_prep: "Video hazırlama",
   pose: "Poz tespiti",
   tracking_prep: "Takip hazırlığı",
+  broadcast: "Raunt tespiti",
   tracking: "Kimlik takibi",
   events: "Olay tespiti",
   scoring: "Puanlama",
@@ -609,7 +622,7 @@ export type StepId = "prep" | "pose" | "select" | "motion" | "results";
 
 export const PROCESS_STEPS: readonly { id: StepId; label: string; stages: PipelineStage[] }[] = [
   { id: "prep", label: "Video hazırlama", stages: ["video_prep"] },
-  { id: "pose", label: "Poz tespiti", stages: ["pose", "tracking_prep"] },
+  { id: "pose", label: "Poz tespiti", stages: ["pose", "tracking_prep", "broadcast"] },
   { id: "select", label: "Dövüşçü seçimi", stages: [] },
   { id: "motion", label: "Hareket analizi", stages: ["tracking", "events", "scoring"] },
   { id: "results", label: "Sonuç hazırlama", stages: ["export"] },
@@ -623,7 +636,7 @@ export const PROCESS_STEPS: readonly { id: StepId; label: string; stages: Pipeli
  */
 export const PROCESS_STEP_DESCRIPTIONS: Record<StepId, string> = {
   prep: "Video, analiz için sabit kare hızlı bir kopyaya dönüştürülüyor.",
-  pose: "Her karede görünen herkesin iskelet noktaları bulunuyor; ardından kamera kesimleri ve aday kareler hazırlanıyor.",
+  pose: "Her karede görünen herkesin iskelet noktaları bulunuyor; ardından kamera kesimleri, aday kareler ve scorebug'daki raunt saati hazırlanıyor.",
   select: "Kırmızı ve mavi köşedeki dövüşçüleri sen işaretlersin; analiz bu seçimle sürer.",
   motion: "Seçilen dövüşçüler video boyunca izleniyor; olaylar ve deneysel momentum hesaplanıyor.",
   results: "Zaman çizelgesi, istatistikler ve AI tahmini hakem kartları sonuç ekranında açılır.",
@@ -669,3 +682,149 @@ export function formatDuration(seconds: number): string {
   if (m < 60) return `${m} dk ${String(s % 60).padStart(2, "0")} sn`;
   return `${Math.floor(m / 60)} sa ${String(m % 60).padStart(2, "0")} dk`;
 }
+
+/**
+ * "Maç ayarları" (v2 Bölüm 2): bout format, rounds found on the scorebug and
+ * the names read there. Rounds and names are AI estimates from a broadcast
+ * graphic; the user's entries always win.
+ */
+export const MATCH_LABELS = {
+  title: "Maç ayarları",
+  description: "Raunt sayısı ve videoda bulunan raunt sınırları; puanlama bunlara dayanır.",
+  roundsLabel: "Raunt sayısı",
+  roundsOption: (n: number) => `${n} raunt`,
+  titleFight: "Şampiyonluk maçı",
+  titleFightHint: "Açınca raunt sayısı 5 olur; istersen değiştirebilirsin.",
+  saving: "Kaydediliyor…",
+  found: "Bulunan raunt sınırları",
+  none: "Henüz raunt bulunamadı.",
+  pending: "Raunt bilgisi bu analizde yok; yeniden işleyince hazırlanır.",
+  round: (n: number) => `R${n}`,
+  source: {
+    ocr: "scorebug saatinden",
+    break: "raunt aralarından (düşük güven)",
+    manual: "elle girildi",
+  } satisfies Record<RoundSource, string>,
+  sourceShort: { ocr: "oto", break: "oto", manual: "elle" } satisfies Record<RoundSource, string>,
+  confidence: (pct: number) => `güven %${pct}`,
+  partial: "kısmi",
+  partialHelp: "Raunt videoda tam süresiyle yok: erken bitti (ör. nakavt) ya da kayıt raunt içinde başlıyor veya bitiyor.",
+  clockEnd: (clock: string) => `bitişte kalan süre ${clock}`,
+  aiNote: "AI tahmini: raunt sınırları yayın grafiğinden okunur; resmi zamanlama değildir.",
+  notes: {
+    ocr_unavailable: () => "OCR modeli kurulu değil, saat okunmadı. setup.cmd'yi çalıştır ya da raunt sınırlarını elle gir.",
+    clock_not_found: () => "Ekranda saat bulunamadı. Saatin etrafına dikdörtgen çizebilir ya da sınırları elle girebilirsin.",
+    roi_unreadable: () => "Çizdiğin alanda saat okunamadı; alanı saatin etrafına daha dar çiz.",
+    no_rounds: () => "Saat okundu ama raunt uzunluğunda bir geri sayım bulunamadı.",
+    round_number_inferred: (n: number | null) => `R${n ?? "?"}: raunt numarası okunamadı, sırasından çıkarıldı.`,
+    rounds_from_breaks: () => "Saat okunamadı; rauntlar pozlardan bulunan raunt aralarından çıkarıldı (düşük güven).",
+  } satisfies Record<BroadcastNoteCode, (n: number | null) => string>,
+  roundNotes: {
+    auto_conflicts_manual: (n: number, other: number | null) =>
+      `Otomatik R${n}, elle girdiğin R${other ?? "?"} ile çakıştığı için kullanılmadı.`,
+    beyond_scheduled: (n: number) => `Otomatik R${n}, planlanan raunt sayısının dışında kaldı.`,
+    out_of_order: (n: number, other: number | null) =>
+      `Otomatik R${n}, R${other ?? "?"} ile zaman sırası tutmadığı için kullanılmadı.`,
+  } satisfies Record<RoundNoteCode, (n: number, other: number | null) => string>,
+  roi: {
+    fix: "Saat alanını düzelt",
+    auto: "Saat alanı otomatik bulundu.",
+    manual: "Saat alanını sen çizdin.",
+    hint: "Videodaki saatin etrafına sürükleyerek dar bir dikdörtgen çiz. Klavyeyle: ok tuşları alanı kaydırır (Shift ile daha hızlı), Alt ile boyutunu değiştirir.",
+    area: "Saat alanı",
+    save: "Kaydet ve saati yeniden oku",
+    cancel: "Vazgeç",
+    reset: "Otomatiğe dön",
+    rereading: "Saat yeniden okunuyor; seçimlerin korunur.",
+  },
+  names: {
+    title: "Scorebug'da okunan adlar",
+    read: (left: string | null, right: string | null) => `Sol: ${left ?? "—"} · Sağ: ${right ?? "—"}`,
+    apply: "Öneriyi uygula",
+    hint: "Yalnızca adı girilmemiş köşeye yazılır; soldaki ad kırmızı köşeye önerilir. Yazdığın bir adın üstüne yazılmaz.",
+    nothing: "İki köşenin adı da girilmiş; öneri uygulanmaz.",
+  },
+  demo: "Demo: örnek raunt verisi; ayarlar kaydedilmez.",
+};
+
+/** Result screen: round boundaries on the timeline and the round list. */
+export const ROUND_EDIT_LABELS = {
+  handle: (n: number, edge: "start" | "end", at: string) =>
+    `R${n} ${edge === "start" ? "başlangıcı" : "bitişi"}, ${at}. Ok tuşlarıyla kaydır (Shift ile 5 sn), Delete ile rauntu sil.`,
+  add: "Raunt ekle (şu andan)",
+  remove: (n: number) => `R${n} rauntunu sil`,
+  revert: (n: number) => `R${n}: otomatiğe dön`,
+  removed: (n: number) => `Otomatik R${n} kaldırıldı.`,
+  noRoom: "Oynatma anında yeni raunt için yer yok (başka bir raunt var ya da raunt sayısı dolu).",
+  help: "Sınırları zaman çizelgesinde sürükleyerek ya da tutamacı seçip ok tuşlarıyla düzeltebilirsin; dokunduğun raunt elle girilmiş sayılır ve otomatiği ezer.",
+  saving: "Kaydediliyor…",
+};
+
+/** Banner on analyses made before the current version (CLAUDE.md: "eski sürümle yapıldı"). */
+export const OUTDATED_LABELS = {
+  title: "Bu analiz eski sürümle yapıldı — yeniden işle",
+  text: "Raunt tespiti gibi yeni adımlar bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
+  action: "Yeniden işle",
+  busy: "Yeniden işleme başlatılıyor…",
+};
+
+/** The result timeline (texts moved here when it got round editing). */
+export const TIMELINE_LABELS = {
+  region: "Zaman çizelgesi",
+  slider: "Video konumu",
+  legend: "Zaman çizelgesi işaretleri",
+  punch: "Yumruk",
+  kick: "Tekme",
+  knee: "Diz",
+  contact: "Olası temas",
+  big: "Olası büyük olay",
+  span: "Klinç / yer kontrolü",
+  gap: "Veri yetersiz",
+  excluded: "Dışlanan bölüm",
+  roundAuto: "Raunt (otomatik)",
+  roundManual: "Raunt (elle)",
+  curve: "Eğri: deneysel momentum payı (üst kırmızı, alt mavi)",
+  noMomentum: "Momentum verisi yok",
+  axisTop: "%100 kırmızı",
+  axisMid: "%50",
+  axisBottom: "%100 mavi",
+  roundTitle: (n: number, a: string, b: string, source: string) => `${n}. raunt ${a}–${b} · ${source}`,
+  excludedTitle: (a: string, b: string) => `Dışlanan bölüm ${a}–${b}`,
+};
+
+/** "Maç bilgileri": how the bout ended and point deductions (texts moved here in Bölüm 2). */
+export const MATCH_EDITOR_LABELS = {
+  region: "Maç bilgileri",
+  title: "Maç bilgileri",
+  userInput: "Kullanıcı girdisi",
+  help: "Bitiş şekli ve puan kesintileri videodan güvenilir biçimde çıkarılamaz; buraya girdiğin resmi bilgiler olduğu gibi kullanılır. Raunt sayısı Maç ayarlarından, raunt sınırları zaman çizelgesinden gelir.",
+  rounds: "Rauntlar",
+  notMarked: "bulunmadı",
+  markRound: "Raunt",
+  markStart: "Başlangıç = şimdiki kare",
+  markEnd: "Bitiş = şimdiki kare",
+  ending: "Maç nasıl bitti?",
+  winner: "Kazanan",
+  endRound: "Raunt",
+  endTime: "Süre (dk:sn)",
+  deductions: "Puan kesintileri",
+  noDeductions: "yok",
+  deductionRound: "Raunt",
+  deductionFighter: "Dövüşçü",
+  deductionPoints: "Puan",
+  removeDeduction: "Kesintiyi kaldır",
+  addDeduction: "Kesinti ekle",
+  saving: "Kaydediliyor…",
+  save: "Kaydet ve kartları yenile",
+  cancel: "Vazgeç",
+  finish: {
+    unknown: "Bilinmiyor / girilmedi",
+    decision: "Puan kararı (maç süresini tamamladı)",
+    ko: "Nakavt (KO)",
+    tko: "Teknik nakavt (TKO)",
+    submission: "Submission",
+    disqualification: "Diskalifiye",
+    referee_stoppage: "Hakem / doktor durdurması",
+    no_contest: "No contest",
+  } satisfies Record<FinishMethod, string>,
+};

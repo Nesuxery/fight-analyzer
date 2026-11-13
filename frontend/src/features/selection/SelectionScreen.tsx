@@ -5,7 +5,9 @@ import type { SelectParams } from "../../app/router";
 import { useDemo } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
 import { CANDIDATE_TIMES, detectionsAt } from "../../demo/scene";
-import { DEMO_FRAME, REFEREE } from "../../demo/script";
+import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME, REFEREE } from "../../demo/script";
+import type { BoutConfig, RoundSegment } from "../../contracts/generated";
+import { MatchSettings } from "../match/MatchSettings";
 import { SELECTION_LABELS as L } from "../../labels";
 import type { Assignment } from "../../model/analysis";
 import { formatClock } from "../../player/clock";
@@ -73,6 +75,16 @@ function DemoSelection() {
       onNext={candidate < CANDIDATE_TIMES.length - 1 ? () => setCandidate(candidate + 1) : undefined}
       onConfirm={confirm}
       problem={problem}
+      settings={<MatchSettings bout={DEMO_BOUT} rounds={DEMO_ROUNDS} broadcast={null} roundNotes={[]} demo />}
     />
   );
 }
+
+/** Demo only (labelled "Demo"): one sample round over the synthetic scene; nothing is saved. */
+const DEMO_BOUT: BoutConfig = {
+  scheduled_rounds: 3, round_length_s: 300, rest_s: 60, title_fight: false, ruleset: "abc_2025", names: null,
+};
+const DEMO_ROUNDS: RoundSegment[] = [{
+  index: 1, start_frame: 0, end_frame: DEMO_DURATION_S * DEMO_FPS - 1, video_start_s: 0, video_end_s: DEMO_DURATION_S,
+  clock_start: 300, clock_end: 0, source: "ocr", confidence: 0.9, partial: false,
+}];

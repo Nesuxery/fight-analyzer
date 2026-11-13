@@ -162,6 +162,12 @@ Bölüm 1 kararlarıyla çeliştiği yerde bunlar geçerlidir:
   numara değişimi" ileri ve geri takip geçişlerinin toplamıdır; tanım bunu
   söyler. "Hakem kartları (AI)" sekmesine tanım eklenmedi; Bölüm 3–5'te yeniden
   kurulacak.
+- **"?" balonu (v2/tema, 13 Kasım 2026):** kapalıyken `display: none`; görünmez
+  olduğu halde sayfayı genişletiyordu (1024 px'te İşlem ekranı 7 px kayıyordu,
+  telefonda sayfa genişliyordu). Açıkken `position: fixed` ve
+  `ui/placeBubble.ts` onu ekranın içine yerleştirir: `align` tercih edilen kenar,
+  ekran kenarına 8 px'ten fazla yaklaşmaz, yer yoksa alta/üste döner. Bu yüzden
+  panelin kesmesi ya da sayfayı taşırması mümkün değil.
 - **İşlem adımları:** "Sonuç hazırlama"nın analizde kendi backend aşaması yok;
   açıklaması yalnızca neyin açıldığını söyler. Momentum her yerde "deneysel"
   diye anılır, "puanlama" denmez.

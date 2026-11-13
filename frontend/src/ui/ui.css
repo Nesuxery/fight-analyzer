@@ -180,9 +180,15 @@
   color: var(--text-1);
 }
 
+/* Closed: display none, so the bubble never takes part in the page layout (it
+   used to widen the page while invisible). Open: fixed, placed by HelpTip.tsx
+   inside the viewport. */
 .helptip__bubble {
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
   z-index: 40;
+  display: none;
   width: max-content;
   max-width: min(260px, calc(100vw - 2 * var(--page-gutter)));
   padding: var(--space-2) var(--space-3);
@@ -198,19 +204,12 @@
   text-transform: none;
   white-space: normal;
   box-shadow: 0 0 0 1px var(--ink-edge), var(--shadow-float);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity var(--motion-fast) var(--ease);
 }
 
-.helptip__bubble--top { bottom: calc(100% + var(--space-1)); }
-.helptip__bubble--bottom { top: calc(100% + var(--space-1)); }
-.helptip__bubble--start { left: calc(-1 * var(--space-2)); }
-.helptip__bubble--end { right: calc(-1 * var(--space-2)); }
-.helptip__bubble--center { left: 50%; transform: translateX(-50%); }
-
 .helptip__bubble.is-open {
-  opacity: 1;
+  display: block;
+  animation: ui-fade-in var(--motion-fast) var(--ease);
 }
 
 /* ---------- SegmentedControl ---------- */

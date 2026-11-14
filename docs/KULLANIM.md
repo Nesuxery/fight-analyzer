@@ -88,12 +88,20 @@ saklanır. Video ve üzerindeki iskelet ve efekt renkleri iki temada aynıdır.
    iskeletler, altta zaman çizelgesi bulunur. Olay listesinde bir olaya
    tıklayınca video olaydan 1 sn önceye gider. Kısayollar: Boşluk oynat/duraklat,
    ←/→ 1 sn, `,` `.` bir kare, S iskelet, E olay efektleri, D mesafe, F tam ekran.
-5. **Tekrar ve ağır çekimler:** Bunlar otomatik ayırt edilemez. Zaman
-   çizelgesinin altındaki **"Bölüm dışla…"** ile başlangıç ve bitiş karesini
-   seçip dışlayın. Dışlanan bölümdeki olaylar listede "Dışlandı" etiketiyle
-   kalır ama sayılmaz ve momentuma puan eklemez; ilerleme/kontrol süresi ve
-   ölçülen süre bu bölümde birikmez; momentum bölüm boyunca donar. Pozlar ve
-   kimlikler değişmez.
+5. **Dışlanan bölümler (tekrar, raunt arası, giriş, maç sonrası):** Dövüş
+   süresi olmayan bölümler otomatik dışlanır ve zaman çizelgesinin altındaki
+   **"Dışlanan bölümler"** listesinde "otomatik" etiketi, nedeni, güveni ve
+   dayanağıyla görünür (ör. "raunt sınırlarının dışında", "scorebug ekranda yok,
+   dövüş saati durdu"). Yanlış olanı **"Geri al"** ile tek tıkla dövüş süresine
+   geri katın; **"Yeniden dışla"** ile yeniden dışlayın. Otomatik bulunmayan bir
+   bölümü **"Bölüm dışla…"** ile başlangıç ve bitiş karesini seçerek elle
+   dışlayın. Dışlanan bölümdeki olaylar listede "Dışlandı" etiketiyle kalır ama
+   sayılmaz ve puan üretmez; ilerleme/kontrol süresi ve ölçülen süre birikmez;
+   momentum bölüm boyunca donar. Listenin altında kaç olayın sayılmadığı yazar.
+   Raunt sınırını değiştirince dövüş dışı bölümler de onunla birlikte değişir.
+   Bunlar AI tahminidir: maçın bittiği videodan kesin anlaşılamıyorsa (ör.
+   nakavttan sonra scorebug kayboldu) "Maç sonrası" düşük güvenle gelir; maçın
+   bitişini "Maç bilgileri"ne girerseniz kesinleşir.
 6. **Dışa aktarma:** "Dışa aktar" sekmesinde videoya işlenecek göstergeleri
    seçip başlatın. İş arka planda çalışır; bu sırada videoyu izlemeye devam
    edebilirsiniz. Bitince MP4, CSV ve JSON indirme düğmeleri çıkar.
@@ -208,7 +216,11 @@ küçük örnekten; ayrıntı ve sayılar `validation/` klasöründe):
   sekmesi bu aralıkları gösterir.
 - **Kamera değişimleri ve yakın çekimler:** Kimlik görünüme göre kurulur; çok
   benzer görünen dövüşçüler (benzer şort rengi) bu klipte denenmedi.
-- **Tekrar/ağır çekim** otomatik ayrılmaz; elle dışlanmalıdır.
+- **Tekrar/ağır çekim** yayın sinyallerinden (scorebug'ın kaybolması, saatin
+  durması, logo geçişi, ağır çekim; en az ikisi) otomatik dışlanır. Yöntem tek
+  bir örnek yayın ve sentetik bir kliple ayarlandı, bağımsız kayıtla
+  doğrulanmadı; scorebug'ı olmayan yayınlarda çoğu tekrar bulunamaz. Listeyi
+  gözden geçirin, eksik olanı elle dışlayın.
 - **Doğruluk:** Ayardan bağımsız, doğrudan maç görüntüleriyle doğruluk ölçümü
   henüz yapılmadı. Kendi kliplerinizde denemek için bölüm 7'ye bakın.
 
@@ -222,9 +234,10 @@ model girişi 640 px. GPU bu bilgisayarda olmadığı için GPU süresi ölçül
 | Poz, `yolo26s-pose.pt` (varsayılan) | 148–172 ms/kare (327 karelik klip, 5 koşu); 30 fps'lik 1 dakika ≈ 4,5–5 dk |
 | Poz, `yolo26n-pose.pt` | 68 ms/kare; 30 fps'lik 1 dakika ≈ 2 dk |
 | 5 dk 28 sn video (9842 kare), varsayılan model | poz ≈ 30 dk (başka işlerle aynı anda), kimlik + olaylar + momentum 2,3–2,7 dk, MP4 dışa aktarma 4–4,5 dk |
-| Raunt tespiti (scorebug saati, 9 dk 1080p yayın, 13 Kasım 2026) | ≈ 40–75 sn (poz süresinin ≈ %2'si); eski analizi yeniden işleme toplam ≈ 75 sn |
+| Raunt tespiti ve tekrar ayıklama (scorebug, 9 dk 1080p yayın, 14 Kasım 2026) | ≈ 60–65 sn (poz süresinin ≈ %2'si; tekrar ayıklama eklenince artmadı); eski analizi yeniden işleme toplam ≈ 75 sn |
 | Aynı videoyu yeniden yükleme | 0,1 sn (video kopyası ve pozlar önbellekten) |
 | Dövüşçüleri yeniden seçme / taraf değiştirme / bölüm dışlama | saniyeler (pozlar yeniden çıkarılmaz) |
+| Otomatik bölümü geri alma, raunt sınırı düzenleme (14 Kasım 2026) | anında (momentum ≈ 0,1 sn, sonuç ekranı açık kalır) |
 | Bellek (5,5 dk video) | en yüksek ≈ 780 MB (poz aşaması, model yüklü) |
 
 Süre video uzunluğuyla doğru orantılıdır; sayfadaki ilerleme çubuğu ölçülen

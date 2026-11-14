@@ -146,8 +146,10 @@ data/                   çalışma verisi (git dışı):
   "Hareket analizini çalıştır" düğmesi çıkar (önbellek sayesinde hızlıdır).
   Boş, yükleniyor, hata ve "bulunamadı" durumları her ekranda vardır.
 - **Katmanlar**: İskelet, Olay efektleri, Mesafe ayrı ayrı açılıp kapanır.
-- **Bölüm dışlama**: zaman çizelgesinin altındaki "Bölüm dışla…" ile tekrar,
-  ağır çekim ya da ara bölümleri işaretlenir (bkz. "Doğrulama ve dayanıklılık").
+- **Dışlanan bölümler**: giriş, raunt araları, maç sonrası, tekrarlar ve
+  duraklamalar otomatik dışlanır ("otomatik" etiketi, neden, güven, dayanak;
+  "Geri al" / "Yeniden dışla" tek tıkla). "Bölüm dışla…" ile elle de işaretlenir
+  (bkz. "Yayın kesmeleri ve tekrar ayıklama").
 - **Dövüşçüler**: ad değiştirme (kalem simgesi), "Tarafları değiştir",
   "Dövüşçüleri yeniden seç".
 - **Klavye (Sonuç)**: Boşluk oynat/duraklat · ←/→ 1 sn (Shift ile 5 sn) ·
@@ -242,7 +244,8 @@ kare: seçim yapılan kare, yoksa videonun %10'u; iş klasöründe önbelleğe a
 `GET /jobs/{id}/events` (olaylar) · `GET /jobs/{id}/motion` (10 Hz sinyaller, `null` = ölçüm
 yok) · `GET /jobs/{id}/momentum` (puan defteri, parametreler, paylar) ·
 `POST /jobs/{id}/swap` (kırmızı/mavi tarafları tek işlemde değiştirir) ·
-`PUT /jobs/{id}/exclusions` (dışlanan bölümler; momentum yeniden hesaplanır) ·
+`PUT /jobs/{id}/exclusions` (kullanıcının dışladığı bölümler; momentum yeniden hesaplanır) ·
+`PUT /jobs/{id}/exclusions/auto` (geri alınan otomatik bölümler; momentum istek içinde yenilenir) ·
 `PUT /jobs/{id}/match` (raundlar, bitiş, kesintiler) · `GET /jobs/{id}/scorecards`
 (AI hakem kartları) ·
 `POST /jobs/{id}/exports` (dışa aktarma işi başlatır; gövde: `ExportRequest`; analiz
@@ -682,6 +685,85 @@ okunan adlar yayın grafiğinden çıkarılan **AI tahminidir**, resmi zamanlama
   karelerden okunan saatle ±1 sn içinde. Bu video yöntem ayarlanırken kullanıldı;
   doğruluk değeri değildir.
 
+## Yayın kesmeleri ve tekrar ayıklama (v2 Bölüm 2b)
+
+`backend/fight_analyzer/broadcast/replay.py` (sinyaller ve kurallar),
+`backend/fight_analyzer/nonfight.py` (rauntlarla birleştirme, geri alma, etkin
+liste). Otomatik bölümler yayın grafiğinden ve raunt sınırlarından çıkarılan bir
+**AI tahminidir**; her biri nedeni, güveni ve dayanağıyla gösterilir, tek tıkla
+geri alınır.
+
+- **Dört sinyal** (yayın aşamasında, saniyede 2 örnek; ayrı bir video okuması yok):
+  1. *Scorebug*: saatin çevresindeki şerit, saatin okunduğu karelerden öğrenilen
+     olağan görünümüyle karşılaştırılır (sıfır ortalamalı korelasyon; örnek
+     yayında görünürken ≥ 0,83, yokken ≤ 0,25, eşik 0,5). Ya da saat ilerlemezken
+     üst/alt bantta bir tekrar yazısı okunur ("REPLAY", "TEKRAR", "SLOW MO"…;
+     liste `BroadcastSettings.replay_words`).
+  2. *Saat*: dövüş saatinin durduğu biliniyor: ekranda donmuş, iki okuma arasında
+     geçen sürenin en az %75'ini kaybetmiş, ya da art arda iki raunt arasında.
+  3. *Logo geçişi*: takip hazırlığındaki kare değişim dizisinde 1 sn içinde en az
+     0,2 sn'lik yüksek değişim (sert kesim tek karedir, kamera hareketi ≈ 10 kat
+     düşük kalır) ya da 1,5 sn'den kısa çekim. Kesim tespiti ve hazırlık anahtarı
+     değişmedi.
+  4. *Ağır çekim*: görüntüdeki kişilerin el ve ayak bileği hızı (kalçaya göre,
+     gövde boyu/sn, 0,1 sn'lik taban; kimlik gerekmez) canlı medyanın 0,65
+     katının altında. Yalnızca destekleyicidir: sakin bir dövüş anı da yavaştır.
+- **Kurallar:** aday bölümler scorebug'ın olmadığı ya da tekrar yazısının
+  okunduğu aralıklar ile iki logo geçişi arasıdır. Dövüş saatinin **çalıştığı
+  bilinen** süre her adaydan çıkarılır (saat işliyorsa görüntü canlıdır). Kalan
+  bölümde dört sinyalden **en az ikisi** varsa `replay` (güven 2/3/4 sinyalle
+  0,6 / 0,8 / 0,9; tekrar yazısı +0,05). Raunt içinde saat ≥ 3 sn durur ve bölüm
+  tekrar değilse `stoppage`. İlk saat rauntundan önce ve sonuncusundan sonra
+  görüntünün ≥ %90'ında scorebug yoksa `intro` ve `post_fight` (son raunt süresini
+  doldurduysa `break`). Bilinmeyen sinyal kanıt sayılmaz: şablon yoksa "scorebug
+  yok", saat okunmadıysa "saat durdu" denmez.
+- **Dövüş dışı bölümler rauntlardan:** etkin rauntların (`Job.rounds`, elle >
+  otomatik) dışında kalan süre, kesin olduğunda dışlanır: R1'den önce `intro`,
+  art arda numaralı iki raunt arası `break`, son raunttan sonra `post_fight`
+  (yalnızca son raunt planlanan son rauntsa ya da kullanıcı o raunt için erken
+  bitiş girdiyse). Arada numarası eksik raunt varsa ya da son rauntun sonuncu
+  olduğu bilinmiyorsa iddia edilmez: orada bir raunt olabilir. Raunt yoksa
+  üretilmez. Tespit edilen bölümler rauntların bıraktığı yeri doldurur; tespit
+  edilen giriş/son bölüm etkin bir rauntun içine giremez.
+- **Geri alma:** `PUT /jobs/{id}/exclusions/auto` geri alınan bölümleri kare
+  aralığı olarak saklar (`params.dismissed_auto`). Otomatik bölüm, saklı bir
+  aralıkla örtüşmesi (IoU) ≥ 0,5 olduğu sürece kapalıdır: raunt kenarı birkaç
+  saniye oynarsa kapalı kalır, bölüm gerçekten değişirse yeniden dışlanır.
+- **Etkin liste** = kullanıcının bölümleri + geri alınmamış otomatik bölümler,
+  birleştirilmiş (`nonfight.effective`). İstatistikler, hakem kartları, momentum
+  ve dışa aktarma aynı listeyi (`ScoringSummary.exclusions`) kullanır. Raunt,
+  maç ayarı ya da bitiş değişince liste değişiyorsa momentum **istek içinde**
+  yeniden hesaplanır (önbellekteki olaylardan ≈ 0,1 sn; sonuç ekranı kapanmaz).
+  Kullanıcının kendi bölümleri eskisi gibi işçide yeniden hesaplanır.
+- **Rapor:** Dışlanan bölümler listesinde her satırda bölümdeki olay sayısı ve
+  altında toplam ("… olay sayılmadı: otomatik / elle"); dışa aktarılan JSON'da
+  `exclusions` (kaynak, neden, güven, sinyaller) ve `excluded_event_ids`.
+- **Saat alanı çizimi:** "Saat alanını düzelt" scorebug'ın kesin göründüğü kareye
+  (`BroadcastSummary.scorebug_frame`, ilk rauntun ortasına en yakın okuma) geçer;
+  bitince seçim karesine ve seçimlere döner.
+- **Eski analizler:** `BroadcastSummary.version < 2` ise otomatik bölüm üretilmez
+  (sonuçlar arkadan değişmez) ve "eski sürümle yapıldı — yeniden işle" bandı çıkar.
+- **Ölçüm (ayar için kullanılan malzeme; doğruluk değeri değildir):**
+  örnek yayın
+  (topuria-volkanovski.mp4, 9:00): giriş 0–10,5 sn, raunt arası 310,5–317,5 sn,
+  maç sonrası 530,5–540,5 sn (scorebug nakavttan hemen sonra kayboluyor; güven
+  0,6); rauntlar değişmedi. Bu videoda tekrar yok. Kullanıcı kararıyla örnek
+  videodan üretilen sentetik klip (83 sn; canlı bölümün ortasına logo geçişli,
+  scorebug'sız, yarı hızda 16 sn'lik kopya; yalnızca `local/` altında): tekrar
+  36,0–53,5 sn bulundu (eklenen 36,0–53,4 sn), dört sinyal birden, güven 0,9.
+  Dışlanan olay: örnek yayında 113 olaydan 1'i (maç sonrası); klipte
+  tespit edilen 2 olayın hiçbiri tekrarın içinde değil (tek seçim noktasıyla
+  kırmızı köşenin kimliği klibin çoğunda belirsiz kaldı; kimlik (c)'nin konusu).
+  Yayın aşaması örnek yayında 60,8–70,4 sn (üç koşu; 2a'da 61,1–71,7 sn),
+  klipte 16,9 sn (poz 443,9 sn); analiz süresindeki artış ölçüm gürültüsünün
+  içinde, ≈ %0 (örnek yayında poz 3091 sn).
+- **Sınırlar:** tek bir örnek yayına ve sentetik malzemeye göre ayarlandı; gerçek
+  tekrar içeren bağımsız bir kayıtla doğrulanmadı. Scorebug'sız ve saatsiz
+  yayında yalnızca logo geçişi + ağır çekim birlikte tekrar sayılır. Raunt
+  içinde scorebug kaybolup saat de okunamazsa (tek sinyal) bölüm dışlanmaz.
+  Raunt araları kısaltılmamış yayında köşe görüntüsü "raunt arası" olarak,
+  rauntlar bulunamazsa "tekrar" etiketiyle dışlanabilir.
+
 ## AI hakemlik (Aşama 9)
 
 `backend/fight_analyzer/judging/`, `GET /jobs/{id}/scorecards`, sonuç ekranında
@@ -773,11 +855,13 @@ ve ağır çekim (yalnızca son 3 kare donuk); bunlar denenmedi.
 
 ### Tekrar ve ağır çekim: bölüm dışlama
 
-Tekrarlar canlı görüntüden güvenilir biçimde ayrılamıyor (aynı dövüşçüler, aynı
-kafes; ağır çekim kare tekrarı da her yayında yok). Bu yüzden kullanıcı sonuç
+Tekrarlar tek kareye bakarak canlı görüntüden ayrılamaz (aynı dövüşçüler, aynı
+kafes). v2 Bölüm 2b'den beri yayın sinyallerinden ve raunt sınırlarından otomatik
+dışlanırlar (bkz. "Yayın kesmeleri ve tekrar ayıklama"); kullanıcı ayrıca sonuç
 ekranında **"Bölüm dışla…"** ile başlangıç/bitiş karesi ve neden (tekrar, ağır
-çekim, ara/grafik, diğer) seçer. Tanım tek yerde (`motion/exclusions.py`) ve
-tarayıcıda aynısı (`model/measured.ts`):
+çekim, raunt arası/ara, giriş, maç sonrası, duraklama, diğer) seçebilir. Dışlanan
+bölümün anlamı otomatik ve elle için aynıdır; tanım tek yerde
+(`motion/exclusions.py`) ve tarayıcıda aynısı (`model/measured.ts`):
 
 - Dışlanan bölüm maç süresi değildir. Anı (tepe karesi, yoksa başlangıç) içinde
   kalan olay listede "Dışlandı" etiketiyle görünür ama sayılmaz, momentuma puan
@@ -877,7 +961,13 @@ başlat" düğmesi eklendi (önceden yalnızca API'de vardı); hareket analizi s
 önizleme alanı "Video analiz kopyasına dönüştürülüyor" yerine çalışan aşamayı
 yazıyor; CUDA uyarısı Türkçe.
 
-## Veri sözleşmeleri (şema v1.7.0)
+## Veri sözleşmeleri (şema v1.8.0)
+
+1.8.0 (v2 Bölüm 2b): `ExcludedSegment` + `source` (manual/auto), `auto_id`,
+`confidence`, `signals`; `ExclusionReason` + `intro`, `post_fight`, `stoppage`;
+`AutoExclusion` (+ `dismissed`), `AutoExclusionEdits`; `Job.auto_exclusions`;
+`BroadcastSummary.version`, `.segments`, `.scorebug_frame`; `OutdatedReason` +
+`broadcast_outdated`. Yeni alanların hepsi varsayılanlı: eski analizler açılır.
 
 1.7.0 (v2 Bölüm 2a): `BoutConfig`, `RoundSegment`, `RoundEdits`, `ScreenRect`,
 `ScorebugRegion`, `BroadcastSummary`, `BroadcastTimeline`; `Job.bout`,
@@ -907,7 +997,7 @@ Kaynak: `backend/fight_analyzer/contracts/`. JSON Schema
 | `MomentumTimeline`, `MomentumContribution`, `MomentumParameters` | puan defteri (kaynak, olay, zaman, miktar, puan), tasarım parametreleri, kırmızı payı ve "veri yetersiz" örnekleri |
 | `EventsSummary`, `ScoringSummary` | iş çıktısı özetleri (dövüşçü başına sayılar, kamera ölçüm oranı; parametreler, son pay) |
 | `MatchSetup` → `RoundMark`, `MatchEnding`, `PointDeduction`; `Scorecards` → `RoundAssessment`, `FighterRoundEvidence`, `KeyMoment`, `JudgeScorecard`, `JudgeRoundScore`, `RoundSummary`, `MatchVerdict` | maç bilgileri (kullanıcı girdisi) ve AI hakem kartları: raund kanıtı, üç hakem, raund özetleri, karar/bitiş, güven, uyarılar (`ai_estimate: true`) |
-| `SegmentExclusions` → `ExcludedSegment` | kullanıcının dışladığı bölümler (başlangıç/bitiş karesi, neden: tekrar, ağır çekim, ara, diğer); `Job.exclusions`, `MomentumTimeline.exclusions`, `ScoringSummary.exclusions` |
+| `SegmentExclusions`, `AutoExclusionEdits` → `ExcludedSegment`, `AutoExclusion` | dışlanan bölümler (başlangıç/bitiş karesi, neden, kaynak elle/otomatik, güven, sinyaller); kullanıcınınkiler `Job.exclusions`, otomatikler `Job.auto_exclusions` (geri alınanlar dahil), uygulanan liste `ScoringSummary.exclusions` ve `MomentumTimeline.exclusions` |
 | `ExportRequest` → `ExportOptions`, `ExportSummary`, `ExportFile`, `SourceKeys`, `AnalysisExport` | videoya işlenecek göstergeler (iskelet, efektler, momentum, sayaçlar, mesafe, diğer kişiler); dışa aktarma işinin çıktısı (kare sayısı, ses, dosyalar, kaynak önbellek anahtarları); dışa aktarılan JSON |
 | `HealthResponse` | veritabanı, işçi, işlem birimi, FFmpeg, poz modeli, iş sayıları |
 

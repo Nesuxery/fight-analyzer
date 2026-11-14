@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 13 Kasım 2026 (v2 Bölüm 2a: maç ayarları ve raunt tespiti). Ayrıntılı
+Son güncelleme: 14 Kasım 2026 (v2 Bölüm 2b: yayın kesmeleri ve tekrar ayıklama). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -24,14 +24,14 @@ CLAUDE.md geçerlidir.
   fight_analyzer.jobs`), Vite/React arayüzü. Hepsi `127.0.0.1`; `start.cmd` tek komut.
 - İş kaydı SQLite (WAL); işçi kalp atışı, 30 sn sonra yarım iş yeniden kuyruğa,
   2 denemeden sonra `worker_lost`.
-- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.7.0**);
+- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.8.0**);
   JSON Schema ve TS tipleri bundan üretilir, `check.cmd` güncelliğini denetler.
   Üretilen dosyalar (şema, TS tipleri, overlay dosyaları) `.gitattributes` ile her
   checkout'ta LF; denetim bayt bayt karşılaştırır ve gevşetilmedi.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
   (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 5`, `CAMERA_VERSION 2`,
-  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`, `BROADCAST_VERSION 1`); mantık değişince
+  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`, `BROADCAST_VERSION 2`); mantık değişince
   ilgili sürüm artırılır, şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
 
 ### Video ve poz
@@ -77,9 +77,11 @@ CLAUDE.md geçerlidir.
   ortak test dosyası `shared/fixtures/label-layout.json` iki tarafta da denetlenir.
 
 ### Dışlanan bölümler (tekrar / ağır çekim)
-- Otomatik ayırt edilemediği için kullanıcı işaretler. Dışlanan bölüm maç süresi
-  değildir: olaylar sayılmaz/puanlanmaz, süreye bağlı puan ve ölçüm birikmez,
-  momentum donar (maç zamanıyla söner).
+- Dışlanan bölüm maç süresi değildir: olaylar sayılmaz/puanlanmaz, süreye bağlı
+  puan ve ölçüm birikmez, momentum donar (maç zamanıyla söner). Otomatik ve elle
+  dışlanan bölüm için anlam aynıdır.
+- v2 Bölüm 2b'den beri otomatik de bulunur (aşağıdaki bölüm); kullanıcı ayrıca
+  elle işaretleyebilir.
 
 ### Maç ayarları ve raunt tespiti (v2 Bölüm 2a, 13 Kasım 2026)
 Bölüm 2 üç aşamada yapılıyor (a: maç ayarları ve raunt tespiti, b: yayın
@@ -130,39 +132,76 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
 - (a) onaylandı (14 Kasım 2026); `v2/bolum-2` dalında, merge/push kullanıcının
   sözüyle.
 
-### Bölüm 2b ve 2c için devam notları (14 Kasım 2026)
-Sonraki oturum buradan başlar. Kurallar CLAUDE.md'de, plan docs/v2-plan.md
-Bölüm 2.3–2.5'te; her aşamadan sonra commit, notlar, kısa rapor, onay beklenir.
+### Yayın kesmeleri ve tekrar ayıklama (v2 Bölüm 2b, 14 Kasım 2026)
+- **Dört sinyal, en az ikisi tekrar:** scorebug'ın kaybolması ya da tekrar yazısı;
+  dövüş saatinin durması; logo geçişi; ağır çekim. Sinyaller yayın aşamasının
+  aynı geçişinde (2 Hz) toplanır; logo geçişi takip hazırlığının kare değişim
+  dizisinden, ağır çekim pozlardan gelir (yeni video okuması, yeni bağımlılık yok;
+  hazırlık anahtarı değişmedi). `BROADCAST_VERSION` 2.
+- **Saat çalışıyorsa görüntü canlıdır:** dövüş saatinin işlediği bilinen süre her
+  adaydan çıkarılır. Raunt başında scorebug birkaç saniye geç geldiği (örnek
+  yayında 3 sn) ve sponsor grafiği saati kapatabildiği için bu kural olmadan
+  raundun ilk saniyeleri dışlanıyordu. Bilinmeyen sinyal kanıt sayılmaz.
+- **Scorebug görünürlüğü OCR'sız ölçülür:** saatin çevresindeki şeridin, saatin
+  okunduğu arama karelerinden öğrenilen medyan görünümüyle korelasyonu. Saat
+  okuması tek başına yetmezdi (saniyede bir, OCR hatasına açık).
+- **Ağır çekim yalnızca destekleyici:** eklem hızının canlı medyana oranı sakin
+  dövüş anında da düşer; bu yüzden aday üretmez. Hız 0,1 sn'lik tabanla
+  ölçülür (kare tekrarıyla yapılan ağır çekim tek kare farkında tam hızlı
+  görünüyordu). Eşik 0,65: yarı hızdaki sentetik kopya 0,60 verdi, aynı görüntü
+  canlıyken 0,99; canlı 6 sn'lik pencerelerin ≈ %1–3'ü bu eşiğin altında.
+- **Dövüş dışı bölümler rauntlardan, yalnızca kesin olduğunda:** R1'den önce
+  giriş, art arda numaralı rauntlar arası ara. Son raunttan sonrası yalnızca
+  planlanan son rauntsa ya da kullanıcı o raunt için erken bitiş girdiyse "maç
+  sonrası" sayılır; aksi halde orada bulunamamış bir raunt olabilir. Örnek yayın
+  tam bu durumda (R2'de nakavt, 5 raunt planlı, saat durmadan kayboluyor):
+  burada yayın sinyali devreye girer (son rauntten sonra scorebug hiç dönmüyorsa
+  "maç sonrası", güven 0,6). Bu, plandaki "raunt içinde saat durursa stoppage"
+  kuralına ek bir karardır.
+- **Geri alınanlar aralık olarak saklanır** (`params.dismissed_auto`), kimlikle
+  değil: otomatik bölüm, saklı aralıkla IoU ≥ 0,5 olduğu sürece kapalıdır. Raunt
+  kenarı oynayınca kimlik değişir ama geri alma korunur; bölüm gerçekten
+  değişince yeniden dışlanır. O an karşılığı olmayan aralıklar da saklanır
+  (raunt geçici silinmişse geri gelince kapalı kalsın).
+- **Tek etkin liste:** kullanıcının bölümleri + geri alınmamış otomatikler
+  (`nonfight.effective`), her yerde `ScoringSummary.exclusions`.
+- **Momentum API'de yenilenir:** raunt, maç ayarı, bitiş ve geri alma listeyi
+  değiştirince momentum istek içinde yeniden hesaplanır (kullanıcının 9 dk'lık
+  analizinde olayları okuma 0,06 sn + hesap 0,04 sn). İşçi üzerinden gitmek
+  sonuç ekranını her raunt kenarı sürüklemesinde kapatıp açıyordu. İşçide olan
+  ağır işler değişmedi; iş "tamamlandı" değilse liste işçinin momentum aşamasında
+  uygulanır. Kullanıcının kendi bölümleri (`PUT /exclusions`) eskisi gibi işçide
+  hesaplanır (mevcut davranış ve testi korundu).
+- **Eski analizler:** yayın sürümü 2'den küçükse otomatik bölüm üretilmez (sonuç
+  arkadan değişmesin) ve yeniden işleme bandı çıkar.
+- **Saat alanı çizimi:** "Saat alanını düzelt" scorebug'ın göründüğü kareye geçer
+  (`scorebug_frame`), bitince seçim karesi ve seçimler geri gelir.
+- **Ölçüm (ayar seti; doğruluk değildir):** örnek yayın
+  (topuria-volkanovski.mp4, 9:00): giriş 0–10,5 sn, raunt arası 310,5–317,5 sn,
+  maç sonrası 530,5–540,5 sn (scorebug nakavttan hemen sonra kayboluyor; güven
+  0,6); rauntlar değişmedi. Bu videoda tekrar yok. Kullanıcı kararıyla örnek
+  videodan üretilen sentetik klip (83 sn; canlı bölümün ortasına logo geçişli,
+  scorebug'sız, yarı hızda 16 sn'lik kopya; yalnızca `local/` altında): tekrar
+  36,0–53,5 sn bulundu (eklenen 36,0–53,4 sn), dört sinyal birden, güven 0,9.
+  Dışlanan olay: örnek yayında 113 olaydan 1'i (maç sonrası); klipte
+  tespit edilen 2 olayın hiçbiri tekrarın içinde değil (tek seçim noktasıyla
+  kırmızı köşenin kimliği klibin çoğunda belirsiz kaldı; kimlik (c)'nin konusu).
+  Yayın aşaması örnek yayında 60,8–70,4 sn (üç koşu; 2a'da 61,1–71,7 sn),
+  klipte 16,9 sn (poz 443,9 sn); analiz süresindeki artış ölçüm gürültüsünün
+  içinde, ≈ %0 (örnek yayında poz 3091 sn).
+- **Yerel malzeme:** sentetik klip `local/replay-clip/replay-synthetic.mp4`
+  (git'e girmez); repodaki testler Pillow ile çizilen sentetik yayını kullanır
+  (`tests/support/scorebug.py`, etiketli tekrar dahil).
+- **Bilinen sınırlar:** gerçek tekrar içeren bağımsız kayıtla doğrulanmadı
+  (kullanıcı bulursa verecek). Scorebug'sız ve saatsiz yayında yalnızca logo
+  geçişi + ağır çekim birlikte tekrar sayılır. Raunt içinde scorebug kaybolur ve
+  saat sonradan da okunamazsa tek sinyal kalır, bölüm dışlanmaz. Rauntlar yoksa
+  köşe görüntüsü "tekrar" etiketi alabilir (scorebug yok + saat durdu).
+- (b) `v2/bolum-2` dalında; onay ve merge/push kullanıcının sözüyle.
 
-**(b) Yayın kesmeleri ve replay ayıklama: onaylı plan ve kullanıcı kararları**
-- Sinyaller yayın aşamasına (`broadcast/`, aynı 2 Hz örnek geçişi; yeni kod çözme
-  yok) eklenir: (1) scorebug kaybı ya da "REPLAY / TEKRAR / INSTANT REPLAY /
-  SLOW MO" yazısı, (2) dövüş saatinin donması/atlaması (`clock.py` okumaları),
-  (3) logo geçişi: takip hazırlığındaki kare değişim dizisinde (`cut_step`) art
-  arda yüksek değişim ya da çok kısa çekim (kesim tespiti ve prep anahtarı
-  değişmez), (4) ağır çekim: pozlardan eklem hızının canlı medyana oranı.
-  En az iki sinyal → `replay` (güven ve sinyallerle). `BROADCAST_VERSION` 2 olur.
-- Dövüş dışı: etkin rauntlardan (`rounds.py`) giriş, raunt araları, maç sonrası;
-  raunt içinde saat ≥3 sn durursa `stoppage`. Raunt yoksa üretilmez.
-- Sözleşme (1.8.0): `ExcludedSegment` + `source` (manual/auto), `auto_id`,
-  `confidence`, `signals`; `ExclusionReason` + `intro`, `post_fight`,
-  `stoppage`. Geri alınanlar `params.dismissed_auto`'da aralık olarak. Etkin liste
-  = elle + otomatik − geri alınan; bugünkü yoldan (`ScoringSummary.exclusions` →
-  istatistik, kartlar, dışa aktarma, momentum) aynı liste. Raunt düzenlemesi dövüş
-  dışı bölümleri değiştirdiği için `PUT /rounds` ve `PUT /match` momentumu yeniden
-  hesaplatmalı (bugün yalnızca parametre yazıyorlar).
-- Arayüz: Dışlanan bölümlerde "otomatik" etiketi, neden, güven, sinyaller; tek
-  tıkla "Geri al" / "Yeniden dışla". `ExclusionEditor` metinleri `labels.ts`'e
-  taşınır (dokunulan bileşen). Rapor: dışlanan olay sayısı (neden/kaynak).
-- **Saat alanı çizimi (kullanıcı isteği):** (b) scorebug görünürlüğünü saptadığı
-  için "Saat alanını düzelt" açılınca seçim ekranı ilk olarak scorebug'ın
-  göründüğü bir kareye geçsin (bugün ilk aday kare, örnek videoda 0:07.9, logo
-  geçişine denk geliyor).
-- **Replay testi (kullanıcı kararı):** örnek videoda replay yok. Örnek videodan
-  sentetik bir klip üretilir (bir bölümün yavaşlatılmış, scorebug'sız kopyası logo
-  geçişiyle eklenir); bu klip ve ondan çıkan kareler yalnızca `local/` altında
-  kalır, git'e girmez. Repodaki testler tamamen sentetik (Pillow). Kullanıcı
-  gerçek replay'li kayıt bulursa ayrıca verecek.
+### Bölüm 2c için devam notları (14 Kasım 2026)
+Sonraki oturum buradan başlar. Kurallar CLAUDE.md'de, plan docs/v2-plan.md
+Bölüm 2.4–2.5'te; aşamadan sonra commit, notlar, kısa rapor, onay beklenir.
 
 **(c) Kimlik takibi: kullanıcı kararları**
 - "Kime ait belirsiz" olaylar momentuma girmez; formül ve ağırlıklar aynı kalır;
@@ -180,7 +219,8 @@ Bölüm 2.3–2.5'te; her aşamadan sonra commit, notlar, kısa rapor, onay bekl
 
 **Çalışma ortamı**
 - Karalama kopyası: `local/fa-data` (kullanıcının 80b67cce işi, önbellekler ve
-  1,3 GB yükleme dosyası; yeniden işleme kaynak dosyayı ister). `.claude/launch.json`
+  1,3 GB yükleme dosyası; yeniden işleme kaynak dosyayı ister; (b)'de eklenen
+  sentetik tekrar klibinin işi 45531e64 de burada). `.claude/launch.json`
   "fa-scratch" yapılandırması buraya bakar (8010/5183). Kullanıcının gerçek işine
   dokunulmaz. **Bölüm 2 bitince `local/fa-data` silinir** (kullanıcı onayladı).
 

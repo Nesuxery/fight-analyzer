@@ -127,6 +127,62 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
 - **Yerel test malzemesi:** örnek videodan türetilen klip/kare ve karalama veri
   dizinleri yalnızca `local/` altında (`.gitignore`); repodaki testler tamamen
   sentetik (Pillow'un gömülü fontu ve Windows fontları).
+- (a) onaylandı (14 Kasım 2026); `v2/bolum-2` dalında, merge/push kullanıcının
+  sözüyle.
+
+### Bölüm 2b ve 2c için devam notları (14 Kasım 2026)
+Sonraki oturum buradan başlar. Kurallar CLAUDE.md'de, plan docs/v2-plan.md
+Bölüm 2.3–2.5'te; her aşamadan sonra commit, notlar, kısa rapor, onay beklenir.
+
+**(b) Yayın kesmeleri ve replay ayıklama: onaylı plan ve kullanıcı kararları**
+- Sinyaller yayın aşamasına (`broadcast/`, aynı 2 Hz örnek geçişi; yeni kod çözme
+  yok) eklenir: (1) scorebug kaybı ya da "REPLAY / TEKRAR / INSTANT REPLAY /
+  SLOW MO" yazısı, (2) dövüş saatinin donması/atlaması (`clock.py` okumaları),
+  (3) logo geçişi: takip hazırlığındaki kare değişim dizisinde (`cut_step`) art
+  arda yüksek değişim ya da çok kısa çekim (kesim tespiti ve prep anahtarı
+  değişmez), (4) ağır çekim: pozlardan eklem hızının canlı medyana oranı.
+  En az iki sinyal → `replay` (güven ve sinyallerle). `BROADCAST_VERSION` 2 olur.
+- Dövüş dışı: etkin rauntlardan (`rounds.py`) giriş, raunt araları, maç sonrası;
+  raunt içinde saat ≥3 sn durursa `stoppage`. Raunt yoksa üretilmez.
+- Sözleşme (1.8.0): `ExcludedSegment` + `source` (manual/auto), `auto_id`,
+  `confidence`, `signals`; `ExclusionReason` + `intro`, `post_fight`,
+  `stoppage`. Geri alınanlar `params.dismissed_auto`'da aralık olarak. Etkin liste
+  = elle + otomatik − geri alınan; bugünkü yoldan (`ScoringSummary.exclusions` →
+  istatistik, kartlar, dışa aktarma, momentum) aynı liste. Raunt düzenlemesi dövüş
+  dışı bölümleri değiştirdiği için `PUT /rounds` ve `PUT /match` momentumu yeniden
+  hesaplatmalı (bugün yalnızca parametre yazıyorlar).
+- Arayüz: Dışlanan bölümlerde "otomatik" etiketi, neden, güven, sinyaller; tek
+  tıkla "Geri al" / "Yeniden dışla". `ExclusionEditor` metinleri `labels.ts`'e
+  taşınır (dokunulan bileşen). Rapor: dışlanan olay sayısı (neden/kaynak).
+- **Saat alanı çizimi (kullanıcı isteği):** (b) scorebug görünürlüğünü saptadığı
+  için "Saat alanını düzelt" açılınca seçim ekranı ilk olarak scorebug'ın
+  göründüğü bir kareye geçsin (bugün ilk aday kare, örnek videoda 0:07.9, logo
+  geçişine denk geliyor).
+- **Replay testi (kullanıcı kararı):** örnek videoda replay yok. Örnek videodan
+  sentetik bir klip üretilir (bir bölümün yavaşlatılmış, scorebug'sız kopyası logo
+  geçişiyle eklenir); bu klip ve ondan çıkan kareler yalnızca `local/` altında
+  kalır, git'e girmez. Repodaki testler tamamen sentetik (Pillow). Kullanıcı
+  gerçek replay'li kayıt bulursa ayrıca verecek.
+
+**(c) Kimlik takibi: kullanıcı kararları**
+- "Kime ait belirsiz" olaylar momentuma girmez; formül ve ağırlıklar aynı kalır;
+  momentum kartında bu yüzden dışarıda kalan olay sayısı gösterilir
+  (`MOMENTUM_VERSION` 3).
+- 2.5 kapsam seçicisi sade olur (yan paneller Bölüm 5'te kalkacak); kapsam hesabı
+  Bölüm 5'in de kullanacağı yeniden kullanılabilir bir fonksiyon olarak yazılır.
+- Önce/sonra tablosu: aynı video, aynı seçim (kare 3142, kırmızı det 0 / mavi
+  det 1) karalama kopyasında; başlangıç değerleri: Volkanovski 124 numara
+  değişimi / %23,4 örtüşme / 59,1 sn belirsiz / en uzun 22,1 sn; Topuria 87 /
+  %24,9 / 21,3 sn / 4,3 sn. ~108 kare etiketleme tek tek değil, birkaç ızgara
+  görselle yapılır. Sonuçlar "ayar seti" olarak etiketlenir.
+- (c) sonunda yalnızca o aşamanın diff'ine tek, küçük bir inceleme ajanı açılabilir;
+  kod okumak için ajan açılmaz (kullanım limiti dar).
+
+**Çalışma ortamı**
+- Karalama kopyası: `local/fa-data` (kullanıcının 80b67cce işi, önbellekler ve
+  1,3 GB yükleme dosyası; yeniden işleme kaynak dosyayı ister). `.claude/launch.json`
+  "fa-scratch" yapılandırması buraya bakar (8010/5183). Kullanıcının gerçek işine
+  dokunulmaz. **Bölüm 2 bitince `local/fa-data` silinir** (kullanıcı onayladı).
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →

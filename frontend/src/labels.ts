@@ -4,6 +4,8 @@ import type { Screen } from "./app/router";
 import type {
   BroadcastNoteCode,
   EventType,
+  ExclusionReason,
+  ExclusionSignal,
   FinishMethod,
   Job,
   JobStatus,
@@ -262,6 +264,7 @@ export const STEP_LABELS = {
   prepSummary: (cuts: number, candidates: number) => ` · ${cuts} kamera kesimi · ${candidates} aday kare`,
   roundsSummary: (rounds: number, fromClock: boolean) =>
     rounds === 0 ? " · raunt bulunamadı" : ` · ${rounds} raunt bulundu${fromClock ? " (saatten)" : ""}`,
+  autoPartsSummary: (parts: number) => (parts === 0 ? "" : ` · ${parts} dövüş dışı bölüm otomatik dışlandı`),
   anchors: (n: number) => `${n} seçim noktası`,
   trackingDone: (red: string, blue: string, switches: number) =>
     `Kimlik takibi: belirsiz ${red} / ${blue} · olası kimlik değişimi ${switches}`,
@@ -763,7 +766,7 @@ export const ROUND_EDIT_LABELS = {
 /** Banner on analyses made before the current version (CLAUDE.md: "eski sürümle yapıldı"). */
 export const OUTDATED_LABELS = {
   title: "Bu analiz eski sürümle yapıldı — yeniden işle",
-  text: "Raunt tespiti gibi yeni adımlar bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
+  text: "Raunt tespiti ve tekrarların otomatik dışlanması gibi yeni adımlar bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
   action: "Yeniden işle",
   busy: "Yeniden işleme başlatılıyor…",
 };
@@ -789,7 +792,62 @@ export const TIMELINE_LABELS = {
   axisMid: "%50",
   axisBottom: "%100 mavi",
   roundTitle: (n: number, a: string, b: string, source: string) => `${n}. raunt ${a}–${b} · ${source}`,
-  excludedTitle: (a: string, b: string) => `Dışlanan bölüm ${a}–${b}`,
+  excludedTitle: (a: string, b: string, reason: string | null) =>
+    `Dışlanan bölüm ${a}–${b}${reason ? ` · ${reason}` : ""}`,
+};
+
+/**
+ * "Dışlanan bölümler" (v2 Bölüm 2b): parts that are not live fight time. The
+ * automatic ones come from the round boundaries and from broadcast signals
+ * (an AI estimate); the user turns them off and on with one click.
+ */
+export const EXCLUSION_LABELS = {
+  title: "Dışlanan bölümler",
+  help: "Dışlanan bölüm dövüş süresi sayılmaz: içindeki olaylar listede “Dışlandı” etiketiyle kalır ama sayılmaz ve puan üretmez; ilerleme, kontrol ve ölçülen süre birikmez; momentum bölüm boyunca donar. Otomatik bölümler raunt sınırlarından ve yayın sinyallerinden çıkarılan bir AI tahminidir; yanlış olanı tek tıkla geri alabilirsin.",
+  none: "Yok",
+  auto: "otomatik",
+  manual: "elle",
+  dismissed: "geri alındı",
+  reasons: {
+    replay: "Tekrar",
+    slow_motion: "Ağır çekim",
+    break: "Raunt arası / ara",
+    intro: "Giriş",
+    post_fight: "Maç sonrası",
+    stoppage: "Duraklama",
+    other: "Diğer",
+  } satisfies Record<ExclusionReason, string>,
+  signals: {
+    outside_rounds: "raunt sınırlarının dışında",
+    scorebug_missing: "scorebug ekranda yok",
+    replay_label: "tekrar yazısı okundu",
+    clock_stopped: "dövüş saati durdu",
+    wipe: "logo geçişi",
+    slow_motion: "ağır çekim hareket",
+  } satisfies Record<ExclusionSignal, string>,
+  evidence: (signals: string) => `Dayanak: ${signals}`,
+  confidence: (pct: number) => `güven %${pct}`,
+  lowConfidence: "düşük güven",
+  events: (n: number) => (n === 0 ? "olay yok" : `${n} olay`),
+  seek: "Bölümün başına git",
+  dismiss: "Geri al",
+  dismissTitle: "Otomatik dışlamayı geri al: bölüm yeniden dövüş süresi sayılır",
+  restore: "Yeniden dışla",
+  restoreTitle: "Bölümü yeniden dışla",
+  remove: "Dışlamayı kaldır",
+  summary: (total: number, auto: number, manual: number) =>
+    total === 0
+      ? "Dışlanan bölümlerde olay yok."
+      : `Dışlanan bölümlerde ${total} olay sayılmadı (otomatik bölümlerde ${auto}, elle işaretlenenlerde ${manual}).`,
+  open: "Bölüm dışla…",
+  close: "Kapat",
+  formHelp: "Otomatik bulunmayan bir tekrar, ağır çekim ya da ara varsa burada işaretle. Kaydedince momentum yeniden hesaplanır; pozlar ve kimlikler değişmez.",
+  startNow: "Başlangıç = şimdiki kare",
+  endNow: "Bitiş = şimdiki kare",
+  frameValue: (time: string, frame: number) => `${time} (kare ${frame})`,
+  reason: "Neden",
+  saving: "Kaydediliyor…",
+  save: "Dışla ve yeniden hesapla",
 };
 
 /** "Maç bilgileri": how the bout ended and point deductions (texts moved here in Bölüm 2). */

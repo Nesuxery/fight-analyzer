@@ -40,7 +40,21 @@ export type EventType =
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "ExclusionReason".
  */
-export type ExclusionReason = "replay" | "slow_motion" | "break" | "other";
+export type ExclusionReason =
+  "replay" | "slow_motion" | "break" | "intro" | "post_fight" | "stoppage" | "other";
+/**
+ * What an automatic excluded part rests on.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "ExclusionSignal".
+ */
+export type ExclusionSignal =
+  "outside_rounds" | "scorebug_missing" | "replay_label" | "clock_stopped" | "wipe" | "slow_motion";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "ExclusionSource".
+ */
+export type ExclusionSource = "manual" | "auto";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "MomentumSource".
@@ -134,7 +148,7 @@ export type JobType = "analysis" | "export";
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "OutdatedReason".
  */
-export type OutdatedReason = "broadcast_missing";
+export type OutdatedReason = "broadcast_missing" | "broadcast_outdated";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "BroadcastNoteCode".
@@ -221,10 +235,11 @@ export type TrackState = "tracked" | "occluded" | "uncertain";
 export type SkeletonFormat = "coco17";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.7.0.
+ * MMA Fight Analyzer data contracts, schema version 1.8.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
+  AutoExclusionEdits?: AutoExclusionEdits;
   BoutConfig?: BoutConfig;
   BroadcastTimeline?: BroadcastTimeline;
   ErrorResponse?: ErrorResponse;
@@ -382,7 +397,8 @@ export interface ImagePoint {
   y: number;
 }
 /**
- * Part of the video the user excluded (replays cannot be told apart automatically).
+ * Part of the video that is not live fight time: marked by the user, or found
+ * automatically (replays, stoppages, everything outside the rounds).
  *
  * An excluded part is not fight time: events whose moment (peak frame, else start
  * frame) lies in it are listed but neither counted nor scored, time-based points
@@ -394,11 +410,24 @@ export interface ImagePoint {
  */
 export interface ExcludedSegment {
   /**
+   * Automatic parts: id used to turn it off.
+   */
+  auto_id: string | null;
+  /**
+   * Automatic parts only.
+   */
+  confidence: number | null;
+  /**
    * Last excluded frame (inclusive).
    */
   end_frame: number;
   note: string | null;
   reason: ExclusionReason;
+  /**
+   * Automatic parts: the evidence.
+   */
+  signals: ExclusionSignal[];
+  source: ExclusionSource;
   start_frame: number;
 }
 /**
@@ -870,6 +899,19 @@ export interface VideoInfo {
   width: number;
 }
 /**
+ * Request body of PUT /jobs/{id}/exclusions/auto: the automatic parts the user turned
+ * off, by auto_id (the complete list; the others apply).
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "AutoExclusionEdits".
+ */
+export interface AutoExclusionEdits {
+  /**
+   * @maxItems 200
+   */
+  dismissed: string[];
+}
+/**
  * Bout format confirmed by the user ("Maç ayarları").
  *
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1145,6 +1187,10 @@ export interface Job {
    * How many times a worker started this job.
    */
   attempts: number;
+  /**
+   * Automatic excluded parts: time outside the rounds in effect, detected replays and stoppages. Those not dismissed apply together with `exclusions`; the list in use is outputs.scoring.exclusions.
+   */
+  auto_exclusions: AutoExclusion[];
   bout: BoutConfig;
   cancel_requested: boolean;
   created_at: string;
@@ -1200,6 +1246,38 @@ export interface Job {
    * Analysis video properties.
    */
   video: VideoInfo | null;
+}
+/**
+ * An automatic excluded part and whether the user turned it off ("Geri al").
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "AutoExclusion".
+ */
+export interface AutoExclusion {
+  /**
+   * Automatic parts: id used to turn it off.
+   */
+  auto_id: string | null;
+  /**
+   * Automatic parts only.
+   */
+  confidence: number | null;
+  /**
+   * Turned off by the user: not applied.
+   */
+  dismissed: boolean;
+  /**
+   * Last excluded frame (inclusive).
+   */
+  end_frame: number;
+  note: string | null;
+  reason: ExclusionReason;
+  /**
+   * Automatic parts: the evidence.
+   */
+  signals: ExclusionSignal[];
+  source: ExclusionSource;
+  start_frame: number;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1282,6 +1360,18 @@ export interface BroadcastSummary {
    * Automatic rounds; Job.rounds applies the user's edits.
    */
   rounds: RoundSegment[];
+  /**
+   * A frame that shows the scorebug (for drawing the clock rectangle).
+   */
+  scorebug_frame: number | null;
+  /**
+   * Parts found from the broadcast signals: replays, stoppages, and the stretches before the first / after the last clock round without a scorebug. Job.auto_exclusions combines them with the rounds in effect.
+   */
+  segments: ExcludedSegment[];
+  /**
+   * Version of the broadcast analysis that made this (1: rounds only; 2: replays, stoppages, non-fight parts).
+   */
+  version: number;
 }
 /**
  * Names read from the scorebug. A suggestion only: never applied without the user.
@@ -1434,6 +1524,9 @@ export interface ScoringSummary {
   cache_hit: boolean;
   cache_key: string;
   contributions: number;
+  /**
+   * Excluded parts applied: the user's and the automatic ones in effect, merged.
+   */
   exclusions: ExcludedSegment[];
   final_red_share: number;
   parameters: MomentumParameters;
@@ -1936,7 +2029,7 @@ export interface ScorebugRegion {
   clock: ScreenRect | null;
 }
 /**
- * Request body: the complete list of excluded parts (replaces the previous one).
+ * Request body: the complete list of the user's excluded parts (replaces the previous one).
  *
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "SegmentExclusions".
@@ -2029,4 +2122,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.7.0";
+export const SCHEMA_VERSION = "1.8.0";

@@ -11,7 +11,7 @@ from .broadcast import BoutConfig, BroadcastSummary, RoundNote, RoundSegment
 from .common import JOB_ID_PATTERN, Contract, VersionedContract
 from .fighters import Fighter
 from .judging import MatchSetup
-from .motion import EventsSummary, ExcludedSegment, ScoringSummary
+from .motion import AutoExclusion, EventsSummary, ExcludedSegment, ScoringSummary
 from .sharing import ExportSummary
 from .pose import PoseSummary
 from .tracking import FighterSelection, TrackingPrepSummary, TrackingSummary
@@ -50,6 +50,7 @@ class PipelineStage(StrEnum):
 
 class OutdatedReason(StrEnum):
     broadcast_missing = "broadcast_missing"  # analysed before rounds were read from the scorebug
+    broadcast_outdated = "broadcast_outdated"  # analysed before replays and non-fight parts were found
 
 
 class JobError(Contract):
@@ -104,6 +105,10 @@ class Job(VersionedContract):
     selection: FighterSelection | None = None
     exclusions: list[ExcludedSegment] = Field(
         default_factory=list, description="Parts excluded from the analysis by the user (e.g. replays).")
+    auto_exclusions: list[AutoExclusion] = Field(
+        default_factory=list, description=(
+            "Automatic excluded parts: time outside the rounds in effect, detected replays and stoppages. Those "
+            "not dismissed apply together with `exclusions`; the list in use is outputs.scoring.exclusions."))
     match: MatchSetup | None = Field(default=None, description="Rounds, ending and deductions entered by the user.")
     bout: BoutConfig = Field(default_factory=BoutConfig, description="Bout format and names (defaults until set).")
     rounds: list[RoundSegment] = Field(

@@ -1,9 +1,11 @@
 """Broadcast analysis (before the user's selection, so the selection screen can
 show the rounds found and the names read).
 
-Input: analysis video, poses and camera cuts, the user's clock rectangle (if
-any). Output: scorebug clock area, fight clock reads, automatic rounds (from
-the clock, or from round breaks without one) and name suggestions, cached.
+Input: analysis video, poses and the tracking preparation (camera cuts, frame
+changes, temporary tracks), the user's clock rectangle (if any). Output:
+scorebug clock area, fight clock reads, automatic rounds (from the clock, or
+from round breaks without one), name suggestions, and the parts that are not
+live fight time by the broadcast signals (replays, stoppages), cached.
 OCR runs offline with the pinned model; without it the clock is not read.
 """
 
@@ -22,7 +24,9 @@ from .base import RateMeter, overall
 STAGE = PipelineStage.broadcast
 METHOD = ("Scorebug: ekranda sabit duran metin kutuları arasından m:ss okunan ve videoyla geri sayan alan "
           "(PaddleOCR PP-OCRv5, yerel); raunt sınırları saatin sıfırlanmasından ve durmasından. Saat yoksa "
-          "pozlardan raunt arası tespiti (düşük güven).")
+          "pozlardan raunt arası tespiti (düşük güven). Tekrar: scorebug'ın kaybolması ya da tekrar yazısı, "
+          "saatin durması, logo geçişi ve ağır çekim sinyallerinden en az ikisi; saat raunt içinde durursa "
+          "duraklama.")
 
 
 def run(ctx: JobContext) -> None:
@@ -31,7 +35,9 @@ def run(ctx: JobContext) -> None:
     if av is None or pose is None:
         raise JobFailed("missing_poses", "Poses are not available for the broadcast analysis.", STAGE)
     cache_root = ctx.settings.cache_dir
-    prep_key, _ = ctx.state.get("tracking_prep") or prep_mod.prep_key(pose.cache_key, ctx.settings.tracking)
+    prep_key, prep = ctx.state.get("tracking_prep") or (None, None)
+    if prep_key is None:
+        prep_key, _ = prep_mod.prep_key(pose.cache_key, ctx.settings.tracking)
     raw_roi = ctx.params.get("scorebug_roi")
     manual = ScreenRect.model_validate(raw_roi) if raw_roi else None
     installed = ocr_model.installed(ctx.settings.models_dir)
@@ -59,14 +65,19 @@ def run(ctx: JobContext) -> None:
                        detail=meter.detail(done))
 
         recognizer = ocr.load(ctx.settings.models_dir) if installed else None
+        if prep is None:  # frame changes and temporary tracks: logo transitions and limb speeds
+            prep = prep_mod.read(cache_root, prep_key, check_hashes=False)
         data = analyze.analyze(video_path(cache_root, av.cache_key), av.video, load_poses,
                                recognizer.read if recognizer else None, ctx.settings.broadcast,
-                               ctx.settings.ruleset, manual, on_progress)
+                               ctx.settings.ruleset, manual, on_progress,
+                               cut_step=prep.cut_step if prep else None, cuts=prep.cuts if prep else (),
+                               track_id=prep.track_id if prep else None)
         bstore.write(cache_root, key, inputs, data)
     summary = BroadcastSummary(
-        cache_key=key, cache_hit=hit, method=METHOD, ocr_available=installed,
+        cache_key=key, cache_hit=hit, version=bstore.BROADCAST_VERSION, method=METHOD, ocr_available=installed,
         ocr_model=ocr_model.model_id() if installed else None, roi=data.roi, clock_share=data.clock_share,
-        rounds=data.rounds, names=data.names, notes=data.notes, processing_s=data.processing_s)
+        rounds=data.rounds, names=data.names, notes=data.notes, segments=data.segments,
+        scorebug_frame=data.scorebug_frame, processing_s=data.processing_s)
     ctx.store.merge_outputs(ctx.job.job_id, ctx.worker_id, broadcast=summary)
     ctx.report(overall(STAGE, 1), "Raunt bilgisi hazır",
                detail=meter.detail(total, note="Önbellekten alındı" if hit else None))

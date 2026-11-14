@@ -17,8 +17,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from fight_analyzer import nonfight
 from fight_analyzer import rounds as rounds_mod
-from fight_analyzer.config import RulesetSettings
+from fight_analyzer.config import BroadcastSettings, RulesetSettings
 from fight_analyzer.contracts import (
     Job,
     JobError,
@@ -28,6 +29,7 @@ from fight_analyzer.contracts import (
     MatchSetup,
     OutdatedReason,
     PipelineStage,
+    ScoringSummary,
     StageProgress,
     VideoInfo,
 )
@@ -271,6 +273,27 @@ class JobStore:
                 raise
         return self.get_job(job_id)
 
+    def replace_scoring(self, job_id: str, summary: ScoringSummary) -> Job | None:
+        """Store a momentum result computed outside the worker (the API, after an edit that
+        changed the excluded parts). Only for a completed job, which no worker is writing
+        to; None otherwise (a job being processed gets it from its scoring stage)."""
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute("SELECT status, outputs_json FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
+                if row is None or row["status"] != JobStatus.completed.value:
+                    conn.execute("ROLLBACK")
+                    return None
+                outputs = JobOutputs.model_validate_json(row["outputs_json"] or "{}")
+                conn.execute("UPDATE jobs SET outputs_json = ?, updated_at = ? WHERE job_id = ?",
+                             (outputs.model_copy(update={"scoring": summary}).model_dump_json(), _ts(utcnow()),
+                              job_id))
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return self.get_job(job_id)
+
     def resubmit(self, job_id: str, *, allowed: tuple[str, ...],
                  params_patch: dict[str, Any] | Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
                  clear_outputs: tuple[str, ...] = (), message: str | None = None) -> Job | None:
@@ -460,11 +483,15 @@ def _fighters(params: dict[str, Any]) -> list[dict[str, str]]:
 
 
 RULESET = RulesetSettings()
+BROADCAST = BroadcastSettings()
+# Broadcast analyses from this version on find replays, stoppages and non-fight parts.
+NONFIGHT_SINCE = 2
 
 
 def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | None,
              status: str) -> dict[str, Any]:
-    """Bout format, effective rounds and what an older analysis lacks (no disk reads)."""
+    """Bout format, effective rounds, automatic excluded parts and what an older analysis
+    lacks (no disk reads)."""
     names = {**DEFAULT_NAMES, **(params.get("names") or {})}
     bout = rounds_mod.bout_config(params, RULESET, names)
     match = MatchSetup.model_validate(params["match"]) if params.get("match") else None
@@ -472,10 +499,22 @@ def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | Non
     if video is not None:
         auto = outputs.broadcast.rounds if outputs.broadcast else []
         rounds, notes = rounds_mod.effective(auto, match, bout.scheduled_rounds, video.fps, bout.round_length_s)
+    current = outputs.broadcast is not None and outputs.broadcast.version >= NONFIGHT_SINCE
+    auto_exclusions = []
+    if video is not None and current:  # an older analysis gets them when it is processed again
+        claims = nonfight.from_rounds(rounds, bout.scheduled_rounds, match.ending if match else None,
+                                      video.frame_count)
+        found = nonfight.combine(claims, outputs.broadcast.segments, rounds, video.fps, video.frame_count,
+                                 BROADCAST.min_segment_s)
+        auto_exclusions = nonfight.with_dismissed(found, params.get("dismissed_auto") or [])
     outdated = []
-    if outputs.tracking_prep is not None and outputs.broadcast is None and status not in ("queued", "running"):
-        outdated.append(OutdatedReason.broadcast_missing)
-    return {"bout": bout, "rounds": rounds, "round_notes": notes, "outdated": outdated}
+    if outputs.tracking_prep is not None and status not in ("queued", "running"):
+        if outputs.broadcast is None:
+            outdated.append(OutdatedReason.broadcast_missing)
+        elif not current:
+            outdated.append(OutdatedReason.broadcast_outdated)
+    return {"bout": bout, "rounds": rounds, "round_notes": notes, "outdated": outdated,
+            "auto_exclusions": auto_exclusions}
 
 
 def _row_to_job(row: sqlite3.Row) -> Job:

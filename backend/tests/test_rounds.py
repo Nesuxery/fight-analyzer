@@ -48,8 +48,8 @@ def analysis(store: JobStore, *, broadcast: bool = True, params: dict | None = N
              "tracking_prep": TrackingPrepSummary(cache_key="p", cache_hit=False, shots=1, cuts=[], tracklets=2,
                                                   candidates=1, tracker="ocsort")}
     if broadcast:
-        parts["broadcast"] = BroadcastSummary(cache_key="b", cache_hit=False, method="test", ocr_available=True,
-                                              clock_share=0.9, rounds=AUTO, processing_s=1.0)
+        parts["broadcast"] = BroadcastSummary(cache_key="b", cache_hit=False, version=2, method="test",
+                                              ocr_available=True, clock_share=0.9, rounds=AUTO, processing_s=1.0)
     store.merge_outputs(job.job_id, "w", **parts)
     store.finish(job.job_id, "w", JobStatus.completed)
     return job.job_id

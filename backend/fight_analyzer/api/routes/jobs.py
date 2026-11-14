@@ -9,10 +9,12 @@ from fastapi.responses import FileResponse
 
 from fight_analyzer.contracts import (
     TERMINAL_STATUSES,
+    AutoExclusionEdits,
     BoutConfig,
     BroadcastTimeline,
     DataOrigin,
     EventTimeline,
+    ExclusionSource,
     ExportFileKind,
     ExportRequest,
     FighterNames,
@@ -37,13 +39,14 @@ from fight_analyzer.contracts import (
 from fight_analyzer.contracts.common import JOB_ID_PATTERN
 from fight_analyzer.media.analysis_video import video_path
 from fight_analyzer.media.thumbnail import ensure_thumbnail, thumbnail_frame
-from fight_analyzer import judging
+from fight_analyzer import judging, nonfight
 from fight_analyzer import rounds as rounds_mod
 from fight_analyzer.broadcast import clock as clock_mod
 from fight_analyzer.broadcast import store as broadcast_store
 from fight_analyzer.motion import exclusions as excl
 from fight_analyzer.motion import store as motion_store
 from fight_analyzer.pipeline import export as export_job
+from fight_analyzer.pipeline import scoring as scoring_stage
 from fight_analyzer.pose.cache import CacheCorrupt, PoseArrays, load_arrays, read_manifest
 from fight_analyzer.pose.preview import image_name, read_preview
 from fight_analyzer.tracking import prep as prep_mod
@@ -316,6 +319,28 @@ def momentum_timeline(store: StoreDep, settings: SettingsDep, job_id: JobId) -> 
     return motion_store.momentum_timeline(job_id, sc.parameters, m, settings.motion.sample_hz, sc.exclusions)
 
 
+def _refresh_momentum(store, settings, job_id: str) -> Job:
+    """After an edit that can change the excluded parts in effect (rounds, bout format, the
+    ending, automatic parts turned off or on): when the list changed, the momentum is
+    computed again right here, from the cached events and well under a second, so the
+    statistics, cards, momentum and exports keep using one list and the result screen
+    stays open. A job that is being processed gets the list from its scoring stage."""
+    job = store.get_job(job_id)
+    o = job.outputs
+    if job.status != JobStatus.completed or o.scoring is None or o.events is None or o.analysis_video is None:
+        return job
+    segments = scoring_stage.excluded_parts(job)
+    if segments == list(o.scoring.exclusions):
+        return job
+    data = _events(settings.cache_dir, o.events.cache_key)
+    if data is None:  # events left the cache: the worker makes them again, then the momentum
+        return store.resubmit(job_id, allowed=("completed",), clear_outputs=("scoring",),
+                              message="Dışlanan bölümler değişti; momentum yeniden hesaplanıyor.") or job
+    summary = scoring_stage.summarize(settings.cache_dir, o.events.cache_key, data, settings.momentum, segments,
+                                      o.analysis_video.video.fps)
+    return store.replace_scoring(job_id, summary) or store.get_job(job_id)
+
+
 def _with_bout(job: Job, setup: dict) -> MatchSetup:
     """The setup with round count and length from the bout format (their source since 1.7.0)."""
     try:
@@ -326,9 +351,10 @@ def _with_bout(job: Job, setup: dict) -> MatchSetup:
 
 
 @router.put("/{job_id}/match", response_model=Job)
-def set_match(store: StoreDep, job_id: JobId, body: MatchSetup) -> Job:
-    """Rounds, how the bout ended and point deductions (user input; nothing is recomputed).
-    Round count and length come from the bout format (PUT /bout)."""
+def set_match(store: StoreDep, settings: SettingsDep, job_id: JobId, body: MatchSetup) -> Job:
+    """Rounds, how the bout ended and point deductions (user input). Round count and length
+    come from the bout format (PUT /bout). Rounds and an early ending decide what lies
+    outside the fight: if the excluded parts change, the momentum is computed again."""
     job = _job(store, job_id)
     av = job.outputs.analysis_video
     if av is None:
@@ -336,13 +362,15 @@ def set_match(store: StoreDep, job_id: JobId, body: MatchSetup) -> Job:
     if any(r.start_frame >= av.video.frame_count for r in body.rounds):
         raise ApiProblem(422, "invalid_match", "Raunt başlangıcı videonun dışında.")
     setup = _with_bout(job, body.model_dump(mode="json"))
-    return store.update_params(job_id, {"match": setup.model_dump(mode="json")})
+    store.update_params(job_id, {"match": setup.model_dump(mode="json")})
+    return _refresh_momentum(store, settings, job_id)
 
 
 @router.put("/{job_id}/rounds", response_model=Job)
-def set_rounds(store: StoreDep, job_id: JobId, body: RoundEdits) -> Job:
+def set_rounds(store: StoreDep, settings: SettingsDep, job_id: JobId, body: RoundEdits) -> Job:
     """The user's round marks (each replaces the automatic round of its number) and the
-    automatic rounds they removed; the ending and deductions are kept."""
+    automatic rounds they removed; the ending and deductions are kept. Time outside the
+    rounds is excluded automatically, so the momentum is computed again when that changes."""
     job = _job(store, job_id)
     av = job.outputs.analysis_video
     if av is None:
@@ -352,12 +380,14 @@ def set_rounds(store: StoreDep, job_id: JobId, body: RoundEdits) -> Job:
     current = job.match.model_dump(mode="json") if job.match else {}
     setup = _with_bout(job, {**current, "rounds": [r.model_dump(mode="json") for r in body.rounds],
                              "cleared_rounds": sorted(set(body.cleared_rounds))})
-    return store.update_params(job_id, {"match": setup.model_dump(mode="json")})
+    store.update_params(job_id, {"match": setup.model_dump(mode="json")})
+    return _refresh_momentum(store, settings, job_id)
 
 
 @router.put("/{job_id}/bout", response_model=Job)
 def set_bout(store: StoreDep, settings: SettingsDep, job_id: JobId, body: BoutConfig) -> Job:
-    """Bout format ("Maç ayarları"), and the names when given. Nothing is recomputed."""
+    """Bout format ("Maç ayarları"), and the names when given. The round count decides which
+    automatic rounds are used: if the excluded parts change, the momentum is computed again."""
     job = _job(store, job_id)
     if body.scheduled_rounds not in settings.ruleset.round_options:
         options = " / ".join(str(n) for n in settings.ruleset.round_options)
@@ -375,7 +405,8 @@ def set_bout(store: StoreDep, settings: SettingsDep, job_id: JobId, body: BoutCo
     if job.match is not None:
         patch["match"] = {**job.match.model_dump(mode="json"), "scheduled_rounds": body.scheduled_rounds,
                           "round_length_s": body.round_length_s}
-    return store.update_params(job_id, patch)
+    store.update_params(job_id, patch)
+    return _refresh_momentum(store, settings, job_id)
 
 
 @router.put("/{job_id}/scorebug", response_model=Job, status_code=202)
@@ -445,13 +476,16 @@ def scorecards(store: StoreDep, settings: SettingsDep, job_id: JobId) -> Scoreca
 
 @router.put("/{job_id}/exclusions", response_model=Job, status_code=202)
 def set_exclusions(store: StoreDep, job_id: JobId, body: SegmentExclusions) -> Job:
-    """Replace the excluded parts (replays, slow motion, breaks). Events are kept but those
-    inside are not counted or scored; the momentum is computed again (fast, from cache)."""
+    """Replace the user's excluded parts (replays, slow motion, breaks). Events are kept but
+    those inside are not counted or scored; the momentum is computed again (fast, from cache).
+    The automatic parts are not touched (PUT /exclusions/auto turns them off and on)."""
     job = _job(store, job_id)
     av = job.outputs.analysis_video
     if job.selection is None or av is None:
         raise ApiProblem(409, "no_selection", "Önce dövüşçüleri seçin.")
-    segments = excl.normalize(body.segments, av.video.frame_count)
+    mine = [x.model_copy(update={"source": ExclusionSource.manual, "auto_id": None, "confidence": None,
+                                 "signals": []}) for x in body.segments]
+    segments = excl.normalize(mine, av.video.frame_count)
     updated = store.resubmit(job_id, allowed=("completed", "failed"),
                              params_patch={"exclusions": [x.model_dump(mode="json") for x in segments]},
                              clear_outputs=("scoring",),
@@ -459,6 +493,22 @@ def set_exclusions(store: StoreDep, job_id: JobId, body: SegmentExclusions) -> J
     if updated is None:
         raise ApiProblem(409, "job_busy", "Analiz şu anda işleniyor; bitince bölümleri değiştirebilirsiniz.")
     return updated
+
+
+@router.put("/{job_id}/exclusions/auto", response_model=Job)
+def set_auto_exclusions(store: StoreDep, settings: SettingsDep, job_id: JobId, body: AutoExclusionEdits) -> Job:
+    """The automatic excluded parts the user turned off ("Geri al"), by id: the complete
+    list, the others apply ("Yeniden dışla"). Stored as frame ranges, so a part stays off
+    when a round edit moves it a little. The momentum is computed again at once."""
+    job = _job(store, job_id)
+    known = {a.auto_id for a in job.auto_exclusions}
+    if any(i not in known for i in body.dismissed):
+        raise ApiProblem(409, "auto_exclusions_changed",
+                         "Otomatik bölümler bu arada değişti; listeyi yenileyip yeniden dene.")
+    stored = store.get_params(job_id).get("dismissed_auto") or []
+    store.update_params(job_id, {"dismissed_auto": nonfight.dismissed_ranges(job.auto_exclusions, body.dismissed,
+                                                                             stored)})
+    return _refresh_momentum(store, settings, job_id)
 
 
 @router.post("/{job_id}/swap", response_model=Job, status_code=202)

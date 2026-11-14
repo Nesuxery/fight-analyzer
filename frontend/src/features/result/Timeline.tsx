@@ -158,8 +158,8 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
   momentum: MomentumSeries | null;
   names?: Record<"red" | "blue", string> | null;
   disabled: boolean;
-  /** Parts excluded by the user, [start, end) in seconds. */
-  excluded?: [number, number][];
+  /** Excluded parts in effect: [start, end) in seconds and, if known, why. */
+  excluded?: [number, number, string?][];
   /** Effective rounds (automatic or marked by the user). */
   rounds?: TimelineRound[];
   /** Given: round edges can be dragged or moved with the keyboard. */
@@ -256,9 +256,9 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
             <span className="tl__round-label">R{r.index}</span>
           </span>
         ))}
-        {excluded.map(([a, b]) => (
+        {excluded.map(([a, b, reason]) => (
           <span key={a} className="tl__excluded" style={{ left: pct(a), width: pct(b - a) }}
-                title={T.excludedTitle(formatClock(a, true), formatClock(b, true))} />
+                title={T.excludedTitle(formatClock(a, true), formatClock(b, true), reason ?? null)} />
         ))}
         {!disabled && <span className="tl__head" style={{ left: pct(time) }} aria-hidden="true" />}
       </div>

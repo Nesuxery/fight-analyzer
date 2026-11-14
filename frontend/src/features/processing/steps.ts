@@ -127,7 +127,8 @@ function doneDetail(job: Job, id: StepId): string | null {
       (prep ? L.prepSummary(prep.cuts.length, prep.candidates) : "") +
       (job.outputs.broadcast
         ? L.roundsSummary(job.outputs.broadcast.rounds.length,
-                          job.outputs.broadcast.rounds.some((r) => r.source === "ocr"))
+                          job.outputs.broadcast.rounds.some((r) => r.source === "ocr")) +
+          L.autoPartsSummary(job.auto_exclusions.filter((x) => !x.dismissed).length)
         : "");
   }
   if (id === "select" && job.selection) {

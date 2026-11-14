@@ -10,6 +10,7 @@ not reliable, camera motion unknown) and is never filled with a guess.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Annotated
 
 from pydantic import Field, model_validator
 
@@ -54,12 +55,32 @@ class MotionTimeline(VersionedContract):
 class ExclusionReason(StrEnum):
     replay = "replay"  # broadcast replay
     slow_motion = "slow_motion"
-    break_ = "break"  # between rounds, stoppage, graphics
+    break_ = "break"  # between rounds, graphics
+    intro = "intro"  # before the first round (walkouts, introductions)
+    post_fight = "post_fight"  # after the bout ended
+    stoppage = "stoppage"  # the fight clock stood still inside a round
     other = "other"
 
 
+class ExclusionSource(StrEnum):
+    manual = "manual"  # marked by the user
+    auto = "auto"  # found by the analysis; the user can turn it off with one click
+
+
+class ExclusionSignal(StrEnum):
+    """What an automatic excluded part rests on."""
+
+    outside_rounds = "outside_rounds"  # lies outside the rounds in effect (Job.rounds)
+    scorebug_missing = "scorebug_missing"  # the scorebug is not on screen
+    replay_label = "replay_label"  # a replay label ("REPLAY"...) was read on screen
+    clock_stopped = "clock_stopped"  # the fight clock is known to stand still
+    wipe = "wipe"  # logo transition at its start or end
+    slow_motion = "slow_motion"  # joint speeds well below the live level
+
+
 class ExcludedSegment(Contract):
-    """Part of the video the user excluded (replays cannot be told apart automatically).
+    """Part of the video that is not live fight time: marked by the user, or found
+    automatically (replays, stoppages, everything outside the rounds).
 
     An excluded part is not fight time: events whose moment (peak frame, else start
     frame) lies in it are listed but neither counted nor scored, time-based points
@@ -70,6 +91,10 @@ class ExcludedSegment(Contract):
     end_frame: int = Field(ge=0, description="Last excluded frame (inclusive).")
     reason: ExclusionReason = ExclusionReason.replay
     note: str | None = Field(default=None, max_length=80)
+    source: ExclusionSource = ExclusionSource.manual
+    auto_id: str | None = Field(default=None, max_length=60, description="Automatic parts: id used to turn it off.")
+    confidence: float | None = Field(default=None, ge=0, le=1, description="Automatic parts only.")
+    signals: list[ExclusionSignal] = Field(default_factory=list, description="Automatic parts: the evidence.")
 
     @model_validator(mode="after")
     def _ordered(self) -> ExcludedSegment:
@@ -78,10 +103,23 @@ class ExcludedSegment(Contract):
         return self
 
 
+class AutoExclusion(ExcludedSegment):
+    """An automatic excluded part and whether the user turned it off ("Geri al")."""
+
+    dismissed: bool = Field(default=False, description="Turned off by the user: not applied.")
+
+
 class SegmentExclusions(Contract):
-    """Request body: the complete list of excluded parts (replaces the previous one)."""
+    """Request body: the complete list of the user's excluded parts (replaces the previous one)."""
 
     segments: list[ExcludedSegment] = Field(default_factory=list, max_length=100)
+
+
+class AutoExclusionEdits(Contract):
+    """Request body of PUT /jobs/{id}/exclusions/auto: the automatic parts the user turned
+    off, by auto_id (the complete list; the others apply)."""
+
+    dismissed: list[Annotated[str, Field(min_length=1, max_length=60)]] = Field(default_factory=list, max_length=200)
 
 
 class MomentumSource(StrEnum):
@@ -167,6 +205,7 @@ class ScoringSummary(Contract):
     cache_key: str
     cache_hit: bool
     parameters: MomentumParameters
-    exclusions: list[ExcludedSegment] = Field(default_factory=list)
+    exclusions: list[ExcludedSegment] = Field(
+        default_factory=list, description="Excluded parts applied: the user's and the automatic ones in effect, merged.")
     contributions: int = Field(ge=0)
     final_red_share: float = Field(ge=0, le=100)

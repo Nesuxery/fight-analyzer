@@ -191,6 +191,39 @@ class BroadcastSettings:
     break_min_s: float = 45.0
     break_quiet_share: float = 0.6
     break_max_confidence: float = 0.5
+    # ---- Replays, stoppages and non-fight parts (broadcast/replay.py) ----
+    # Signal 1a, scorebug on screen: the strip around the clock compared with its usual look.
+    bug_strip: float = 1.0  # strip = clock area widened by this many of its widths on each side
+    bug_present: float = 0.5  # template match (zero-mean correlation) from which the scorebug counts as shown
+    bug_min_frames: int = 3  # search frames with a readable clock needed to learn the strip
+    # Signal 1b, replay label: words read in the top / bottom band while the clock does not advance
+    # (compared in upper case without diacritics or punctuation).
+    replay_words: tuple[str, ...] = ("REPLAY", "TEKRAR", "SLOW MO", "SLO MO", "SLOW MOTION", "AGIR CEKIM")
+    label_max_boxes: int = 8  # text boxes read per frame, largest first
+    label_min_reads: int = 2  # reads of a label inside a part for the signal
+    # Signal 2, fight clock standing still: video time the clock lost between reads.
+    stall_min_s: float = 3.0
+    stall_share: float = 0.75  # share of the time between two reads that the clock must have lost
+    # Signal 3, logo transition (wipe): many frames in a row that change a lot, or a very short shot.
+    wipe_step: float = 0.03  # colour change to the previous frame (camera motion stays ~10x lower)
+    wipe_window_s: float = 1.0
+    wipe_min_s: float = 0.2  # of such frames inside the window
+    wipe_max_shot_s: float = 1.5  # two cuts closer than this: the logo between them
+    wipe_near_s: float = 1.5  # distance of a transition from the start / end of a part
+    # Signal 4, slow motion: limb speed of the people in view against the live median.
+    slow_ratio: float = 0.65  # half speed lands near 0.5; live stretches of 6 s and more rarely fall below this
+    slow_min_s: float = 3.0  # measured time needed inside the part
+    # Parts: at least two of the four signals make a replay.
+    replay_min_s: float = 2.0
+    replay_max_s: float = 90.0  # between two transitions (parts found without a scorebug)
+    signal_share: float = 0.6  # of a part's samples that must show a signal
+    close_gap_s: float = 1.5  # shorter holes in a signal are closed
+    edge_share: float = 0.9  # before the first / after the last round: share without scorebug or running clock
+    min_segment_s: float = 1.0
+    replay_confidence: tuple[float, ...] = (0.6, 0.8, 0.9)  # with 2, 3 and 4 signals
+    label_bonus: float = 0.05
+    stoppage_confidence: float = 0.7
+    edge_confidence: float = 0.6
 
 
 @dataclass(frozen=True)

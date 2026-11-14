@@ -11,7 +11,7 @@ import type {
   TrackingTimeline,
 } from "../../contracts/generated";
 import { usePoseFrames } from "../../hooks/usePoseFrames";
-import { OUTDATED_LABELS, RESULT_LABELS, ROUND_EDIT_LABELS, SELECTION_LABELS } from "../../labels";
+import { EXCLUSION_LABELS, OUTDATED_LABELS, RESULT_LABELS, ROUND_EDIT_LABELS, SELECTION_LABELS } from "../../labels";
 import { Button } from "../../ui";
 import { IconAlert } from "../../ui/icons";
 import { addRound, editsOf, moveEdge, removeRound } from "../match/roundEdit";
@@ -177,6 +177,7 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
   const iv = useMemo(() => exclusionIntervals(segments, video.fps), [segments, video.fps]);
   const excludedIds = useMemo(() => new Set((events?.events ?? [])
     .filter((e) => isFrameExcluded(eventFrame(e), segments)).map((e) => e.event_id)), [events, segments]);
+  const eventFrames = useMemo(() => (events?.events ?? []).map(eventFrame), [events]);
   const sums = useMemo(() => (motion ? motionSums(motion, iv) : null), [motion, iv]);
   const tEvents = useMemo(
     () => (events ? toTimelineEvents(events.events, momentum?.contributions ?? null, timeline, segments) : []),
@@ -373,7 +374,8 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
                        </>
                      } />
         <Timeline clock={clock} time={snap.time} events={tEvents} momentum={series} names={names} disabled={false}
-                  excluded={segments.map((x) => [x.start_frame / video.fps, (x.end_frame + 1) / video.fps])}
+                  excluded={segments.map((x) => [x.start_frame / video.fps, (x.end_frame + 1) / video.fps,
+                                                 EXCLUSION_LABELS.reasons[x.reason]])}
                   rounds={job.rounds.map((r) => ({ index: r.index, startS: r.video_start_s, endS: r.video_end_s,
                                                    source: r.source }))}
                   roundEditing={roundBusy ? undefined : roundEditing} />
@@ -386,7 +388,8 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
         </div>
         {eventsKey && (
           <ExclusionEditor jobId={job.job_id} frame={frame} fps={video.fps} frameCount={video.frame_count}
-                           saved={job.exclusions} clock={clock} onSaved={() => onRecalculate?.()} />
+                           saved={job.exclusions} auto={job.auto_exclusions} eventFrames={eventFrames} clock={clock}
+                           onSaved={() => onRecalculate?.()} onJob={setFresh} />
         )}
       </div>
       <div className="result__events">

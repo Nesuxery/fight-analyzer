@@ -74,7 +74,7 @@
           "$ref": "#/$defs/MomentumParameters"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -176,6 +176,121 @@
         "transcode"
       ],
       "title": "AnalysisVideo",
+      "type": "object"
+    },
+    "AutoExclusion": {
+      "additionalProperties": false,
+      "description": "An automatic excluded part and whether the user turned it off (\"Geri al\").",
+      "properties": {
+        "auto_id": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Automatic parts: id used to turn it off.",
+          "title": "Auto Id"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Automatic parts only.",
+          "title": "Confidence"
+        },
+        "dismissed": {
+          "default": false,
+          "description": "Turned off by the user: not applied.",
+          "title": "Dismissed",
+          "type": "boolean"
+        },
+        "end_frame": {
+          "description": "Last excluded frame (inclusive).",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "reason": {
+          "$ref": "#/$defs/ExclusionReason",
+          "default": "replay"
+        },
+        "signals": {
+          "description": "Automatic parts: the evidence.",
+          "items": {
+            "$ref": "#/$defs/ExclusionSignal"
+          },
+          "title": "Signals",
+          "type": "array"
+        },
+        "source": {
+          "$ref": "#/$defs/ExclusionSource",
+          "default": "manual"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_frame",
+        "end_frame",
+        "reason",
+        "note",
+        "source",
+        "auto_id",
+        "confidence",
+        "signals",
+        "dismissed"
+      ],
+      "title": "AutoExclusion",
+      "type": "object"
+    },
+    "AutoExclusionEdits": {
+      "additionalProperties": false,
+      "description": "Request body of PUT /jobs/{id}/exclusions/auto: the automatic parts the user turned\noff, by auto_id (the complete list; the others apply).",
+      "properties": {
+        "dismissed": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Dismissed",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dismissed"
+      ],
+      "title": "AutoExclusionEdits",
       "type": "object"
     },
     "BoundingBox": {
@@ -384,11 +499,41 @@
           },
           "title": "Rounds",
           "type": "array"
+        },
+        "scorebug_frame": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A frame that shows the scorebug (for drawing the clock rectangle).",
+          "title": "Scorebug Frame"
+        },
+        "segments": {
+          "description": "Parts found from the broadcast signals: replays, stoppages, and the stretches before the first / after the last clock round without a scorebug. Job.auto_exclusions combines them with the rounds in effect.",
+          "items": {
+            "$ref": "#/$defs/ExcludedSegment"
+          },
+          "title": "Segments",
+          "type": "array"
+        },
+        "version": {
+          "default": 1,
+          "description": "Version of the broadcast analysis that made this (1: rounds only; 2: replays, stoppages, non-fight parts).",
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
         }
       },
       "required": [
         "cache_key",
         "cache_hit",
+        "version",
         "method",
         "ocr_available",
         "ocr_model",
@@ -397,6 +542,8 @@
         "rounds",
         "names",
         "notes",
+        "segments",
+        "scorebug_frame",
         "processing_s"
       ],
       "title": "BroadcastSummary",
@@ -476,7 +623,7 @@
           "type": "number"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -724,7 +871,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -766,7 +913,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -852,8 +999,37 @@
     },
     "ExcludedSegment": {
       "additionalProperties": false,
-      "description": "Part of the video the user excluded (replays cannot be told apart automatically).\n\nAn excluded part is not fight time: events whose moment (peak frame, else start\nframe) lies in it are listed but neither counted nor scored, time-based points\n(advancing, control) and measured time do not accrue in it, and the momentum\nholds its value through it (decay runs on fight time).",
+      "description": "Part of the video that is not live fight time: marked by the user, or found\nautomatically (replays, stoppages, everything outside the rounds).\n\nAn excluded part is not fight time: events whose moment (peak frame, else start\nframe) lies in it are listed but neither counted nor scored, time-based points\n(advancing, control) and measured time do not accrue in it, and the momentum\nholds its value through it (decay runs on fight time).",
       "properties": {
+        "auto_id": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Automatic parts: id used to turn it off.",
+          "title": "Auto Id"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Automatic parts only.",
+          "title": "Confidence"
+        },
         "end_frame": {
           "description": "Last excluded frame (inclusive).",
           "minimum": 0,
@@ -877,6 +1053,18 @@
           "$ref": "#/$defs/ExclusionReason",
           "default": "replay"
         },
+        "signals": {
+          "description": "Automatic parts: the evidence.",
+          "items": {
+            "$ref": "#/$defs/ExclusionSignal"
+          },
+          "title": "Signals",
+          "type": "array"
+        },
+        "source": {
+          "$ref": "#/$defs/ExclusionSource",
+          "default": "manual"
+        },
         "start_frame": {
           "minimum": 0,
           "title": "Start Frame",
@@ -887,7 +1075,11 @@
         "start_frame",
         "end_frame",
         "reason",
-        "note"
+        "note",
+        "source",
+        "auto_id",
+        "confidence",
+        "signals"
       ],
       "title": "ExcludedSegment",
       "type": "object"
@@ -897,9 +1089,33 @@
         "replay",
         "slow_motion",
         "break",
+        "intro",
+        "post_fight",
+        "stoppage",
         "other"
       ],
       "title": "ExclusionReason",
+      "type": "string"
+    },
+    "ExclusionSignal": {
+      "description": "What an automatic excluded part rests on.",
+      "enum": [
+        "outside_rounds",
+        "scorebug_missing",
+        "replay_label",
+        "clock_stopped",
+        "wipe",
+        "slow_motion"
+      ],
+      "title": "ExclusionSignal",
+      "type": "string"
+    },
+    "ExclusionSource": {
+      "enum": [
+        "manual",
+        "auto"
+      ],
+      "title": "ExclusionSource",
       "type": "string"
     },
     "ExportFile": {
@@ -1892,7 +2108,7 @@
           "$ref": "#/$defs/PoseModelInfo"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1954,6 +2170,14 @@
           "minimum": 0,
           "title": "Attempts",
           "type": "integer"
+        },
+        "auto_exclusions": {
+          "description": "Automatic excluded parts: time outside the rounds in effect, detected replays and stoppages. Those not dismissed apply together with `exclusions`; the list in use is outputs.scoring.exclusions.",
+          "items": {
+            "$ref": "#/$defs/AutoExclusion"
+          },
+          "title": "Auto Exclusions",
+          "type": "array"
         },
         "bout": {
           "$ref": "#/$defs/BoutConfig",
@@ -2087,7 +2311,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2175,6 +2399,7 @@
         "fighters",
         "selection",
         "exclusions",
+        "auto_exclusions",
         "match",
         "bout",
         "rounds",
@@ -2286,7 +2511,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3222,7 +3447,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3302,7 +3527,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3400,7 +3625,8 @@
     },
     "OutdatedReason": {
       "enum": [
-        "broadcast_missing"
+        "broadcast_missing",
+        "broadcast_outdated"
       ],
       "title": "OutdatedReason",
       "type": "string"
@@ -3672,7 +3898,7 @@
           "title": "Processing S"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3736,7 +3962,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3801,7 +4027,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3861,7 +4087,7 @@
           "$ref": "#/$defs/ModelInfo"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4519,7 +4745,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4574,6 +4800,7 @@
           "type": "integer"
         },
         "exclusions": {
+          "description": "Excluded parts applied: the user's and the automatic ones in effect, merged.",
           "items": {
             "$ref": "#/$defs/ExcludedSegment"
           },
@@ -4641,7 +4868,7 @@
     },
     "SegmentExclusions": {
       "additionalProperties": false,
-      "description": "Request body: the complete list of excluded parts (replaces the previous one).",
+      "description": "Request body: the complete list of the user's excluded parts (replaces the previous one).",
       "properties": {
         "segments": {
           "items": {
@@ -4717,7 +4944,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5208,7 +5435,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5363,7 +5590,7 @@
           "type": "integer"
         },
         "schema_version": {
-          "default": "1.7.0",
+          "default": "1.8.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5569,10 +5796,13 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "MMA Fight Analyzer data contracts, schema version 1.7.0.",
+  "description": "MMA Fight Analyzer data contracts, schema version 1.8.0.",
   "properties": {
     "AnalysisExport": {
       "$ref": "#/$defs/AnalysisExport"
+    },
+    "AutoExclusionEdits": {
+      "$ref": "#/$defs/AutoExclusionEdits"
     },
     "BoutConfig": {
       "$ref": "#/$defs/BoutConfig"
@@ -5668,5 +5898,5 @@
     "left_ankle",
     "right_ankle"
   ],
-  "x-schema-version": "1.7.0"
+  "x-schema-version": "1.8.0"
 }

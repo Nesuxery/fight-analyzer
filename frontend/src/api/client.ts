@@ -1,4 +1,5 @@
 import type {
+  AutoExclusionEdits,
   BoutConfig,
   BroadcastTimeline,
   ErrorResponse,
@@ -102,13 +103,13 @@ export const api = {
   /** Exchange red and blue (selection and names together); results are derived again. */
   swapCorners: (jobId: string) =>
     request<Job>(`/jobs/${encodeURIComponent(jobId)}/swap`, { method: "POST", headers: CLIENT_HEADER }),
-  /** Rounds, ending and point deductions entered by the user (nothing is recomputed). */
+  /** Rounds, ending and point deductions entered by the user (the momentum follows if the excluded parts change). */
   setMatch: (jobId: string, body: MatchSetup) =>
     request<Job>(`/jobs/${encodeURIComponent(jobId)}/match`, {
       method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
-  /** Bout format ("Maç ayarları"); names too when given (nothing is recomputed). */
+  /** Bout format ("Maç ayarları"); names too when given. */
   setBout: (jobId: string, body: BoutConfig) =>
     request<Job>(`/jobs/${encodeURIComponent(jobId)}/bout`, {
       method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
@@ -138,6 +139,12 @@ export const api = {
   /** Replace the excluded parts (replays etc.); the momentum is computed again. */
   setExclusions: (jobId: string, body: SegmentExclusions) =>
     request<Job>(`/jobs/${encodeURIComponent(jobId)}/exclusions`, {
+      method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  /** Automatic excluded parts the user turned off (by id; the others apply). The momentum follows at once. */
+  setAutoExclusions: (jobId: string, body: AutoExclusionEdits) =>
+    request<Job>(`/jobs/${encodeURIComponent(jobId)}/exclusions/auto`, {
       method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),

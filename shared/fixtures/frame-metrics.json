@@ -765,7 +765,7 @@
   }
  ],
  "motion": {
-  "schema_version": "1.7.0",
+  "schema_version": "1.8.0",
   "job_id": "ffffffffffffffffffffffffffffffff",
   "data_origin": "measured",
   "sample_hz": 10.0,
@@ -5930,7 +5930,7 @@
   ]
  },
  "momentum": {
-  "schema_version": "1.7.0",
+  "schema_version": "1.8.0",
   "job_id": "ffffffffffffffffffffffffffffffff",
   "data_origin": "measured",
   "experimental": true,
@@ -8049,13 +8049,21 @@
     "start_frame": 300,
     "end_frame": 389,
     "reason": "replay",
-    "note": null
+    "note": null,
+    "source": "manual",
+    "auto_id": null,
+    "confidence": null,
+    "signals": []
    },
    {
     "start_frame": 700,
     "end_frame": 730,
     "reason": "slow_motion",
-    "note": null
+    "note": null,
+    "source": "manual",
+    "auto_id": null,
+    "confidence": null,
+    "signals": []
    }
   ]
  },

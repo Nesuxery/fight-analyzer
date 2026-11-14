@@ -1418,6 +1418,37 @@
 .excl__none { color: var(--text-3); font-size: var(--fs-12); }
 .excl__toggle { margin-left: auto; }
 
+/* one line per part: kind, span, reason, evidence, action */
+.excl__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.excl__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-13);
+}
+
+.excl__reason-text { color: var(--text-1); font-weight: var(--fw-medium); }
+.excl__meta { flex: 1 1 160px; min-width: 0; color: var(--text-2); }
+.excl__low { color: var(--warning); }
+.excl__actions { display: inline-flex; align-items: center; margin-left: auto; }
+.excl__summary { margin: 0; color: var(--text-2); font-size: var(--fs-13); }
+
+/* turned off by the user: still listed, clearly not in effect */
+.excl__item.is-dismissed .linkbtn,
+.excl__item.is-dismissed .excl__reason-text { text-decoration: line-through; text-decoration-color: var(--text-3); }
+.excl__item.is-dismissed .excl__reason-text,
+.excl__item.is-dismissed .excl__meta,
+.excl__item.is-dismissed .excl__low { color: var(--text-3); }
+
 .excl__chip {
   display: inline-flex;
   align-items: center;

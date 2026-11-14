@@ -15,6 +15,7 @@ from pydantic import Field, model_validator
 
 from .common import JOB_ID_PATTERN, Contract, VersionedContract
 from .judging import RoundMark
+from .motion import ExcludedSegment
 from .tracking import FighterNames
 
 RoundNumber = Annotated[int, Field(ge=1, le=5)]
@@ -144,6 +145,8 @@ class BroadcastNote(Contract):
 class BroadcastSummary(Contract):
     cache_key: str
     cache_hit: bool
+    version: int = Field(default=1, ge=1, description=(
+        "Version of the broadcast analysis that made this (1: rounds only; 2: replays, stoppages, non-fight parts)."))
     method: str
     ocr_available: bool
     ocr_model: str | None = None
@@ -152,6 +155,11 @@ class BroadcastSummary(Contract):
     rounds: list[RoundSegment] = Field(description="Automatic rounds; Job.rounds applies the user's edits.")
     names: NameSuggestion | None = None
     notes: list[BroadcastNote] = Field(default_factory=list)
+    segments: list[ExcludedSegment] = Field(default_factory=list, description=(
+        "Parts found from the broadcast signals: replays, stoppages, and the stretches before the first / after "
+        "the last clock round without a scorebug. Job.auto_exclusions combines them with the rounds in effect."))
+    scorebug_frame: int | None = Field(
+        default=None, ge=0, description="A frame that shows the scorebug (for drawing the clock rectangle).")
     processing_s: float = Field(ge=0)
 
 

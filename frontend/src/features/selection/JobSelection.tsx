@@ -55,6 +55,8 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   /** Frame the <video> is showing (after the seek finished): the tiles are cut from it. */
   const [shown, setShown] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  /** Frame and picks to come back to after the clock rectangle was drawn on another frame. */
+  const roiReturn = useRef<{ frame: number; picks: Assignment } | null>(null);
   const polled = job.data;
   const data = polled && fresh && fresh.job_id === polled.job_id &&
     Date.parse(fresh.updated_at) >= Date.parse(polled.updated_at) ? fresh : polled;
@@ -199,6 +201,14 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
   };
   const broadcast = data.outputs.broadcast ?? null;
   const suggestion = broadcast?.names ?? null;
+  const leaveRoi = () => {
+    setRoiEditing(false);
+    const back = roiReturn.current;
+    roiReturn.current = null;
+    if (!back) return;
+    setFrame(back.frame);
+    setPicks(back.picks);
+  };
   const settings = (
     <MatchSettings
       bout={data.bout} rounds={data.rounds} broadcast={broadcast} roundNotes={data.round_notes}
@@ -212,12 +222,20 @@ export function JobSelection({ jobId, params }: { jobId: string; params?: Select
         onStart: () => {
           setRoiDraft(broadcast.roi?.clock ?? null);
           setRoiEditing(true);
+          // Draw on a frame that shows the scorebug: a candidate frame can fall into an
+          // intro or a logo transition. The selection frame and picks come back afterwards.
+          const shows = broadcast.scorebug_frame;
+          if (shows != null && shows !== current) {
+            roiReturn.current = { frame: current, picks };
+            setFrame(Math.min(lastFrame, shows));
+            setPicks({ red: null, blue: null });
+          }
         },
         onSave: () => saveSettings(api.setScorebug(jobId, { clock: roiDraft }), () => {
-          setRoiEditing(false);
+          leaveRoi();
           setRereading(true);
         }),
-        onCancel: () => setRoiEditing(false),
+        onCancel: leaveRoi,
         onReset: () => saveSettings(api.setScorebug(jobId, { clock: null }), () => setRereading(true)),
       } : undefined}
       names={suggestion ? {

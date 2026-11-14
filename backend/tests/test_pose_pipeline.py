@@ -377,3 +377,38 @@ def test_match_setup_and_ai_scorecards(env: Env, first: dict):
     env.client.put(f"/api/v1/jobs/{job_id}/match", json=ko, headers=JSON)
     v = env.client.get(f"/api/v1/jobs/{job_id}/scorecards").json()["verdict"]
     assert v["status"] == "finish" and v["winner"] == "fighter_b" and v["source"] == "user_input"
+
+
+def test_time_outside_the_rounds_is_excluded_at_once_and_can_be_turned_off(env: Env, first: dict):
+    """Rounds and an early ending decide what is not fight time: the momentum follows in the
+    same request (no trip through the worker), and one request turns an automatic part off."""
+    job_id = first["job_id"]
+    url = f"/api/v1/jobs/{job_id}"
+    setup = {"rounds": [{"number": 1, "start_frame": 0, "end_frame": 2}],
+             "ending": {"method": "ko", "winner": "fighter_a", "round": 1, "time_s": 1}}
+    job = env.client.put(f"{url}/match", json=setup, headers=JSON).json()
+    frames = job["outputs"]["analysis_video"]["video"]["frame_count"]
+    assert job["status"] == "completed"  # computed in the request
+    (auto,) = job["auto_exclusions"]
+    assert (auto["reason"], auto["source"], auto["start_frame"], auto["end_frame"], auto["dismissed"]) ==         ("post_fight", "auto", 3, frames - 1, False)
+    assert auto["signals"] == ["outside_rounds"] and auto["confidence"] == 1
+    applied = job["outputs"]["scoring"]["exclusions"]
+    assert [(x["start_frame"], x["end_frame"], x["source"]) for x in applied] == [(3, frames - 1, "auto")]
+    momentum = env.client.get(f"{url}/momentum").json()
+    assert [(x["start_frame"], x["reason"]) for x in momentum["exclusions"]] == [(3, "post_fight")]
+    assert job["exclusions"] == []  # the user's own list is untouched
+
+    off = env.client.put(f"{url}/exclusions/auto", json={"dismissed": [auto["auto_id"]]}, headers=JSON)
+    assert off.status_code == 200 and off.json()["status"] == "completed"
+    assert off.json()["auto_exclusions"][0]["dismissed"] is True and off.json()["outputs"]["scoring"]["exclusions"] == []
+    assert env.client.put(f"{url}/exclusions/auto", json={"dismissed": ["replay-1-2"]}, headers=JSON).status_code == 409
+    # a small round edit moves the part: it stays off; a large one makes it a new part
+    moved = env.client.put(f"{url}/rounds", json={"rounds": [{"number": 1, "start_frame": 0, "end_frame": 1}]},
+                           headers=JSON).json()
+    assert [(a["start_frame"], a["dismissed"]) for a in moved["auto_exclusions"]] == [(2, True)]
+    back = env.client.put(f"{url}/exclusions/auto", json={"dismissed": []}, headers=JSON).json()
+    assert [(x["start_frame"], x["end_frame"]) for x in back["outputs"]["scoring"]["exclusions"]] == [(2, frames - 1)]
+    # without the early ending nothing says the bout is over after round 1 of 3
+    plain = env.client.put(f"{url}/match", json={"rounds": setup["rounds"]}, headers=JSON).json()
+    assert plain["auto_exclusions"] == [] and plain["outputs"]["scoring"]["exclusions"] == []
+    assert plain["outputs"]["scoring"]["cache_hit"] is True and env.worker.run_once() is False  # nothing was queued

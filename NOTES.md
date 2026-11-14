@@ -31,7 +31,7 @@ CLAUDE.md geçerlidir.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
   (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 5`, `CAMERA_VERSION 2`,
-  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`, `BROADCAST_VERSION 2`); mantık değişince
+  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`, `BROADCAST_VERSION 3`); mantık değişince
   ilgili sürüm artırılır, şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
 
 ### Video ve poz
@@ -133,11 +133,14 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
   sözüyle.
 
 ### Yayın kesmeleri ve tekrar ayıklama (v2 Bölüm 2b, 14 Kasım 2026)
-- **Dört sinyal, en az ikisi tekrar:** scorebug'ın kaybolması ya da tekrar yazısı;
-  dövüş saatinin durması; logo geçişi; ağır çekim. Sinyaller yayın aşamasının
+- **Dört sinyal, en az ikisi dövüş dışı:** scorebug'ın kaybolması ya da tekrar yazısı;
+  dövüş saatinin durması; logo geçişi; ağır çekim. "Tekrar" etiketi için tekrar
+  yazısı, logo geçişi ya da ağır çekimden en az biri gerekir; yalnızca "scorebug
+  yok + saat durdu" varsa bölüm "ara" olur (kullanıcı kararı, 14 Kasım 2026).
+  Böyle bir ara tek bir rauntun içindeyse yerinde kalır (`BROADCAST_VERSION` 3). Sinyaller yayın aşamasının
   aynı geçişinde (2 Hz) toplanır; logo geçişi takip hazırlığının kare değişim
   dizisinden, ağır çekim pozlardan gelir (yeni video okuması, yeni bağımlılık yok;
-  hazırlık anahtarı değişmedi). `BROADCAST_VERSION` 2.
+  hazırlık anahtarı değişmedi).
 - **Saat çalışıyorsa görüntü canlıdır:** dövüş saatinin işlediği bilinen süre her
   adaydan çıkarılır. Raunt başında scorebug birkaç saniye geç geldiği (örnek
   yayında 3 sn) ve sponsor grafiği saati kapatabildiği için bu kural olmadan
@@ -150,6 +153,9 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
   ölçülür (kare tekrarıyla yapılan ağır çekim tek kare farkında tam hızlı
   görünüyordu). Eşik 0,65: yarı hızdaki sentetik kopya 0,60 verdi, aynı görüntü
   canlıyken 0,99; canlı 6 sn'lik pencerelerin ≈ %1–3'ü bu eşiğin altında.
+  **Sentetik veriyle ayarlandı, geçici:** bu eşik ve diğer tekrar eşikleri
+  (`BroadcastSettings`) gerçek tekrar içeren bir kayıt gelene kadar geçicidir
+  (kullanıcı kararı; kayıt bulursa verecek).
 - **Dövüş dışı bölümler rauntlardan, yalnızca kesin olduğunda:** R1'den önce
   giriş, art arda numaralı rauntlar arası ara. Son raunttan sonrası yalnızca
   planlanan son rauntsa ya da kullanıcı o raunt için erken bitiş girdiyse "maç
@@ -170,8 +176,9 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
   analizinde olayları okuma 0,06 sn + hesap 0,04 sn). İşçi üzerinden gitmek
   sonuç ekranını her raunt kenarı sürüklemesinde kapatıp açıyordu. İşçide olan
   ağır işler değişmedi; iş "tamamlandı" değilse liste işçinin momentum aşamasında
-  uygulanır. Kullanıcının kendi bölümleri (`PUT /exclusions`) eskisi gibi işçide
-  hesaplanır (mevcut davranış ve testi korundu).
+  uygulanır. Kullanıcının kendi bölümleri (`PUT /exclusions`) de aynı yoldan
+  anında uygulanır (kullanıcı kararı): uç artık 202 yerine 200 döner, iş kuyruğa
+  girmez; analiz işlenirken 409 `job_busy` verir.
 - **Eski analizler:** yayın sürümü 2'den küçükse otomatik bölüm üretilmez (sonuç
   arkadan değişmesin) ve yeniden işleme bandı çıkar.
 - **Saat alanı çizimi:** "Saat alanını düzelt" scorebug'ın göründüğü kareye geçer
@@ -196,8 +203,9 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
   (kullanıcı bulursa verecek). Scorebug'sız ve saatsiz yayında yalnızca logo
   geçişi + ağır çekim birlikte tekrar sayılır. Raunt içinde scorebug kaybolur ve
   saat sonradan da okunamazsa tek sinyal kalır, bölüm dışlanmaz. Rauntlar yoksa
-  köşe görüntüsü "tekrar" etiketi alabilir (scorebug yok + saat durdu).
-- (b) `v2/bolum-2` dalında; onay ve merge/push kullanıcının sözüyle.
+  köşe görüntüsü "ara" olarak dışlanır (scorebug yok + saat durdu).
+- (b) onaylandı (14 Kasım 2026); `v2/bolum-2` dalında, merge/push kullanıcının
+  sözüyle.
 
 ### Bölüm 2c için devam notları (14 Kasım 2026)
 Sonraki oturum buradan başlar. Kurallar CLAUDE.md'de, plan docs/v2-plan.md
@@ -214,6 +222,14 @@ Bölüm 2.4–2.5'te; aşamadan sonra commit, notlar, kısa rapor, onay beklenir
   değişimi / %23,4 örtüşme / 59,1 sn belirsiz / en uzun 22,1 sn; Topuria 87 /
   %24,9 / 21,3 sn / 4,3 sn. ~108 kare etiketleme tek tek değil, birkaç ızgara
   görselle yapılır. Sonuçlar "ayar seti" olarak etiketlenir.
+- (b)'den kalan gözlem: sentetik tekrar klibinde (tek seçim noktası, kare 57)
+  kırmızı köşe 83 saniyenin yalnızca 9,2'sinde ölçülebildi, mavi 79,5'inde; klipte
+  2 olay çıktı. Kimlik iyileşmesini denemek için ikinci bir malzeme olarak
+  kullanılabilir (karalama işi 45531e64).
+- (b)'den kalan teknik not: dışlanan bölüm listesini değiştiren her uç
+  `_refresh_momentum` çağırır; (c)'de "Kime ait belirsiz" olaylar momentumdan
+  çıkınca `MOMENTUM_VERSION` 3 olur ve bu yol aynı kalır. Karalama kopyasındaki
+  yayın önbelleği sürüm 3 anahtarıyla yeniden hesaplanır (≈ 60–70 sn).
 - (c) sonunda yalnızca o aşamanın diff'ine tek, küçük bir inceleme ajanı açılabilir;
   kod okumak için ajan açılmaz (kullanım limiti dar).
 

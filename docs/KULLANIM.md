@@ -236,8 +236,8 @@ model girişi 640 px. GPU bu bilgisayarda olmadığı için GPU süresi ölçül
 | 5 dk 28 sn video (9842 kare), varsayılan model | poz ≈ 30 dk (başka işlerle aynı anda), kimlik + olaylar + momentum 2,3–2,7 dk, MP4 dışa aktarma 4–4,5 dk |
 | Raunt tespiti ve tekrar ayıklama (scorebug, 9 dk 1080p yayın, 14 Kasım 2026) | ≈ 60–65 sn (poz süresinin ≈ %2'si; tekrar ayıklama eklenince artmadı); eski analizi yeniden işleme toplam ≈ 75 sn |
 | Aynı videoyu yeniden yükleme | 0,1 sn (video kopyası ve pozlar önbellekten) |
-| Dövüşçüleri yeniden seçme / taraf değiştirme / bölüm dışlama | saniyeler (pozlar yeniden çıkarılmaz) |
-| Otomatik bölümü geri alma, raunt sınırı düzenleme (14 Kasım 2026) | anında (momentum ≈ 0,1 sn, sonuç ekranı açık kalır) |
+| Dövüşçüleri yeniden seçme / taraf değiştirme | saniyeler (pozlar yeniden çıkarılmaz) |
+| Bölüm dışlama, otomatik bölümü geri alma, raunt sınırı düzenleme (14 Kasım 2026) | anında (momentum ≈ 0,1 sn, sonuç ekranı açık kalır) |
 | Bellek (5,5 dk video) | en yüksek ≈ 780 MB (poz aşaması, model yüklü) |
 
 Süre video uzunluğuyla doğru orantılıdır; sayfadaki ilerleme çubuğu ölçülen

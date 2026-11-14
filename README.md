@@ -244,7 +244,7 @@ kare: seçim yapılan kare, yoksa videonun %10'u; iş klasöründe önbelleğe a
 `GET /jobs/{id}/events` (olaylar) · `GET /jobs/{id}/motion` (10 Hz sinyaller, `null` = ölçüm
 yok) · `GET /jobs/{id}/momentum` (puan defteri, parametreler, paylar) ·
 `POST /jobs/{id}/swap` (kırmızı/mavi tarafları tek işlemde değiştirir) ·
-`PUT /jobs/{id}/exclusions` (kullanıcının dışladığı bölümler; momentum yeniden hesaplanır) ·
+`PUT /jobs/{id}/exclusions` (kullanıcının dışladığı bölümler; momentum istek içinde yenilenir) ·
 `PUT /jobs/{id}/exclusions/auto` (geri alınan otomatik bölümler; momentum istek içinde yenilenir) ·
 `PUT /jobs/{id}/match` (raundlar, bitiş, kesintiler) · `GET /jobs/{id}/scorecards`
 (AI hakem kartları) ·
@@ -711,8 +711,10 @@ geri alınır.
 - **Kurallar:** aday bölümler scorebug'ın olmadığı ya da tekrar yazısının
   okunduğu aralıklar ile iki logo geçişi arasıdır. Dövüş saatinin **çalıştığı
   bilinen** süre her adaydan çıkarılır (saat işliyorsa görüntü canlıdır). Kalan
-  bölümde dört sinyalden **en az ikisi** varsa `replay` (güven 2/3/4 sinyalle
-  0,6 / 0,8 / 0,9; tekrar yazısı +0,05). Raunt içinde saat ≥ 3 sn durur ve bölüm
+  bölümde dört sinyalden **en az ikisi** varsa bölüm dövüş dışıdır (güven 2/3/4
+  sinyalle 0,6 / 0,8 / 0,9; tekrar yazısı +0,05). Etiketi `replay` olması için
+  tekrar yazısı, logo geçişi ya da ağır çekimden en az biri gerekir; yalnızca
+  "scorebug yok + saat durdu" varsa `break` (ara) olur. Raunt içinde saat ≥ 3 sn durur ve bölüm
   tekrar değilse `stoppage`. İlk saat rauntundan önce ve sonuncusundan sonra
   görüntünün ≥ %90'ında scorebug yoksa `intro` ve `post_fight` (son raunt süresini
   doldurduysa `break`). Bilinmeyen sinyal kanıt sayılmaz: şablon yoksa "scorebug
@@ -734,7 +736,8 @@ geri alınır.
   ve dışa aktarma aynı listeyi (`ScoringSummary.exclusions`) kullanır. Raunt,
   maç ayarı ya da bitiş değişince liste değişiyorsa momentum **istek içinde**
   yeniden hesaplanır (önbellekteki olaylardan ≈ 0,1 sn; sonuç ekranı kapanmaz).
-  Kullanıcının kendi bölümleri eskisi gibi işçide yeniden hesaplanır.
+  Kullanıcının kendi bölümleri (`PUT /jobs/{id}/exclusions`) de aynı yoldan
+  anında uygulanır; analiz işlenirken uç 409 döner.
 - **Rapor:** Dışlanan bölümler listesinde her satırda bölümdeki olay sayısı ve
   altında toplam ("… olay sayılmadı: otomatik / elle"); dışa aktarılan JSON'da
   `exclusions` (kaynak, neden, güven, sinyaller) ve `excluded_event_ids`.
@@ -758,11 +761,12 @@ geri alınır.
   klipte 16,9 sn (poz 443,9 sn); analiz süresindeki artış ölçüm gürültüsünün
   içinde, ≈ %0 (örnek yayında poz 3091 sn).
 - **Sınırlar:** tek bir örnek yayına ve sentetik malzemeye göre ayarlandı; gerçek
-  tekrar içeren bağımsız bir kayıtla doğrulanmadı. Scorebug'sız ve saatsiz
+  tekrar içeren bağımsız bir kayıtla doğrulanmadı. Eşikler (ağır çekim oranı 0,65
+  dahil) bu yüzden **geçicidir**. Scorebug'sız ve saatsiz
   yayında yalnızca logo geçişi + ağır çekim birlikte tekrar sayılır. Raunt
   içinde scorebug kaybolup saat de okunamazsa (tek sinyal) bölüm dışlanmaz.
-  Raunt araları kısaltılmamış yayında köşe görüntüsü "raunt arası" olarak,
-  rauntlar bulunamazsa "tekrar" etiketiyle dışlanabilir.
+  Köşe görüntüsü rauntlar bulunmuşsa "raunt arası", bulunamamışsa yine "ara"
+  olarak dışlanır.
 
 ## AI hakemlik (Aşama 9)
 

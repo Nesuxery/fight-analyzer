@@ -15,7 +15,7 @@ const LOW_CONFIDENCE = 0.7;
  * detected replays and stoppages) are listed with why and how sure; one click
  * turns one off or on again. The user can also mark parts by hand.
  */
-export function ExclusionEditor({ jobId, frame, fps, frameCount, saved, auto, eventFrames, clock, onSaved, onJob }: {
+export function ExclusionEditor({ jobId, frame, fps, frameCount, saved, auto, eventFrames, clock, onJob }: {
   jobId: string;
   /** Presented frame. */
   frame: number;
@@ -28,9 +28,7 @@ export function ExclusionEditor({ jobId, frame, fps, frameCount, saved, auto, ev
   /** Frames the events count from (their peak, else their start). */
   eventFrames: number[];
   clock: Clock;
-  /** The user's parts changed: the analysis is computed again by the worker. */
-  onSaved: () => void;
-  /** An automatic part was switched: the updated job (already recomputed). */
+  /** A part was added, removed or switched: the updated job (momentum already recomputed). */
   onJob: (job: Job) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,11 +46,11 @@ export function ExclusionEditor({ jobId, frame, fps, frameCount, saved, auto, ev
     setBusy(true);
     setProblem(null);
     api.setExclusions(jobId, { segments })
-      .then(() => {
+      .then((job) => {
         setStart(null);
         setEnd(null);
         setOpen(false);
-        onSaved();
+        onJob(job);
       }, fail)
       .finally(() => setBusy(false));
   };

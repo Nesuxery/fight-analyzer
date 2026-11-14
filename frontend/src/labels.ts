@@ -841,13 +841,13 @@ export const EXCLUSION_LABELS = {
       : `Dışlanan bölümlerde ${total} olay sayılmadı (otomatik bölümlerde ${auto}, elle işaretlenenlerde ${manual}).`,
   open: "Bölüm dışla…",
   close: "Kapat",
-  formHelp: "Otomatik bulunmayan bir tekrar, ağır çekim ya da ara varsa burada işaretle. Kaydedince momentum yeniden hesaplanır; pozlar ve kimlikler değişmez.",
+  formHelp: "Otomatik bulunmayan bir tekrar, ağır çekim ya da ara varsa burada işaretle. Kaydedince momentum hemen yeniden hesaplanır; pozlar ve kimlikler değişmez.",
   startNow: "Başlangıç = şimdiki kare",
   endNow: "Bitiş = şimdiki kare",
   frameValue: (time: string, frame: number) => `${time} (kare ${frame})`,
   reason: "Neden",
   saving: "Kaydediliyor…",
-  save: "Dışla ve yeniden hesapla",
+  save: "Dışla",
 };
 
 /** "Maç bilgileri": how the bout ended and point deductions (texts moved here in Bölüm 2). */

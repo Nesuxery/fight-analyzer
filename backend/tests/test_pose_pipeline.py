@@ -307,19 +307,19 @@ def test_export_of_finished_analysis(env: Env, first: dict, clip: bytes):
 
 
 def test_excluded_parts_recompute_momentum_only(env: Env, first: dict):
-    """A replay marked by the user: events stay, momentum is computed again with the exclusion."""
+    """A replay marked by the user: events stay, momentum is computed again with the exclusion,
+    in the request itself (no trip through the worker)."""
     job_id = first["job_id"]
     before = env.client.get(f"/api/v1/jobs/{job_id}").json()
     bad = {"segments": [{"start_frame": 3, "end_frame": 1}]}
     assert env.client.put(f"/api/v1/jobs/{job_id}/exclusions", json=bad, headers=JSON).status_code == 422
     body = {"segments": [{"start_frame": 3, "end_frame": 999, "reason": "replay"}, {"start_frame": 0, "end_frame": 0}]}
     resp = env.client.put(f"/api/v1/jobs/{job_id}/exclusions", json=body, headers=JSON)
-    assert resp.status_code == 202, resp.text
+    assert resp.status_code == 200 and resp.json()["status"] == "completed", resp.text
     frames = before["outputs"]["analysis_video"]["video"]["frame_count"]
     # clipped to the video and sorted
     assert [(x["start_frame"], x["end_frame"]) for x in resp.json()["exclusions"]] == [(0, 0), (3, frames - 1)]
-    assert env.client.put(f"/api/v1/jobs/{job_id}/exclusions", json=body, headers=JSON).status_code == 409  # busy
-    assert env.worker.run_once()
+    assert env.worker.run_once() is False  # nothing was queued
     after = env.client.get(f"/api/v1/jobs/{job_id}").json()
     assert after["status"] == "completed", after["error"]
     assert after["outputs"]["events"]["cache_key"] == before["outputs"]["events"]["cache_key"]  # events reused
@@ -327,11 +327,15 @@ def test_excluded_parts_recompute_momentum_only(env: Env, first: dict):
     momentum = env.client.get(f"/api/v1/jobs/{job_id}/momentum").json()
     assert [(x["start_frame"], x["end_frame"]) for x in momentum["exclusions"]] == [(0, 0), (3, frames - 1)]
     # clearing them restores the previous result from the cache
-    env.client.put(f"/api/v1/jobs/{job_id}/exclusions", json={"segments": []}, headers=JSON)
-    assert env.worker.run_once()
-    cleared = env.client.get(f"/api/v1/jobs/{job_id}").json()
+    cleared = env.client.put(f"/api/v1/jobs/{job_id}/exclusions", json={"segments": []}, headers=JSON).json()
     assert cleared["exclusions"] == [] and cleared["outputs"]["scoring"]["cache_hit"]
     assert cleared["outputs"]["scoring"]["cache_key"] == before["outputs"]["scoring"]["cache_key"]
+    # while the analysis is being processed the parts cannot be changed
+    queued = env.client.post(f"/api/v1/jobs/{job_id}/reprocess", headers=JSON)
+    assert queued.status_code == 202
+    assert env.client.put(f"/api/v1/jobs/{job_id}/exclusions", json=body, headers=JSON).status_code == 409
+    assert env.worker.run_once()
+    assert env.client.get(f"/api/v1/jobs/{job_id}").json()["status"] == "completed"
 
 
 def test_validation_tool_reports_against_labels(env: Env, first: dict):

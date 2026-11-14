@@ -389,7 +389,7 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
         {eventsKey && (
           <ExclusionEditor jobId={job.job_id} frame={frame} fps={video.fps} frameCount={video.frame_count}
                            saved={job.exclusions} auto={job.auto_exclusions} eventFrames={eventFrames} clock={clock}
-                           onSaved={() => onRecalculate?.()} onJob={setFresh} />
+                           onJob={setFresh} />
         )}
       </div>
       <div className="result__events">

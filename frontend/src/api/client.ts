@@ -136,7 +136,7 @@ export const api = {
   /** AI round scoring by three virtual judges (an estimate, not an official result). */
   scorecards: (jobId: string, signal?: AbortSignal) =>
     request<Scorecards>(`/jobs/${encodeURIComponent(jobId)}/scorecards`, { signal }),
-  /** Replace the excluded parts (replays etc.); the momentum is computed again. */
+  /** Replace the user's excluded parts (replays etc.); the momentum follows at once. */
   setExclusions: (jobId: string, body: SegmentExclusions) =>
     request<Job>(`/jobs/${encodeURIComponent(jobId)}/exclusions`, {
       method: "PUT", headers: { ...CLIENT_HEADER, "Content-Type": "application/json" },

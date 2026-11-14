@@ -474,25 +474,22 @@ def scorecards(store: StoreDep, settings: SettingsDep, job_id: JobId) -> Scoreca
     return judging.compute(job_id, job.fighters, setup, inputs)
 
 
-@router.put("/{job_id}/exclusions", response_model=Job, status_code=202)
-def set_exclusions(store: StoreDep, job_id: JobId, body: SegmentExclusions) -> Job:
+@router.put("/{job_id}/exclusions", response_model=Job)
+def set_exclusions(store: StoreDep, settings: SettingsDep, job_id: JobId, body: SegmentExclusions) -> Job:
     """Replace the user's excluded parts (replays, slow motion, breaks). Events are kept but
-    those inside are not counted or scored; the momentum is computed again (fast, from cache).
-    The automatic parts are not touched (PUT /exclusions/auto turns them off and on)."""
+    those inside are not counted or scored; the momentum is computed again in this request,
+    like for the automatic parts (which are not touched: PUT /exclusions/auto)."""
     job = _job(store, job_id)
     av = job.outputs.analysis_video
     if job.selection is None or av is None:
         raise ApiProblem(409, "no_selection", "Önce dövüşçüleri seçin.")
+    if job.status in (JobStatus.queued, JobStatus.running):
+        raise ApiProblem(409, "job_busy", "Analiz şu anda işleniyor; bitince bölümleri değiştirebilirsiniz.")
     mine = [x.model_copy(update={"source": ExclusionSource.manual, "auto_id": None, "confidence": None,
                                  "signals": []}) for x in body.segments]
     segments = excl.normalize(mine, av.video.frame_count)
-    updated = store.resubmit(job_id, allowed=("completed", "failed"),
-                             params_patch={"exclusions": [x.model_dump(mode="json") for x in segments]},
-                             clear_outputs=("scoring",),
-                             message="Dışlanan bölümler güncellendi; momentum yeniden hesaplanıyor.")
-    if updated is None:
-        raise ApiProblem(409, "job_busy", "Analiz şu anda işleniyor; bitince bölümleri değiştirebilirsiniz.")
-    return updated
+    store.update_params(job_id, {"exclusions": [x.model_dump(mode="json") for x in segments]})
+    return _refresh_momentum(store, settings, job_id)
 
 
 @router.put("/{job_id}/exclusions/auto", response_model=Job)

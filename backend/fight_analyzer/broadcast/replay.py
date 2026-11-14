@@ -20,8 +20,11 @@ Rules:
   and the stretches between two wipes (broadcasts without a scorebug).
 - Time in which the fight clock is known to run is live: it is cut out of
   every candidate, whatever the other signals say.
-- A candidate with at least two of the four signals is a replay. Its
-  confidence grows with the number of signals; the signals are stored.
+- A candidate with at least two of the four signals is not live fight time.
+  It is called a replay only with something that speaks for a replay: a
+  replay label, a logo transition or slow motion. With nothing but "no
+  scorebug" and "clock stands still" it is a break (corner footage, a
+  graphic). Its confidence grows with the number of signals; they are stored.
 - The clock standing still for `stall_min_s` or more inside a round, outside a
   replay, is a stoppage.
 - Before the first and after the last clock round: a stretch that is
@@ -253,6 +256,15 @@ class _Replay:
     signals: list[ExclusionSignal]
     confidence: float
 
+    @property
+    def reason(self) -> ExclusionReason:
+        return ExclusionReason.replay if set(self.signals) & REPLAY_EVIDENCE else ExclusionReason.break_
+
+
+# Signals that speak for a replay; the scorebug being away and the clock standing still
+# only say "not live".
+REPLAY_EVIDENCE = frozenset({ExclusionSignal.replay_label, ExclusionSignal.wipe, ExclusionSignal.slow_motion})
+
 
 ORDER = list(ExclusionSignal)
 
@@ -369,7 +381,7 @@ def detect(sig: Signals, rounds: Sequence[ClockRound], fps: float, frame_count: 
     for r in merged:  # inside an intro / post-fight part a replay adds nothing
         for piece in _minus((r.start, r.end), edge_spans):
             replay_spans.append(piece)
-            add(piece, ExclusionReason.replay, r.signals, r.confidence)
+            add(piece, r.reason, r.signals, r.confidence)
     in_round = np.zeros(n, bool)
     for r in ordered:
         in_round |= (sig.t >= r.start_t) & (sig.t < r.end_t)

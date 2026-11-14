@@ -179,9 +179,17 @@ def test_two_signals_are_enough_and_one_is_not():
     duration = r.end_t + 5
     edges = [(0, 10), (r.end_t, duration)]
     two = detect(signals(duration, [r], hidden=[(100, 120), *edges]), [r], duration)
-    assert spans(two, ExclusionReason.replay) == [(100.0, 120.0)]
-    (rep,) = [p for p in two if p.reason == ExclusionReason.replay]
-    assert rep.signals == [MISSING, CLOCK] and rep.confidence == 0.6
+    # not live, but nothing speaks for a replay (no label, transition or slow motion): a break
+    # (the round ran out, so the stretch after it is a break as well)
+    assert spans(two, ExclusionReason.break_) == [(100.0, 120.0), (r.end_t, duration)]
+    assert spans(two, ExclusionReason.replay) == []
+    part = next(p for p in two if p.reason == ExclusionReason.break_)
+    assert part.signals == [MISSING, CLOCK] and part.confidence == 0.6
+    assert spans(two, ExclusionReason.stoppage) == []
+    # the same with a logo transition at its end is a replay
+    wiped = detect(signals(duration, [r], hidden=[(100, 120), *edges], wipes=[(119.6, 120.3)]), [r], duration)
+    assert spans(wiped, ExclusionReason.replay) == [(100.0, 120.0)]
+    assert spans(wiped, ExclusionReason.break_) == [(r.end_t, duration)]
     # a slow, calm stretch of the fight alone is nothing
     assert spans(detect(signals(duration, [one_round()], hidden=edges, slow=[(100, 120)]), [one_round()], duration),
                  ExclusionReason.replay) == []
@@ -233,7 +241,7 @@ def test_before_the_first_and_after_the_last_round():
     assert spans(parts, ExclusionReason.post_fight) == [(200.0, 215.0)]  # R2 stopped early: the bout is over
     # between the rounds: scorebug away and the clock not running; the round's first seconds
     # without a scorebug (the clock already runs) are not part of it
-    assert spans(parts, ExclusionReason.replay) == [(130.0, 140.0)]
+    assert spans(parts, ExclusionReason.break_) == [(130.0, 140.0)] and spans(parts, ExclusionReason.replay) == []
     intro = next(p for p in parts if p.reason == ExclusionReason.intro)
     assert intro.signals == [MISSING] and intro.confidence == S.edge_confidence
     # after a round that ran out comes a break, not necessarily the end of the bout

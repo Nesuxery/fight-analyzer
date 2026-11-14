@@ -109,6 +109,9 @@ def test_a_detected_end_never_reaches_into_a_round_in_effect():
     # a replay or stoppage keeps its place inside a round, manual or not
     inside = nonfight.combine([], [detected(15000, 15300, ExclusionReason.stoppage)], [R1, longer], FPS, FRAMES)
     assert spans(inside) == [(15000, 15300)]
+    # so does a break found inside one round (scorebug away, clock standing still)
+    held = nonfight.combine([], [detected(15000, 15300, ExclusionReason.break_)], [R1, longer], FPS, FRAMES)
+    assert spans(held) == [(15000, 15300)]
     # without rounds the detected parts stand on their own
     assert spans(nonfight.combine([], [detected(100, 400, ExclusionReason.replay)], [], FPS, FRAMES)) == [(100, 400)]
 

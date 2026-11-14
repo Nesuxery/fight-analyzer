@@ -55,10 +55,11 @@ class MotionTimeline(VersionedContract):
 class ExclusionReason(StrEnum):
     replay = "replay"  # broadcast replay
     slow_motion = "slow_motion"
-    break_ = "break"  # between rounds, graphics
+    break_ = "break"  # outside the rounds: between rounds, corner footage, graphics
     intro = "intro"  # before the first round (walkouts, introductions)
     post_fight = "post_fight"  # after the bout ended
     stoppage = "stoppage"  # the fight clock stood still inside a round
+    timeout = "timeout"  # inside a round: the scorebug away while the clock stands still, no sign of a replay
     other = "other"
 
 

@@ -24,7 +24,8 @@ Rules:
   It is called a replay only with something that speaks for a replay: a
   replay label, a logo transition or slow motion. With nothing but "no
   scorebug" and "clock stands still" it is a break (corner footage, a
-  graphic). Its confidence grows with the number of signals; they are stored.
+  graphic); nonfight.py calls it a timeout where it lies inside a round in
+  effect. Its confidence grows with the number of signals; they are stored.
 - The clock standing still for `stall_min_s` or more inside a round, outside a
   replay, is a stoppage.
 - Before the first and after the last clock round: a stretch that is

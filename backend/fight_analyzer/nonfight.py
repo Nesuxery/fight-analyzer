@@ -16,9 +16,11 @@ Two sources, combined here and nowhere else:
    after the last clock round. Rounds come first: a detected part gives way
    to what the rounds already claim, and a detected intro / break / post-fight
    part never reaches into a round in effect (the user's round always wins).
-   The exception is a break that lies entirely inside one round: that is the
-   scorebug away while the clock stands still, and it keeps its place there
-   like a replay or a stoppage.
+   The exception is a detected break that lies entirely inside one round: that
+   is the scorebug away while the clock stands still. It keeps its place there
+   like a replay or a stoppage and is called a timeout ("mola"); "break" ("ara")
+   is only ever a part outside the rounds. The name is given here because only
+   this module knows the rounds in effect.
 
 The user can turn any automatic part off ("Geri al"). What is turned off is
 stored as frame ranges, not ids: an automatic part is off while a stored range
@@ -107,10 +109,11 @@ def combine(claims: Sequence[ExcludedSegment], detected: Sequence[ExcludedSegmen
             continue
         end = min(d.end_frame, frame_count - 1)
         inside_one = d.reason == ExclusionReason.break_ and any(a <= d.start_frame and end <= b for a, b in in_rounds)
-        taken = claimed + (in_rounds if d.reason in OUTSIDE_ROUND_REASONS and not inside_one else [])
+        reason = ExclusionReason.timeout if inside_one else d.reason
+        taken = claimed + (in_rounds if reason in OUTSIDE_ROUND_REASONS else [])
         for a, b in _subtract(d.start_frame, end, taken):
             if (b - a + 1) / fps >= min_s:
-                out.append(auto_segment(a, b, d.reason, d.signals, d.confidence or 0.0))
+                out.append(auto_segment(a, b, reason, d.signals, d.confidence or 0.0))
     return sorted(out, key=lambda x: (x.start_frame, x.end_frame))
 
 

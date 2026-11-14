@@ -109,9 +109,17 @@ def test_a_detected_end_never_reaches_into_a_round_in_effect():
     # a replay or stoppage keeps its place inside a round, manual or not
     inside = nonfight.combine([], [detected(15000, 15300, ExclusionReason.stoppage)], [R1, longer], FPS, FRAMES)
     assert spans(inside) == [(15000, 15300)]
-    # so does a break found inside one round (scorebug away, clock standing still)
+    # so does a break found inside one round (scorebug away, clock standing still): there it is
+    # a timeout ("mola"), "break" ("ara") is only used outside the rounds
     held = nonfight.combine([], [detected(15000, 15300, ExclusionReason.break_)], [R1, longer], FPS, FRAMES)
-    assert spans(held) == [(15000, 15300)]
+    assert [(p.reason, p.start_frame, p.end_frame, p.auto_id) for p in held] == [
+        (ExclusionReason.timeout, 15000, 15300, "timeout-15000-15300")]
+    # one that reaches out of the round is a break, and only its part outside the rounds
+    across = nonfight.combine([], [detected(15900, 16100, ExclusionReason.break_)], [R1, longer], FPS, FRAMES)
+    assert [(p.reason, p.start_frame, p.end_frame) for p in across] == [(ExclusionReason.break_, 16001, 16100)]
+    # without rounds there is nothing to be inside of: a break
+    alone = nonfight.combine([], [detected(15000, 15300, ExclusionReason.break_)], [], FPS, FRAMES)
+    assert [p.reason for p in alone] == [ExclusionReason.break_]
     # without rounds the detected parts stand on their own
     assert spans(nonfight.combine([], [detected(100, 400, ExclusionReason.replay)], [], FPS, FRAMES)) == [(100, 400)]
 

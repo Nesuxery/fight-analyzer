@@ -136,8 +136,12 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
 - **Dört sinyal, en az ikisi dövüş dışı:** scorebug'ın kaybolması ya da tekrar yazısı;
   dövüş saatinin durması; logo geçişi; ağır çekim. "Tekrar" etiketi için tekrar
   yazısı, logo geçişi ya da ağır çekimden en az biri gerekir; yalnızca "scorebug
-  yok + saat durdu" varsa bölüm "ara" olur (kullanıcı kararı, 14 Kasım 2026).
-  Böyle bir ara tek bir rauntun içindeyse yerinde kalır (`BROADCAST_VERSION` 3). Sinyaller yayın aşamasının
+  yok + saat durdu" varsa bölüm tekrar değildir (kullanıcı kararı, 14 Kasım 2026):
+  tek bir etkin rauntun tamamen içindeyse yerinde kalır ve **"mola"** (`timeout`)
+  adını alır; **"ara" (`break`) yalnızca raunt dışındaki bölümdür** (kullanıcı
+  kararı, 14 Kasım 2026; şema 1.9.0). Ad `nonfight.combine` içinde, istek anında
+  verilir (etkin rauntları bilen tek yer); tespit önbelleği ve `BROADCAST_VERSION`
+  (3) değişmedi, yeniden işleme gerekmez. Sinyaller yayın aşamasının
   aynı geçişinde (2 Hz) toplanır; logo geçişi takip hazırlığının kare değişim
   dizisinden, ağır çekim pozlardan gelir (yeni video okuması, yeni bağımlılık yok;
   hazırlık anahtarı değişmedi).

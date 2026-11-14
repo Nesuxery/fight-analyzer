@@ -815,6 +815,7 @@ export const EXCLUSION_LABELS = {
     intro: "Giriş",
     post_fight: "Maç sonrası",
     stoppage: "Duraklama",
+    timeout: "Mola",
     other: "Diğer",
   } satisfies Record<ExclusionReason, string>,
   signals: {

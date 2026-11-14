@@ -41,7 +41,7 @@ export type EventType =
  * via the `definition` "ExclusionReason".
  */
 export type ExclusionReason =
-  "replay" | "slow_motion" | "break" | "intro" | "post_fight" | "stoppage" | "other";
+  "replay" | "slow_motion" | "break" | "intro" | "post_fight" | "stoppage" | "timeout" | "other";
 /**
  * What an automatic excluded part rests on.
  *
@@ -235,7 +235,7 @@ export type TrackState = "tracked" | "occluded" | "uncertain";
 export type SkeletonFormat = "coco17";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.8.0.
+ * MMA Fight Analyzer data contracts, schema version 1.9.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
@@ -2122,4 +2122,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.8.0";
+export const SCHEMA_VERSION = "1.9.0";

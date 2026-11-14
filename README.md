@@ -714,8 +714,11 @@ geri alınır.
   bölümde dört sinyalden **en az ikisi** varsa bölüm dövüş dışıdır (güven 2/3/4
   sinyalle 0,6 / 0,8 / 0,9; tekrar yazısı +0,05). Etiketi `replay` olması için
   tekrar yazısı, logo geçişi ya da ağır çekimden en az biri gerekir; yalnızca
-  "scorebug yok + saat durdu" varsa `break` (ara) olur. Raunt içinde saat ≥ 3 sn durur ve bölüm
-  tekrar değilse `stoppage`. İlk saat rauntundan önce ve sonuncusundan sonra
+  "scorebug yok + saat durdu" varsa bölüm tekrar sayılmaz: etkin bir rauntun
+  tamamen içindeyse `timeout` (mola), raunt dışındaysa `break` (ara) olur; "ara"
+  yalnızca raunt dışındaki bölümler için kullanılır (ad, etkin rauntları bilen
+  `nonfight.combine` içinde verilir). Raunt içinde saat ≥ 3 sn durur ve bölüm
+  tekrar ya da mola değilse `stoppage` (duraklama: scorebug ekranda, saat donuk). İlk saat rauntundan önce ve sonuncusundan sonra
   görüntünün ≥ %90'ında scorebug yoksa `intro` ve `post_fight` (son raunt süresini
   doldurduysa `break`). Bilinmeyen sinyal kanıt sayılmaz: şablon yoksa "scorebug
   yok", saat okunmadıysa "saat durdu" denmez.
@@ -766,7 +769,7 @@ geri alınır.
   yayında yalnızca logo geçişi + ağır çekim birlikte tekrar sayılır. Raunt
   içinde scorebug kaybolup saat de okunamazsa (tek sinyal) bölüm dışlanmaz.
   Köşe görüntüsü rauntlar bulunmuşsa "raunt arası", bulunamamışsa yine "ara"
-  olarak dışlanır.
+  olarak dışlanır (raunt yokken "mola" adı verilemez).
 
 ## AI hakemlik (Aşama 9)
 
@@ -863,7 +866,7 @@ Tekrarlar tek kareye bakarak canlı görüntüden ayrılamaz (aynı dövüşçü
 kafes). v2 Bölüm 2b'den beri yayın sinyallerinden ve raunt sınırlarından otomatik
 dışlanırlar (bkz. "Yayın kesmeleri ve tekrar ayıklama"); kullanıcı ayrıca sonuç
 ekranında **"Bölüm dışla…"** ile başlangıç/bitiş karesi ve neden (tekrar, ağır
-çekim, raunt arası/ara, giriş, maç sonrası, duraklama, diğer) seçebilir. Dışlanan
+çekim, raunt arası/ara, giriş, maç sonrası, duraklama, mola, diğer) seçebilir. Dışlanan
 bölümün anlamı otomatik ve elle için aynıdır; tanım tek yerde
 (`motion/exclusions.py`) ve tarayıcıda aynısı (`model/measured.ts`):
 
@@ -965,7 +968,10 @@ başlat" düğmesi eklendi (önceden yalnızca API'de vardı); hareket analizi s
 önizleme alanı "Video analiz kopyasına dönüştürülüyor" yerine çalışan aşamayı
 yazıyor; CUDA uyarısı Türkçe.
 
-## Veri sözleşmeleri (şema v1.8.0)
+## Veri sözleşmeleri (şema v1.9.0)
+
+1.9.0: `ExclusionReason` + `timeout` (mola: raunt içinde scorebug yok ve saat
+durmuş, tekrar belirtisi yok). `break` artık yalnızca raunt dışındaki bölümdür.
 
 1.8.0 (v2 Bölüm 2b): `ExcludedSegment` + `source` (manual/auto), `auto_id`,
 `confidence`, `signals`; `ExclusionReason` + `intro`, `post_fight`, `stoppage`;

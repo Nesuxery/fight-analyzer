@@ -88,8 +88,9 @@ class IdentitySettings:
     extra_cut_relative: float = 6.0  # times the median change around the frame
     extra_cut_isolation: float = 0.5  # a neighbour frame this close to the peak: flash or wipe, not a cut
     # Appearance model: samples of each fighter from confident stretches all over the video.
-    model_samples: int = 40  # per fighter, spread over the video (at least 20 are aimed for)
-    model_min_samples: int = 20
+    # per fighter, spread over the video; a short video gives fewer, and the model is used with
+    # what there is (the summary reports how many)
+    model_samples: int = 40
     model_min_confidence: float = 0.75
     model_min_weight: float = 4.0  # clean appearance evidence of a sampled stretch (summed quality)
     # Placing a fighter without a position: at least as much like the model as his least typical

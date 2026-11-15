@@ -971,6 +971,232 @@
      ]
     }
    ]
+  },
+  {
+   "start": 90,
+   "end": 121,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 32,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 1067.7,
+     "longest_uncertain_ms": 1067.7,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 1.0
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 32,
+     "measurable_share": 0.0,
+     "occluded_share": 1.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 1.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 100,
+   "end": 131,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 32,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 1067.7,
+     "longest_uncertain_ms": 1067.7,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.6875
+      },
+      {
+       "cause": "overlap",
+       "share": 0.3125
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 32,
+     "measurable_share": 0.0,
+     "occluded_share": 1.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 1.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 200,
+   "end": 359,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 160,
+     "measurable_share": 0.1813,
+     "occluded_share": 0.925,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 1,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.8188
+      },
+      {
+       "cause": "overlap",
+       "share": 0.1063
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 160,
+     "measurable_share": 0.6625,
+     "occluded_share": 0.4063,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.3375
+      },
+      {
+       "cause": "overlap",
+       "share": 0.0688
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 660,
+   "end": 691,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 32,
+     "measurable_share": 1.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "camera",
+       "share": 1.0
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 32,
+     "measurable_share": 0.75,
+     "occluded_share": 0.0,
+     "uncertain_ms": 266.9,
+     "longest_uncertain_ms": 266.9,
+     "identity_changes": 1,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.25
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 700,
+   "end": 859,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 160,
+     "measurable_share": 0.825,
+     "occluded_share": 0.175,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 4,
+     "causes": [
+      {
+       "cause": "camera",
+       "share": 0.3813
+      },
+      {
+       "cause": "image",
+       "share": 0.375
+      },
+      {
+       "cause": "no_footage",
+       "share": 0.175
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 160,
+     "measurable_share": 0.7438,
+     "occluded_share": 0.0,
+     "uncertain_ms": 1368.0,
+     "longest_uncertain_ms": 734.1,
+     "identity_changes": 3,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.2563
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 400,
+   "end": 399,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 0,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": []
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 0,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": []
+    }
+   ]
   }
  ]
 }

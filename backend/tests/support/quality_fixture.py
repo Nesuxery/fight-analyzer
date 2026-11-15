@@ -28,7 +28,9 @@ EXCLUSIONS = [ExcludedSegment(start_frame=0, end_frame=89, reason="intro", sourc
               ExcludedSegment(start_frame=600, end_frame=659, reason="replay"),
               ExcludedSegment(start_frame=1150, end_frame=1199, reason="post_fight", source="auto")]
 # whole video, a "round", up to a playhead, a range inside an excluded part, single frames
-RANGES = [(0, FRAMES - 1), (90, 599), (0, 433), (610, 650), (700, 700), (1100, 1199), (0, 0), (300, 1150)]
+RANGES = [(0, FRAMES - 1), (90, 599), (0, 433), (610, 650), (700, 700), (1100, 1199), (0, 0), (300, 1150),
+          # 32 and 160 frames of fight time: shares such as 29/160 = 0.18125 are exact ties when rounded
+          (90, 121), (100, 131), (200, 359), (660, 691), (700, 859), (400, 399)]
 
 
 def arrays() -> dict[str, np.ndarray]:

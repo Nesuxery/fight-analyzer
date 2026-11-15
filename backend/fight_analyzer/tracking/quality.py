@@ -27,6 +27,7 @@ sharp and close, so the blur and resolution limits were not exercised by it.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 
 import numpy as np
@@ -112,12 +113,20 @@ def excluded_mask(segments: Sequence[ExcludedSegment], frame_count: int) -> np.n
     return out
 
 
+def _share(count: int, total: int) -> float:
+    """count / total to four decimals, halves rounded up: the browser's Math.round, not
+    Python's round-half-to-even, so both show the same number on an exact tie."""
+    return math.floor(count / total * 1e4 + 0.5) / 1e4 if total else 0.0
+
+
 def summarize(state: np.ndarray, quality: np.ndarray, change: np.ndarray, start: int, end: int, fps: float,
               excluded: np.ndarray | None = None) -> list[TrackQuality]:
     """Quality of both fighters over the frames [start, end] (inclusive) that are fight time."""
     n = state.shape[0]
     inside = np.zeros(n, bool)
-    inside[max(0, start):min(n - 1, end) + 1] = True
+    first, last = max(0, start), min(n - 1, end)
+    if last >= first:
+        inside[first:last + 1] = True
     if excluded is not None:
         inside &= ~excluded
     count = int(inside.sum())
@@ -127,14 +136,14 @@ def summarize(state: np.ndarray, quality: np.ndarray, change: np.ndarray, start:
         unknown = inside & (state[:, f] == UNCERTAIN)
         edges = np.diff(np.concatenate(([0], unknown.astype(np.int8), [0])))
         lengths = np.flatnonzero(edges == -1) - np.flatnonzero(edges == 1)
-        shares = [(c, float((mask & BIT[c] != 0).mean()) if count else 0.0) for c in CAUSES]
+        # ordered by the rounded share, equal shares in the order of the causes (as the browser does)
+        shares = [(c, _share(int((mask & BIT[c] != 0).sum()), count)) for c in CAUSES]
         out.append(TrackQuality(
             fighter_id=FIGHTERS[f], frames=count,
-            measurable_share=round(float((mask & UNMEASURABLE == 0).mean()), 4) if count else 0.0,
-            occluded_share=round(float((st == OCCLUDED).mean()), 4) if count else 0.0,
+            measurable_share=_share(int((mask & UNMEASURABLE == 0).sum()), count),
+            occluded_share=_share(int((st == OCCLUDED).sum()), count),
             uncertain_ms=round(float(unknown.sum()) * 1000.0 / fps, 1),
             longest_uncertain_ms=round(float(lengths.max()) * 1000.0 / fps, 1) if lengths.size else 0.0,
             identity_changes=int(change[inside, f].sum()),
-            causes=[CauseShare(cause=c, share=round(v, 4))
-                    for c, v in sorted(shares, key=lambda x: -x[1]) if v > 0]))
+            causes=[CauseShare(cause=c, share=v) for c, v in sorted(shares, key=lambda x: -x[1]) if v > 0]))
     return out

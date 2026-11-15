@@ -93,6 +93,9 @@ def test_summary_of_a_range_leaves_excluded_parts_out():
     assert quality.summarize(state, mask, change, 0, 99, 10.0)[1].causes == []
     empty = quality.summarize(state, mask, change, 20, 39, 10.0, excluded)[0]
     assert (empty.frames, empty.measurable_share, empty.causes) == (0, 0.0, [])
+    assert quality.summarize(state, mask, change, 40, 10, 10.0)[0].frames == 0  # a range that ends before it starts
+    # an exact tie rounds up, as Math.round does in the browser (Python's round would give 0.1812)
+    assert quality._share(29, 160) == 0.1813 and quality._share(1, 32) == 0.0313
 
 
 def test_golden_file_matches_the_summary():

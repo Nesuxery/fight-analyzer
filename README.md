@@ -828,17 +828,17 @@ geri alınır.
 | Kapsam | Dövüşçü | | Geçici numara değişimi | Örtüşme | Belirsiz | En uzun belirsiz | Ölçülebilir |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Tüm video | Volkanovski (kırmızı) | önce | 90 (eski sayım: 124) | %23,4 | 59,1 sn | 22,1 sn | %82,9 |
-| | | sonra | 102 | %6,2 | 30,6 sn | 8,2 sn | %89,4 |
+| | | sonra | 102 | %6,2 | 31,0 sn | 8,2 sn | %89,3 |
 | | Topuria (mavi) | önce | 87 | %24,9 | 21,3 sn | 4,3 sn | %90,8 |
-| | | sonra | 89 | %4,4 | 19,6 sn | 4,3 sn | %92,4 |
+| | | sonra | 89 | %4,4 | 19,8 sn | 4,3 sn | %92,4 |
 | Dövüş süresi (R1+R2) | Volkanovski | önce | 89 | %24,5 | 35,5 sn | 11,6 sn | %86,7 |
-| | | sonra | 99 | %6,3 | 11,9 sn | 1,6 sn | %92,8 |
+| | | sonra | 99 | %6,2 | 12,2 sn | 1,6 sn | %92,7 |
 | | Topuria | önce | 82 | %24,6 | 14,7 sn | 3,2 sn | %93,2 |
-| | | sonra | 86 | %3,9 | 8,4 sn | 2,1 sn | %95,1 |
-| R1 | Volkanovski | önce → sonra | 51 → 59 | %24,8 → %4,7 | 17,8 → 3,5 sn | 11,6 → 1,3 sn | %88,8 → %94,7 |
-| | Topuria | önce → sonra | 51 → 54 | %23,8 → %4,2 | 11,0 → 8,0 sn | 3,2 → 2,1 sn | %91,8 → %93,7 |
-| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %8,5 | 17,7 → 8,4 sn | 4,4 → 1,6 sn | %83,7 → %90,1 |
-| | Topuria | önce → sonra | 31 → 32 | %25,9 → %3,5 | 3,7 → 0,3 sn | 1,2 → 0,1 sn | %95,3 → %97,1 |
+| | | sonra | 86 | %3,9 | 8,5 sn | 2,1 sn | %95,1 |
+| R1 | Volkanovski | önce → sonra | 51 → 59 | %24,8 → %4,6 | 17,8 → 3,7 sn | 11,6 → 1,3 sn | %88,8 → %94,6 |
+| | Topuria | önce → sonra | 51 → 54 | %23,8 → %4,2 | 11,0 → 8,1 sn | 3,2 → 2,1 sn | %91,8 → %93,6 |
+| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %8,5 | 17,7 → 8,5 sn | 4,4 → 1,6 sn | %83,7 → %90,0 |
+| | Topuria | önce → sonra | 31 → 32 | %25,9 → %3,5 | 3,7 → 0,4 sn | 1,2 → 0,1 sn | %95,3 → %97,1 |
 
   Hazırlıkta 36 kesim bulunmuştu, 34 ek kesim bulundu. Sentetik tekrar klibinde
   (83 sn) kırmızı köşe belirsiz 73,0 → 1,7 sn, olay 2 → 15, tekrarın içindeki 2

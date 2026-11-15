@@ -17,7 +17,9 @@ const timeline: TrackingTimeline = {
 test("browser data quality equals the backend's for every checked range", () => {
   const index = qualityIndex(timeline, fixture.exclusions);
   assert.ok(index);
-  assert.ok(fixture.cases.length >= 8 && fixture.exclusions.length > 0);
+  assert.ok(fixture.cases.length >= 14 && fixture.exclusions.length > 0);
+  // the fixture holds exact ties (e.g. 29/160 = 0.18125 -> 0.1813)
+  assert.ok(fixture.cases.some((c: { fighters: { frames: number }[] }) => c.fighters[0]!.frames === 32));
   let withCauses = 0;
   for (const c of fixture.cases) {
     for (const [k, side] of (["red", "blue"] as const).entries()) {
@@ -26,18 +28,14 @@ test("browser data quality equals the backend's for every checked range", () => 
       const where = `frames ${c.start}-${c.end} ${side}`;
       assert.equal(got.frames, want.frames, where);
       assert.equal(got.identityChanges, want.identity_changes, where);
-      assert.ok(Math.abs(got.measurableShare - want.measurable_share) < 1e-4, where);
-      assert.ok(Math.abs(got.occludedShare - want.occluded_share) < 1e-4, where);
+      // the very same numbers, exact ties included (both round halves up)
+      assert.equal(got.measurableShare, want.measurable_share, where);
+      assert.equal(got.occludedShare, want.occluded_share, where);
       assert.ok(Math.abs(got.uncertainMs - want.uncertain_ms) < 0.11, where);
       assert.ok(Math.abs(got.longestUncertainMs - want.longest_uncertain_ms) < 0.11, where);
-      assert.deepEqual(got.causes.map((x) => x.cause).sort(), want.causes.map((x: { cause: string }) => x.cause).sort(), where);
-      for (const cause of want.causes) {
-        const mine = got.causes.find((x) => x.cause === cause.cause)!;
-        assert.ok(Math.abs(mine.share - cause.share) < 1e-4, `${where} ${cause.cause}`);
-        withCauses += 1;
-      }
-      // largest first
-      assert.ok(got.causes.every((x, i) => i === 0 || got.causes[i - 1]!.share >= x.share), where);
+      // and the same order: largest first, equal shares in the order of the causes
+      assert.deepEqual(got.causes, want.causes, where);
+      withCauses += want.causes.length;
     }
   }
   assert.ok(withCauses > 10);

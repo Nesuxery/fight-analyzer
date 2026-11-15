@@ -85,6 +85,7 @@ THIRD_MARGIN = 0.03  # how much more like the fighter than like a known third pe
 MAX_THIRD_REFS = 48
 LONE_AFTER_CUT_DISC = 0.15  # appearance lead needed when one person is placed alone after a cut
 ACQUIRE_MIN_WEIGHT = 2.0  # clean appearance evidence (summed quality) to place a fighter without position
+STACKED_IOU = 0.5  # two boxes this alike are one person in front of the other
 
 
 @dataclass
@@ -343,10 +344,17 @@ class _Propagation:
             if other == d or ctx.rel_scale[other] < MIN_REL_SCALE:
                 continue
             ox1, oy1, ox2, oy2 = boxes[other]
+            inter = (min(x2, ox2) - max(x1, ox1)) * (min(y2, oy2) - max(y1, oy1))
             if min(x2, ox2) <= max(x1, ox1) or min(y2, oy2) <= max(y1, oy1):
                 continue  # the boxes do not touch
             sims = self._det_sims(f, other)
-            if sims is not None and sims[0] >= own - ctx.i.verify_margin:
+            if sims is None:
+                # nothing can be said about that box: it only matters when the two are almost
+                # the same box (one person behind the other)
+                union = (x2 - x1) * (y2 - y1) + (ox2 - ox1) * (oy2 - oy1) - inter
+                if inter >= STACKED_IOU * union:
+                    return False
+            elif sims[0] >= own - ctx.i.verify_margin:
                 return False
         return True
 
@@ -414,6 +422,8 @@ class _Propagation:
         for t in frames:
             if t != anchor_frame and ctx.shot_id[t] != ctx.shot_id[t - self.dir]:
                 for f in (0, 1):  # camera cut: positions mean nothing in the new shot
+                    if provisional[f]:  # nothing after the cut can confirm what was carried before it
+                        self._drop_provisional(f, provisional)
                     cur[f] = None
                     lost_since[f] = t
                     lost_reason[f] = UncertainReason.camera_cut

@@ -130,10 +130,29 @@ class TrackingPrepSummary(Contract):
     tracker: str = Field(description="Short-term tracker used inside shots.")
 
 
+class AppearanceSummary(Contract):
+    """The appearance model the identities were assigned with (v2 Bölüm 2c): samples of each
+    fighter's shorts and torso from confident stretches all over the video, and of the third
+    persons (referee, corner staff) seen next to both fighters."""
+
+    red_samples: int = Field(ge=0)
+    blue_samples: int = Field(ge=0)
+    red_shots: int = Field(ge=0, description="Camera shots the red corner's samples come from.")
+    blue_shots: int = Field(ge=0)
+    third_samples: int = Field(ge=0, description="Samples of people who are neither fighter.")
+    height_ratio: float | None = Field(
+        default=None, description="Red / blue box height while both stand apart (median). Reported only: it is "
+                                  "not used to tell the fighters apart.")
+
+
 class TrackingSummary(Contract):
     cache_key: str
     cache_hit: bool
     method: str
+    version: int = Field(default=0, ge=0, description="Version of the identity layer (0: before version 6).")
+    appearance: AppearanceSummary | None = Field(default=None, description="None: not enough confident stretches.")
+    extra_cuts: list[int] = Field(
+        default_factory=list, description="Camera cuts the preparation missed, found by the identity layer (frames).")
     anchors: list[FighterAnchor]
     shots: list[ShotInfo]
     fighters: list[FighterTrackStats]
@@ -152,9 +171,65 @@ class TrackStateRun(Contract):
     state: TrackState
 
 
+class QualityCause(StrEnum):
+    """What lowers the confidence of a fighter's data on a frame."""
+
+    no_footage = "no_footage"  # the fighter is not found in the picture
+    camera = "camera"  # far camera, or a view in which he cannot be told apart (after a cut)
+    overlap = "overlap"  # the fighters overlap and the frame could not be verified by appearance
+    image = "image"  # low image quality: resolution, blur, low keypoint confidence
+
+
+class QualityRun(Contract):
+    """A stretch of frames that is not measurable or has causes that lower the confidence.
+    Frames in no run are measurable without a known cause."""
+
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0)
+    measurable: bool = Field(description="Identity verified with a detection and enough of the body measured.")
+    causes: list[QualityCause]
+
+
 class FighterTimeline(Contract):
     fighter_id: FighterId
     runs: list[TrackStateRun]
+    quality: list[QualityRun] | None = Field(
+        default=None, description="None: analysed before the quality data existed (process again).")
+    changes: list[int] = Field(
+        default_factory=list, description="Frames at which the temporary tracker id under the fighter changed.")
+
+
+class CauseShare(Contract):
+    cause: QualityCause
+    share: float = Field(ge=0, le=1, description="Share of the fight time in the range with this cause.")
+
+
+class TrackQuality(Contract):
+    """Data quality of one fighter in a frame range (excluded parts are not fight time)."""
+
+    fighter_id: FighterId
+    frames: int = Field(ge=0, description="Frames of fight time in the range.")
+    measurable_share: float = Field(ge=0, le=1)
+    occluded_share: float = Field(ge=0, le=1, description="Overlap frames carried by tracker continuity.")
+    uncertain_ms: float = Field(ge=0)
+    longest_uncertain_ms: float = Field(ge=0)
+    identity_changes: int = Field(ge=0, description="Times the temporary tracker id under the fighter changed.")
+    causes: list[CauseShare] = Field(description="Largest first; a frame can have several causes.")
+
+
+class QualityScope(Contract):
+    round: int | None = Field(default=None, ge=1, description="Round number; None: the whole bout.")
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0)
+    fighters: list[TrackQuality] = Field(max_length=2)
+
+
+class TrackQualityReport(VersionedContract):
+    """Data quality for the whole bout and for every round in effect."""
+
+    job_id: str = Field(pattern=JOB_ID_PATTERN)
+    fps: float = Field(gt=0)
+    scopes: list[QualityScope]
 
 
 class TrackingTimeline(VersionedContract):

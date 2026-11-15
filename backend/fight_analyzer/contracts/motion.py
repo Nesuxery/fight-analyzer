@@ -178,6 +178,9 @@ class MomentumTimeline(VersionedContract):
     contributions: list[MomentumContribution]
     exclusions: list[ExcludedSegment] = Field(
         default_factory=list, description="Excluded parts the ledger was computed with (already applied).")
+    unattributed_event_ids: list[str] = Field(
+        default_factory=list, description=(
+            "Events left out of the ledger because it is uncertain whose they are (outside excluded parts)."))
 
 
 class FighterEventCounts(Contract):
@@ -208,5 +211,7 @@ class ScoringSummary(Contract):
     parameters: MomentumParameters
     exclusions: list[ExcludedSegment] = Field(
         default_factory=list, description="Excluded parts applied: the user's and the automatic ones in effect, merged.")
+    unattributed_events: int = Field(
+        default=0, ge=0, description="Events left out because it is uncertain whose they are ('Kime ait belirsiz').")
     contributions: int = Field(ge=0)
     final_red_share: float = Field(ge=0, le=100)

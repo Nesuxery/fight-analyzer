@@ -2,7 +2,10 @@
 
 Arrays are [frames, 2] (column 0 = red / fighter_a, column 1 = blue /
 fighter_b): state (0 tracked, 1 occluded, 2 uncertain), det (global detection
-index or -1), conf, reason (index into UncertainReason or -1).
+index or -1), conf, reason (index into UncertainReason or -1). Since identity
+version 6 also quality (bit mask, see quality.py) and change (the temporary
+tracker id under the fighter changed at this frame); entries written before
+have neither and stay readable.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from fight_analyzer.config import TrackingSettings
+from fight_analyzer.config import IdentitySettings, TrackingSettings
 from fight_analyzer.contracts import (
     SCHEMA_VERSION,
     FighterAnchor,
@@ -27,9 +30,11 @@ from fight_analyzer.contracts import (
 from fight_analyzer.fsutil import cache_key, staging_dir
 from fight_analyzer.pose.cache import PoseArrays
 
+from . import quality as quality_mod
 from .identity import FIGHTERS, IDENTITY_VERSION, IdentityResult
 
 ARRAYS = ("state", "det", "conf", "reason")
+OPTIONAL_ARRAYS = ("quality", "change")  # identity version 6 on
 STATES = (TrackState.tracked, TrackState.occluded, TrackState.uncertain)
 SUMMARY = "summary.json"
 
@@ -40,9 +45,10 @@ SUMMARY = "summary.json"
 KEY_SCHEMA = "1.2.0"
 
 
-def identity_key(prep_key: str, anchors: list[FighterAnchor], s: TrackingSettings) -> tuple[str, dict]:
+def identity_key(prep_key: str, anchors: list[FighterAnchor], s: TrackingSettings,
+                 i: IdentitySettings | None = None) -> tuple[str, dict]:
     inputs = {"kind": "identity", "version": IDENTITY_VERSION, "schema_version": KEY_SCHEMA,
-              "prep_key": prep_key, "settings": asdict(s),
+              "prep_key": prep_key, "settings": asdict(s), "identity": asdict(i or IdentitySettings()),
               "anchors": sorted((a.frame_index, a.red_detection_id, a.blue_detection_id) for a in anchors)}
     return cache_key(inputs), inputs
 
@@ -59,10 +65,15 @@ def shots_from(shot_id: np.ndarray) -> list[ShotInfo]:
     return [ShotInfo(index=i, start_frame=a, end_frame=b) for i, (a, b) in enumerate(zip(starts, ends))]
 
 
-def write(cache_root: Path, key: str, result: IdentityResult, summary: TrackingSummary) -> None:
+def write(cache_root: Path, key: str, result: IdentityResult, summary: TrackingSummary,
+          quality: np.ndarray | None = None) -> None:
+    extra = {"quality": quality, "change": result.change}
     with staging_dir(entry_dir(cache_root, key)) as stage:
         for name in ARRAYS:
             np.save(stage / f"{name}.npy", np.ascontiguousarray(getattr(result, name)), allow_pickle=False)
+        for name, arr in extra.items():
+            if arr is not None:
+                np.save(stage / f"{name}.npy", np.ascontiguousarray(arr), allow_pickle=False)
         (stage / SUMMARY).write_text(summary.model_dump_json(indent=2), encoding="utf-8")
 
 
@@ -82,6 +93,13 @@ def read_arrays(cache_root: Path, key: str) -> dict[str, np.ndarray] | None:
     frames = out["state"].shape[0]
     if any(a.shape[0] != frames or a.ndim != 2 or a.shape[1] != 2 for a in out.values()):
         return None
+    for name in OPTIONAL_ARRAYS:  # absent in entries of older versions
+        try:
+            arr = np.load(d / f"{name}.npy", allow_pickle=False)
+        except (OSError, ValueError):
+            continue
+        if arr.shape == out["state"].shape:
+            out[name] = arr
     return out
 
 
@@ -123,6 +141,9 @@ def timeline(arrays: dict[str, np.ndarray]) -> list[FighterTimeline]:
         change = np.flatnonzero(np.diff(st)) + 1
         starts = [0, *change.tolist()]
         ends = [*(c - 1 for c in change.tolist()), int(st.size - 1)]
-        out.append(FighterTimeline(fighter_id=fighter, runs=[
-            TrackStateRun(start_frame=a, end_frame=b, state=STATES[int(st[a])]) for a, b in zip(starts, ends)]))
+        out.append(FighterTimeline(
+            fighter_id=fighter,
+            runs=[TrackStateRun(start_frame=a, end_frame=b, state=STATES[int(st[a])]) for a, b in zip(starts, ends)],
+            quality=quality_mod.quality_runs(arrays["quality"][:, f]) if "quality" in arrays else None,
+            changes=np.flatnonzero(arrays["change"][:, f]).tolist() if "change" in arrays else []))
     return out

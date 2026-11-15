@@ -15,7 +15,9 @@ const pts = (v: number) => formatNumber(v, v >= 10 ? 1 : 2);
  * each side's points by source, and what the selected event contributes right
  * now. The formula and the model parameters are under "Nasıl hesaplanır?".
  */
-export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [] }: {
+export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [], unattributed = 0 }: {
+  /** Events left out of the ledger because it is uncertain whose they are. */
+  unattributed?: number;
   contribs: MomentumContribution[];
   params: MomentumParameters;
   tMs: number;
@@ -42,6 +44,13 @@ export function MomentumPanel({ contribs, params, tMs, names, selected, iv = [] 
         <b className="num">{pts(m.blue)}</b> {L.points} → <b className="num">%{Math.round(red)}</b> /{" "}
         <b className="num">%{100 - Math.round(red)}</b>
       </p>
+
+      {unattributed > 0 && (
+        <p className="mpanel__unattributed">
+          {L.unattributed(unattributed)}
+          <HelpTip label={UI_LABELS.help(L.unattributedTerm)} align="start">{L.unattributedHelp}</HelpTip>
+        </p>
+      )}
 
       <details className="mpanel__how">
         <summary>{L.howTitle}</summary>

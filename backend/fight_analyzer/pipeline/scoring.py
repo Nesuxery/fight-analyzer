@@ -46,6 +46,7 @@ def summarize(cache_root: Path, events_key: str, data: motion_store.EventsData, 
         motion_store.write_momentum(cache_root, key, inputs, result)
     final = float(result.red_share[-1]) if result.red_share.size else 50.0
     return ScoringSummary(cache_key=key, cache_hit=hit, parameters=momentum.parameters(s), exclusions=segments,
+                          unattributed_events=len(result.unattributed),
                           contributions=len(result.contributions), final_red_share=round(final, 2))
 
 

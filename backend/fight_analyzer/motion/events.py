@@ -24,6 +24,14 @@ Falls
     close contact before it, and a plain stance change otherwise.
 No event is produced while a fighter or (for attempts) the opponent is not
 verified: missing data means no event, never an assumed one.
+
+Whose event
+    Every event carries `attribution_confidence`: the mean identity confidence
+    of its actor over the event's frames (of both fighters for an event without
+    an actor). The identity confidence is high on frames followed cleanly or
+    verified by appearance and low inside a long overlap that could not be
+    verified. Below `attribution_min` an event with an actor is marked
+    `attribution_uncertain` ("Kime ait belirsiz").
 """
 
 from __future__ import annotations
@@ -406,8 +414,21 @@ def _event(type_: EventType, actor: int | None, target: int | None, a: int, b: i
                       confidence=confidence, data_origin=DataOrigin.measured, note=note)
 
 
+def attribute(events: list[FightEvent], kin: tuple[FighterKinematics, FighterKinematics],
+              identity_conf: np.ndarray, s: MotionSettings) -> None:
+    """Set the attribution confidence of every event from the identity confidence [F, 2]."""
+    for e in events:
+        frames = slice(e.start_frame, e.end_frame + 1)
+        values = []
+        for f in ([FIGHTERS.index(e.actor)] if e.actor is not None else [0, 1]):
+            conf = identity_conf[frames, f][kin[f].present[frames]]
+            values.append(float(conf.mean()) if conf.size else 0.0)
+        e.attribution_confidence = round(min(1.0, max(0.0, min(values))), 3)
+        e.attribution_uncertain = e.actor is not None and e.attribution_confidence < s.attribution_min
+
+
 def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematics, FighterKinematics],
-            s: MotionSettings) -> Analysis:
+            s: MotionSettings, identity_conf: np.ndarray | None = None) -> Analysis:
     ts_ms = arrays.timestamp_ms.astype(np.float64)
     ts = ts_ms / 1000.0
     n = arrays.frame_count
@@ -561,6 +582,8 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
         seen[e.event_id] = seen.get(e.event_id, 0) + 1
         if seen[e.event_id] > 1:
             e.event_id = f"{e.event_id}-{seen[e.event_id]}"
+    if identity_conf is not None:
+        attribute(events, kin, identity_conf, s)
     valid = np.stack([k.valid for k in kin])
     stats = []
     for i in range(2):

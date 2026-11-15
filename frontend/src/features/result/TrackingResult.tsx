@@ -11,7 +11,15 @@ import type {
   TrackingTimeline,
 } from "../../contracts/generated";
 import { usePoseFrames } from "../../hooks/usePoseFrames";
-import { EXCLUSION_LABELS, OUTDATED_LABELS, RESULT_LABELS, ROUND_EDIT_LABELS, SELECTION_LABELS } from "../../labels";
+import {
+  EVENT_TAG_LABELS,
+  EXCLUSION_LABELS,
+  OUTDATED_LABELS,
+  RESULT_LABELS,
+  ROUND_EDIT_LABELS,
+  SCOPE_LABELS,
+  SELECTION_LABELS,
+} from "../../labels";
 import { Button } from "../../ui";
 import { IconAlert } from "../../ui/icons";
 import { addRound, editsOf, moveEdge, removeRound } from "../match/roundEdit";
@@ -23,7 +31,6 @@ import {
   exclusionIntervals,
   frameMs,
   isFrameExcluded,
-  measuredSeconds,
   measuredStats,
   motionSums,
   redShare,
@@ -33,7 +40,10 @@ import {
   toTimelineEvents,
   totals,
 } from "../../model/measured";
-import { VideoClock, useClock, useDisposeClock } from "../../player/clock";
+import { qualityIn, qualityIndex } from "../../model/quality";
+import { scopeRange, validScope } from "../../model/scope";
+import type { Scope } from "../../model/scope";
+import { VideoClock, formatClock, useClock, useDisposeClock } from "../../player/clock";
 import type { Layers } from "../../player/draw";
 import { effectsAt } from "../../player/effects";
 import { frameAt } from "../../player/geometry";
@@ -47,6 +57,7 @@ import { JudgingPanel } from "./JudgingPanel";
 import { FighterHeader } from "./FighterHeader";
 import { MomentumPanel } from "./MomentumPanel";
 import { PlaybackBar } from "./PlaybackBar";
+import { ScopeBar } from "./ScopeBar";
 import { StatPanel } from "./StatPanel";
 import { Timeline } from "./Timeline";
 import type { MomentumSeries, RoundEditing } from "./Timeline";
@@ -55,6 +66,9 @@ import { TrackingLog } from "./TrackingLog";
 import { TrackQuality } from "./TrackQuality";
 
 const R = RESULT_LABELS.screen;
+const UNATTRIBUTED_TAG = (pct: number) => ({
+  label: EVENT_TAG_LABELS.unattributed, tone: "amber" as const, title: EVENT_TAG_LABELS.unattributedHelp(pct),
+});
 const STATE_TEXT = RESULT_LABELS.quality.state;
 
 function isTyping(target: EventTarget | null): boolean {
@@ -93,6 +107,8 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
   const [momentum, setMomentum] = useState<MomentumTimeline | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("events");
+  // Which stretch of the bout the side panels refer to (the momentum is always the playhead value).
+  const [wantedScope, setScope] = useState<Scope>({ kind: "playhead" });
   const [problem, setProblem] = useState<string | null>(null);
   const [scorecards, setScorecards] = useState<Scorecards | null>(null);
   const [scProblem, setScProblem] = useState<string | null>(null);
@@ -180,7 +196,8 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
   const eventFrames = useMemo(() => (events?.events ?? []).map(eventFrame), [events]);
   const sums = useMemo(() => (motion ? motionSums(motion, iv) : null), [motion, iv]);
   const tEvents = useMemo(
-    () => (events ? toTimelineEvents(events.events, momentum?.contributions ?? null, timeline, segments) : []),
+    () => (events ? toTimelineEvents(events.events, momentum?.contributions ?? null, timeline, segments,
+                                     UNATTRIBUTED_TAG) : []),
     [events, momentum, timeline, segments]);
   const series = useMemo<MomentumSeries | null>(() => (momentum ? {
     t: momentum.sample_ms.map((ms) => ms / 1000),
@@ -193,8 +210,20 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
     ? shownShare(redShare(totals(momentum.contributions, tMs, momentum.parameters, iv), momentum.parameters.prior))
     : null;
   const insufficient = momentum ? (momentum.insufficient[sampleAt(momentum.sample_ms, tMs)] ?? false) : false;
+  // Scope of the side panels: one frame range for the statistics and the data quality of both sides.
+  const scope = validScope(wantedScope, job.rounds);
+  const range = scopeRange(scope, job.rounds, frame, video.frame_count);
+  const clockOf = (f: number) => formatClock(f / video.fps);
+  const rangeText = range ? SCOPE_LABELS.range(clockOf(range.start), clockOf(range.end)) : null;
+  const scopeNote = !range ? null
+    : scope.kind === "round" ? SCOPE_LABELS.note.round(scope.index, clockOf(range.start), clockOf(range.end))
+      : SCOPE_LABELS.note[scope.kind](clockOf(range.start), clockOf(range.end));
+  const quality = useMemo(() => (timeline ? qualityIndex(timeline, segments) : null), [timeline, segments]);
   const statsFor = (side: Side) =>
-    (events && sums ? measuredStats(side, frame, tMs, events.events, sums, segments, iv) : EMPTY_STATS);
+    (events && sums && range
+      ? measuredStats(side, range.end, frameMs(range.end, video.fps), events.events, sums, segments, iv,
+                      range.start, frameMs(range.start, video.fps))
+      : EMPTY_STATS);
   const excludedNow = isFrameExcluded(frame, segments);
   const selected = events?.events.find((e) => e.event_id === selectedId) ?? null;
   const warnings = events && layers.strikes ? effectsAt(events.events, snap.time, excludedIds).warnings : [];
@@ -285,12 +314,13 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
                                      (e: unknown) => setProblem(e instanceof Error ? e.message : String(e)));
   };
   const panel = (side: Side) => (
-    <StatPanel side={side} name={names[side]} stats={statsFor(side)} untilS={events ? snap.time : null} demo={false}
+    <StatPanel side={side} name={names[side]} stats={statsFor(side)} scopeNote={events ? scopeNote : null} demo={false}
                emptyNote={eventsKey ? RESULT_LABELS.stats.loading : RESULT_LABELS.stats.noMotion}
-               quality={tracking.fighters[side === "red" ? 0 : 1] && (
-                 <TrackQuality side={side} stats={tracking.fighters[side === "red" ? 0 : 1]} frames={video.frame_count}
+               quality={tracking.fighters[side === "red" ? 0 : 1] && timeline && (
+                 <TrackQuality side={side} quality={quality && range ? qualityIn(quality, side, range) : null}
+                               legacy={tracking.fighters[side === "red" ? 0 : 1]} frames={video.frame_count}
                                now={stateOf(side === "red" ? "fighter_a" : "fighter_b")}
-                               measuredS={sums ? measuredSeconds(side, tMs, sums) : null} />
+                               scopeNote={quality ? scopeNote : null} />
                )} />
   );
 
@@ -348,6 +378,7 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
             })}
           </div>
         </div>
+        <ScopeBar scope={scope} onScope={setScope} rounds={job.rounds} frame={frame} range={rangeText} />
         {!eventsKey && (
           <div className="inline-note">
             {R.noMotionNote}{" "}
@@ -410,14 +441,16 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
                        emptyText={eventsKey ? R.noEvents : R.noMotion} />
             {momentum && (
               <MomentumPanel contribs={momentum.contributions} params={momentum.parameters} tMs={tMs} iv={iv}
-                             names={names} selected={selected} />
+                             names={names} selected={selected}
+                             unattributed={momentum.unattributed_event_ids.length} />
             )}
           </div>
         ) : tab === "tracking" ? (
           <div className="tracktab">
             <TrackingLanes clock={clock} time={snap.time} timeline={timeline} names={names}
                            review={tracking.review_points} />
-            <TrackingLog jobId={job.job_id} tracking={tracking} cuts={job.outputs.tracking_prep?.cuts ?? []}
+            <TrackingLog jobId={job.job_id} tracking={tracking}
+                         cuts={timeline?.cuts ?? job.outputs.tracking_prep?.cuts ?? []}
                          fps={video.fps} clock={clock} time={snap.time} names={names} />
           </div>
         ) : tab === "judging" ? (

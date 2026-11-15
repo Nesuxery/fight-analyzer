@@ -411,21 +411,21 @@ export const RESULT_LABELS = {
     empty: "Ölçüm verisi yok",
     loading: "Ölçüm verisi yükleniyor…",
     noMotion: "Hareket analizi yapılmadı",
-    interval: (until: string) => `Bu değerler 00:00 – ${until} arası içindir`,
+    interval: (from: string, until: string) => `Bu değerler ${from} – ${until} arası içindir`,
     groups: { striking: "Vuruş", movement: "Hareket ve baskı", control: "Kontrol", quality: "Veri kalitesi" },
     outOf100: "/100",
     percent: "%",
     strikeAttempts: {
       label: "Vuruş denemeleri",
-      help: "Bu ana kadar tespit edilen yumruk ve diz denemelerinin sayısı; tekmeler ayrı sayılır. Deneme, vuruşun isabet ettiği anlamına gelmez.",
+      help: "Seçili kapsamda tespit edilen yumruk ve diz denemelerinin sayısı; tekmeler ayrı sayılır. Deneme, vuruşun isabet ettiği anlamına gelmez.",
     },
     kicks: {
       label: "Tekmeler",
-      help: "Bu ana kadar tespit edilen tekme denemelerinin sayısı. Deneme, tekmenin isabet ettiği anlamına gelmez.",
+      help: "Seçili kapsamda tespit edilen tekme denemelerinin sayısı. Deneme, tekmenin isabet ettiği anlamına gelmez.",
     },
     activity: {
       label: "Aktivite",
-      help: "El ve ayak bileklerinin gövdeye göre ortalama hızından türetilen 0–100 arası hareketlilik endeksi; bu ana kadarki ortalamadır. İsabet ya da etki ölçmez.",
+      help: "El ve ayak bileklerinin gövdeye göre ortalama hızından türetilen 0–100 arası hareketlilik endeksi; seçili kapsamın ortalamasıdır. İsabet ya da etki ölçmez.",
     },
     pressure: {
       label: "Baskı",
@@ -445,37 +445,45 @@ export const RESULT_LABELS = {
     },
   },
   quality: {
-    scope: "Durum ve ölçülebilen süre şu ana kadar; diğer satırlar tüm video içindir.",
     stateTerm: "Kimlik durumu",
     state: { tracked: "Takipte", occluded: "Örtüşme", uncertain: "Takip belirsiz" },
-    stateHelp: "Takipte: kimlik bu karede doğrulandı. Örtüşme: dövüşçü başka biriyle üst üste ya da kısa süre görünmüyor; kimlik önceki karelerden taşınıyor. Takip belirsiz: kimlik doğrulanamadı; tahmin edilmez ve ölçüm yapılmaz.",
-    measured: {
-      label: "Ölçülebilen süre",
-      help: "Bu ana kadar dövüşçünün kimliğinin doğrulandığı ve vücudunun yeterince göründüğü toplam süre. Bunun dışındaki sürede ölçüm yapılmaz ve olay üretilmez.",
-    },
-    tracked: {
-      label: "Takipte",
-      help: "Tüm videodaki karelerin yüzde kaçında bu dövüşçünün kimliği doğrulanmış olarak izlendi.",
+    stateHelp: "Şu anki kare için. Takipte: kimlik bu karede doğrulandı (örtüşme sırasında karenin kendi görünümüyle). Örtüşme: dövüşçü başka biriyle üst üste ve bu kare görünümle doğrulanamadı ya da kısa süre görünmüyor; kimlik önceki karelerden taşınıyor. Takip belirsiz: kimlik doğrulanamadı; tahmin edilmez ve ölçüm yapılmaz.",
+    measurable: {
+      label: "Ölçülebilir süre",
+      help: "Seçili kapsamdaki dövüş süresinin yüzde kaçında dövüşçünün kimliği doğrulandı ve vücudu yeterince göründü. Bunun dışındaki sürede ölçüm yapılmaz ve olay üretilmez. Dışlanan bölümler dövüş süresi sayılmaz.",
     },
     occluded: {
       label: "Örtüşme",
-      help: "Tüm videodaki karelerin yüzde kaçında dövüşçü başka biriyle üst üste bindi ya da kısa süre (1 saniyeden az) görünmedi. Bu karelerde kimlik önceki karelerden taşınır.",
+      help: "Seçili kapsamdaki dövüş süresinin yüzde kaçında dövüşçü başka biriyle üst üsteydi ve kare görünümle doğrulanamadı (ya da 1 saniyeden kısa süre görünmedi). Bu karelerde kimlik önceki karelerden taşınır ve güveni düşer.",
     },
     uncertain: {
       label: "Belirsiz",
-      help: "Tüm videoda bu dövüşçünün kimliğinin doğrulanamadığı toplam süre. Bu sürede kimlik tahmin edilmez ve ölçüm yapılmaz.",
+      help: "Seçili kapsamda bu dövüşçünün kimliğinin doğrulanamadığı toplam süre. Bu sürede kimlik tahmin edilmez ve ölçüm yapılmaz.",
     },
     longestUncertain: {
       label: "En uzun belirsiz",
-      help: "Kimliğin kesintisiz olarak doğrulanamadığı en uzun aralığın süresi.",
+      help: "Seçili kapsamda kimliğin kesintisiz olarak doğrulanamadığı en uzun aralığın süresi.",
     },
-    reacquisitions: {
-      label: "Yeniden bulma",
-      help: "Dövüşçünün bir kamera kesiminden ya da 1 saniyeden uzun bir kayıptan sonra yeniden tanındığı durumların sayısı. İleri ve geri takip geçişleri toplanır; birden fazla seçim noktası varsa aynı durum iki kez sayılabilir.",
-    },
-    trackChanges: {
+    identityChanges: {
       label: "Geçici numara değişimi",
-      help: "İzleyicinin bu dövüşçüye verdiği geçici iz numarasının kaç kez değiştiği. Kimliğin değiştiği anlamına gelmez; kimlik her seferinde yeniden eşlenir. İleri ve geri takip geçişleri toplanır.",
+      help: "Seçili kapsamda izleyicinin bu dövüşçüye verdiği geçici iz numarasının kaç kez değiştiği (her kamera kesiminde ve iz koptuğunda değişir). Kimliğin değiştiği anlamına gelmez; kimlik her seferinde görünüm ve konumla yeniden eşlenir.",
+    },
+    causesTitle: "Güveni düşüren nedenler",
+    causesHelp: "Seçili kapsamdaki dövüş süresinin yüzde kaçında bu neden görüldü. Bir karede birden çok neden olabilir; yüzde 1'in altındakiler gösterilmez.",
+    causes: {
+      no_footage: "Eksik görüntü (dövüşçü karede bulunamadı)",
+      camera: "Uzak ya da kötü kamera açısı",
+      overlap: "Örtüşen dövüşçüler",
+      image: "Düşük görüntü kalitesi",
+    },
+    noCauses: "Belirgin bir neden yok",
+    noFightTime: "Bu kapsamda dövüş süresi yok",
+    outdated: "Bu analiz eski sürümle yapıldı: değerler tüm video içindir, kapsam uygulanmaz. Yeniden işleyince kapsamlı veri kalitesi gelir.",
+    legacy: {
+      tracked: "Takipte (tüm video)",
+      occluded: "Örtüşme (tüm video)",
+      uncertain: "Belirsiz (tüm video)",
+      longestUncertain: "En uzun belirsiz (tüm video)",
     },
   },
   /** The momentum card of the "Olaylar ve momentum" tab. */
@@ -504,6 +512,10 @@ export const RESULT_LABELS = {
     },
     seconds: "sn",
     noPoints: "Henüz puan yok",
+    unattributed: (n: number) =>
+      `Kime ait olduğu belirsiz ${n} olay momentuma katılmadı (formül ve ağırlıklar aynı).`,
+    unattributedHelp: "Olay anında kimlik güveni eşiğin altındaydı (ör. uzun süre doğrulanamayan bir örtüşme). Yanlış dövüşçüye yazılan puan payı iki kat oynatacağı için bu olaylar momentuma eklenmez; olay listesinde “Kime ait belirsiz” etiketiyle durur.",
+    unattributedTerm: "Kime ait belirsiz olaylar",
     source: "Kaynak",
     earned: "Kazanılan",
     current: "Şu an",
@@ -766,9 +778,50 @@ export const ROUND_EDIT_LABELS = {
 /** Banner on analyses made before the current version (CLAUDE.md: "eski sürümle yapıldı"). */
 export const OUTDATED_LABELS = {
   title: "Bu analiz eski sürümle yapıldı — yeniden işle",
-  text: "Raunt tespiti ve tekrarların otomatik dışlanması gibi yeni adımlar bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
+  text: "Raunt tespiti, tekrarların otomatik dışlanması, görünüm modeliyle kimlik takibi ve veri kalitesi gibi yeni adımların bir kısmı bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
   action: "Yeniden işle",
   busy: "Yeniden işleme başlatılıyor…",
+};
+
+/** Uncertainty labels of events added in v2 Bölüm 2c (the older ones are still in model/measured.ts). */
+export const EVENT_TAG_LABELS = {
+  unattributed: "Kime ait belirsiz",
+  unattributedHelp: (pct: number) =>
+    `Olay anında dövüşçülerin kimlik güveni düşüktü (%${pct}): olay doğru dövüşçüye yazılmamış olabilir. Sayılır ama momentuma puan eklemez.`,
+};
+
+/**
+ * Time scope of the side panels (v2 Bölüm 2.5): every metric group shows which
+ * stretch of the bout its numbers belong to. The momentum is not scoped: it is
+ * the value at the playhead.
+ */
+export const SCOPE_LABELS = {
+  label: "Kapsam",
+  group: "İstatistiklerin ve veri kalitesinin kapsamı",
+  playhead: "Şu ana kadar",
+  round: "Raunt",
+  bout: "Tüm maç",
+  roundPick: "Raunt seç",
+  roundOption: (n: number) => `R${n}`,
+  noRounds: "Raunt bulunamadı: önce zaman çizelgesinden raunt ekle.",
+  help: "Yan panellerdeki istatistikler ve veri kalitesi bu aralık için hesaplanır. Şu ana kadar: videonun başından oynatma anına. Raunt: seçili rauntun tamamı. Tüm maç: videonun tamamı. Dışlanan bölümler hiçbir kapsamda dövüş süresi sayılmaz. Momentum her zaman oynatma anındaki değerdir.",
+  range: (from: string, until: string) => `${from} – ${until}`,
+  /** Shown at the foot of every metric group. */
+  note: {
+    playhead: (from: string, until: string) => `Şu ana kadar: ${from} – ${until}`,
+    round: (n: number, from: string, until: string) => `${n}. raunt: ${from} – ${until}`,
+    bout: (from: string, until: string) => `Tüm maç: ${from} – ${until}`,
+  },
+};
+
+/** The identity summary of the "Takip" tab (texts added in v2 Bölüm 2c). */
+export const TRACKING_LABELS = {
+  appearance: (red: number, blue: number, third: number) =>
+    `Görünüm modeli: kırmızı köşe ${red}, mavi köşe ${blue} örnek; diğer kişiler (hakem vb.) ${third} örnek`,
+  appearanceHelp: "Kimlikler, seçiminizden sonra videonun farklı yerlerinden toplanan şort ve gövde görünümü örnekleriyle eşlenir (AI tahmini). Hakem ve köşe ekibi gibi kişiler ayrı sınıftır ve dövüşçü adayı olamaz.",
+  appearanceTerm: "Görünüm modeli",
+  noAppearance: "Görünüm modeli kurulamadı (yeterli güvenli kesit yok); yalnızca seçim kareleri kullanıldı.",
+  extraCuts: (n: number) => `${n} kesim hazırlıkta kaçmış, kimlik katmanında bulundu`,
 };
 
 /** The result timeline (texts moved here when it got round editing). */

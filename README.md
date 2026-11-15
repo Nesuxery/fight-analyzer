@@ -340,7 +340,9 @@ eşiği bu yüzden düşük tutulmuştur.
 ### Ölçümler ve düzeltme
 
 - Dövüşçü başına: takipte / örtüşme / belirsiz kare sayısı, belirsiz süre ve en
-  uzun belirsiz aralık, yeniden bulma, geçici numara değişimi, ortalama güven.
+  uzun belirsiz aralık, yeniden bulma, geçici numara değişimi (son sonuç
+  üzerinden, her değişim bir kez), ortalama güven. Kapsamlı veri kalitesi için
+  bkz. "Kimlik takibi sürüm 6 ve veri kalitesi".
 - **Olası kimlik değişimi:** bir dövüşçü, kısa süre önce diğer dövüşçüye ait
   olan geçici ize geçtiğinde sayılır. **Takas düzeltmesi:** izleyici izi
   sürdürdüğü hâlde görünüm başka kişi dediğinde. Bunlar doğruluk ölçüsü değil,
@@ -771,6 +773,83 @@ geri alınır.
   Köşe görüntüsü rauntlar bulunmuşsa "raunt arası", bulunamamışsa yine "ara"
   olarak dışlanır (raunt yokken "mola" adı verilemez).
 
+## Kimlik takibi sürüm 6 ve veri kalitesi (v2 Bölüm 2c)
+
+`backend/fight_analyzer/tracking/identity.py`, `tracking/quality.py`,
+`frontend/src/model/scope.ts`, `model/quality.ts`. Ayarlar `IdentitySettings`
+(yalnızca kimlik önbellek anahtarına girer). Kimlikler seçimden türetilen bir
+**AI tahminidir**; emin olunamayan yerde "belirsiz" kalır.
+
+- **Kaçan kamera kesimleri:** hazırlık, aynı zemine bakan iki kamera arasındaki
+  kesimleri kaçırabilir (renk değişimi eşiğin altında kalır). Kimlik katmanı
+  saklı kare değişim dizisinde tek başına duran tepeleri (≥ 0,03 ve çevre
+  medyanının ≥ 6 katı; komşu karede yarısı kadar değişim yoksa) ek kesim sayar
+  ve izleyicinin parça ile numaralarını orada böler. Hazırlık önbelleği ve
+  anahtarı değişmez. `TrackingSummary.extra_cuts`, `shots` ve zaman çizelgesindeki
+  kesimler bu kesimleri içerir.
+- **Görünüm modeli (iki geçiş):** ilk geçiş yalnızca seçim karelerini kullanır.
+  Güvenli ve temiz parçalardan dövüşçü başına videoya yayılmış en çok 40 örnek
+  (şort ve gövde renk/doku tanımlayıcısı) ile iki dövüşçünün yanında en az 5 kare
+  görülen dövüşçü boyundaki kişilerden en çok 60 "üçüncü kişi" örneği toplanır;
+  ikinci geçiş aynı kuralları bu modelle çalıştırır. Konum bilgisi yokken
+  (kesim, uzun kayıp) aday modele en az "en az tipik örnek − 0,08" kadar
+  benzemelidir. Kutu yüksekliği oranı ölçülür ve raporlanır, karar için
+  kullanılmaz. Özet: `TrackingSummary.appearance`.
+- **Örtüşmede doğrulama:** örtüşen kutudaki kare, kendi görünümü dövüşçüye diğer
+  dövüşçüden ve üçüncü kişilerden 0,08 daha çok benziyorsa ve örtüşen başka bir
+  kutu da aynı dövüşçüye benzemiyorsa "takipte"dir; değilse izleyici
+  sürekliliğiyle taşınır ("örtüşme") ve kimlik güveni düşer (× 0,75 / × 0,45).
+  Geriye dönük sahip değiştirme yapılmaz.
+- **Olay sahipliği:** her olay `attribution_confidence` taşır (aktörün olay
+  karelerindeki ortalama kimlik güveni). 0,5'in altı `attribution_uncertain`
+  ("Kime ait belirsiz"): olay listede ve sayımlarda kalır, momentuma puan
+  eklemez; momentum kartı ve `MomentumTimeline.unattributed_event_ids` kaç olayın
+  dışarıda kaldığını gösterir. Puanlamadaki ağırlığını Bölüm 4 belirleyecek.
+- **Veri kalitesi:** kare başına "ölçülemez" ve dört neden (eksik görüntü, uzak
+  ya da kötü kamera açısı, örtüşen dövüşçüler, düşük görüntü kalitesi:
+  çözünürlük, bulanıklık, düşük eklem güveni). Bir aralığın özeti: ölçülebilir
+  süre oranı, örtüşme oranı, belirsiz süre, en uzun belirsiz aralık, geçici
+  numara değişimi ve nedenlerin payı; dışlanan bölümler dövüş süresi sayılmaz.
+  `GET /jobs/{id}/tracking/quality` tüm maç ve her etkin raunt için döner;
+  tarayıcı aynı hesabı `GET /jobs/{id}/tracking/timeline` verisinden
+  (`quality`, `changes`) oynatma anına kadar olan kapsam için yapar. İki taraf
+  `shared/fixtures/track-quality.json` ile denetlenir.
+- **Zaman kapsamı:** sonuç ekranında videonun altındaki **Kapsam** seçici (Şu ana
+  kadar · Raunt · Tüm maç) iki yan paneldeki istatistiklerin ve veri kalitesinin
+  aralığını belirler; her grubun altında aralık yazar. Momentum her zaman
+  oynatma anındaki değerdir. Kapsamı kareye çeviren tek fonksiyon
+  `model/scope.ts` → `scopeRange`.
+- **Eski analizler:** açılır; kimlik sürümü 6'dan küçükse "eski sürümle yapıldı
+  — yeniden işle" bandı çıkar ve veri kalitesi "tüm video" etiketiyle eski
+  toplamları gösterir.
+- **Ölçüm (ayar için kullanılan malzeme; doğruluk değeri değildir).** Örnek yayın
+  (topuria-volkanovski.mp4, 9:00), aynı seçim; "önce" kimlik sürüm 5:
+
+| Kapsam | Dövüşçü | | Geçici numara değişimi | Örtüşme | Belirsiz | En uzun belirsiz | Ölçülebilir |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tüm video | Volkanovski (kırmızı) | önce | 90 (eski sayım: 124) | %23,4 | 59,1 sn | 22,1 sn | %82,9 |
+| | | sonra | 102 | %6,2 | 30,6 sn | 8,2 sn | %89,4 |
+| | Topuria (mavi) | önce | 87 | %24,9 | 21,3 sn | 4,3 sn | %90,8 |
+| | | sonra | 89 | %4,4 | 19,6 sn | 4,3 sn | %92,4 |
+| Dövüş süresi (R1+R2) | Volkanovski | önce | 89 | %24,5 | 35,5 sn | 11,6 sn | %86,7 |
+| | | sonra | 99 | %6,3 | 11,9 sn | 1,6 sn | %92,8 |
+| | Topuria | önce | 82 | %24,6 | 14,7 sn | 3,2 sn | %93,2 |
+| | | sonra | 86 | %3,9 | 8,4 sn | 2,1 sn | %95,1 |
+| R1 | Volkanovski | önce → sonra | 51 → 59 | %24,8 → %4,7 | 17,8 → 3,5 sn | 11,6 → 1,3 sn | %88,8 → %94,7 |
+| | Topuria | önce → sonra | 51 → 54 | %23,8 → %4,2 | 11,0 → 8,0 sn | 3,2 → 2,1 sn | %91,8 → %93,7 |
+| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %8,5 | 17,7 → 8,4 sn | 4,4 → 1,6 sn | %83,7 → %90,1 |
+| | Topuria | önce → sonra | 31 → 32 | %25,9 → %3,5 | 3,7 → 0,3 sn | 1,2 → 0,1 sn | %95,3 → %97,1 |
+
+  Hazırlıkta 36 kesim bulunmuştu, 34 ek kesim bulundu. Sentetik tekrar klibinde
+  (83 sn) kırmızı köşe belirsiz 73,0 → 1,7 sn, olay 2 → 15, tekrarın içindeki 2
+  tekme dışlandı. 108 karelik gözle denetimde 107 kare doğru, 1 yanlış (maç
+  sonrası seyirci çekimi; düzeltildi). Kimlik adımı 2,7 → 6,3 sn (poz çıkarımı
+  3091 sn: toplam süreye etkisi ≈ %0,1).
+- **Sınırlar:** tek yayınla ayarlandı; şort renkleri çok farklıydı. Geçici numara
+  değişimi sayısı düşmedi (kesim sayısı arttı; bu bir izleyici ölçüsüdür).
+  Bulanıklık/çözünürlük eşikleri bu yayında tetiklenmedi. Dışa aktarılan JSON'da
+  raunt bazlı kalite özeti yok.
+
 ## AI hakemlik (Aşama 9)
 
 `backend/fight_analyzer/judging/`, `GET /jobs/{id}/scorecards`, sonuç ekranında
@@ -968,7 +1047,15 @@ başlat" düğmesi eklendi (önceden yalnızca API'de vardı); hareket analizi s
 önizleme alanı "Video analiz kopyasına dönüştürülüyor" yerine çalışan aşamayı
 yazıyor; CUDA uyarısı Türkçe.
 
-## Veri sözleşmeleri (şema v1.9.0)
+## Veri sözleşmeleri (şema v1.10.0)
+
+1.10.0 (v2 Bölüm 2c): `TrackingSummary` + `version`, `appearance`
+(`AppearanceSummary`), `extra_cuts`; `FighterTimeline` + `quality`
+(`QualityRun`, `QualityCause`), `changes`; `TrackQuality`, `CauseShare`,
+`QualityScope`, `TrackQualityReport`; `FightEvent` + `attribution_confidence`,
+`attribution_uncertain`; `MomentumTimeline.unattributed_event_ids`,
+`ScoringSummary.unattributed_events`; `OutdatedReason` + `identity_outdated`.
+Yeni alanların hepsi varsayılanlı: eski analizler açılır.
 
 1.9.0: `ExclusionReason` + `timeout` (mola: raunt içinde scorebug yok ve saat
 durmuş, tekrar belirtisi yok). `break` artık yalnızca raunt dışındaki bölümdür.

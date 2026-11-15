@@ -226,16 +226,27 @@ def test_selection_runs_identity_tracking(env: Env, first: dict):
         assert all(d["track_id"] is not None for d in dets.values() if d["fighter_id"])
     timeline = env.client.get(f"/api/v1/jobs/{job_id}/tracking/timeline").json()
     assert all(run["state"] != "uncertain" for f in timeline["fighters"] for run in f["runs"])
+    # identity version 6: the result says how it was made, and carries the data quality
+    assert tracking["version"] == 6 and tracking["extra_cuts"] == [] and job["outdated"] == []
+    assert all(f["quality"] is not None for f in timeline["fighters"])
+    report = env.client.get(f"/api/v1/jobs/{job_id}/tracking/quality").json()
+    (bout,) = report["scopes"]  # no rounds on this clip: the whole video only
+    assert bout["round"] is None and (bout["start_frame"], bout["end_frame"]) == (0, 4)
+    for q in bout["fighters"]:
+        assert q["frames"] == 5 and q["uncertain_ms"] == 0 and 0 <= q["measurable_share"] <= 1
 
     # Motion analysis on a still photo (real model output): measured, and nothing is invented.
     assert job["outputs"]["events"]["camera_known_share"] >= 0 and job["outputs"]["scoring"] is not None
     events = env.client.get(f"/api/v1/jobs/{job_id}/events").json()
     assert not [e for e in events["events"] if e["type"] in ("punch", "kick", "knee", "knockdown", "takedown")]
+    assert all(e["attribution_confidence"] is not None for e in events["events"])
+    assert job["outputs"]["scoring"]["unattributed_events"] == 0
     motion = env.client.get(f"/api/v1/jobs/{job_id}/motion").json()
     assert len(motion["fighters"]) == 2 and len(motion["sample_ms"]) == len(motion["fighters"][0]["valid"]) >= 1
     momentum = env.client.get(f"/api/v1/jobs/{job_id}/momentum").json()
     assert momentum["experimental"] and momentum["parameters"]["half_life_s"] == 20
     assert momentum["contributions"] == [] and all(abs(v - 50) < 1e-9 for v in momentum["red_share"])
+    assert momentum["unattributed_event_ids"] == []
 
     named = env.client.put(f"/api/v1/jobs/{job_id}/names", json={"red": "Sol", "blue": "Sağ"}, headers=JSON)
     assert [f["display_name"] for f in named.json()["fighters"]] == ["Sol", "Sağ"]

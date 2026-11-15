@@ -486,6 +486,9 @@ RULESET = RulesetSettings()
 BROADCAST = BroadcastSettings()
 # Broadcast analyses from this version on find replays, stoppages and non-fight parts.
 NONFIGHT_SINCE = 2
+# Identity results from this version on use the appearance model and carry the data quality
+# (tracking/identity.py IDENTITY_VERSION 6).
+IDENTITY_SINCE = 6
 
 
 def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | None,
@@ -513,6 +516,8 @@ def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | Non
             outdated.append(OutdatedReason.broadcast_missing)
         elif not current:
             outdated.append(OutdatedReason.broadcast_outdated)
+        if outputs.tracking is not None and outputs.tracking.version < IDENTITY_SINCE:
+            outdated.append(OutdatedReason.identity_outdated)
     return {"bout": bout, "rounds": rounds, "round_notes": notes, "outdated": outdated,
             "auto_exclusions": auto_exclusions}
 

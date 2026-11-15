@@ -212,7 +212,8 @@ kesmeleri ve replay ayıklama, c: kimlik takibi); bu kararlar (a) içindir.
   sözüyle.
 
 ### Bölüm 2c için devam notları (14 Kasım 2026)
-Sonraki oturum buradan başlar. Kurallar CLAUDE.md'de, plan docs/v2-plan.md
+(c) 15 Kasım 2026'da yapıldı; kararlar bir sonraki başlıkta. Bu notlar o oturumun
+girdisiydi. Sonraki oturum buradan başlar. Kurallar CLAUDE.md'de, plan docs/v2-plan.md
 Bölüm 2.4–2.5'te; aşamadan sonra commit, notlar, kısa rapor, onay beklenir.
 
 **(c) Kimlik takibi: kullanıcı kararları**
@@ -243,6 +244,119 @@ Bölüm 2.4–2.5'te; aşamadan sonra commit, notlar, kısa rapor, onay beklenir
   sentetik tekrar klibinin işi 45531e64 de burada). `.claude/launch.json`
   "fa-scratch" yapılandırması buraya bakar (8010/5183). Kullanıcının gerçek işine
   dokunulmaz. **Bölüm 2 bitince `local/fa-data` silinir** (kullanıcı onayladı).
+
+### Kimlik takibi ve veri kalitesi (v2 Bölüm 2c, 15 Kasım 2026)
+Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
+`IdentitySettings` (kimlik önbellek anahtarına girer; hazırlık anahtarına girmez).
+- **Asıl kök neden kaçan kamera kesimleriydi.** Örnek yayında hazırlık 36 kesim
+  bulmuş, 34'ünü kaçırmıştı (aynı kafes zeminine bakan iki kamera arasında renk
+  histogramı 0,05–0,12 oynuyor, eşik 0,12; olağan değişim ≈ 0,004). İzleyici
+  kaçan kesimden geçip dövüşçünün geçici numarasını yeni çekimde aynı yerde duran
+  kişiye (ör. hakeme) veriyordu; karışık parça "üçüncü kişi" referansı oluyor ve
+  dövüşçü bir daha bulunamıyordu (Volkanovski raundun ilk 12 saniyesinde açıkça
+  görünürken belirsizdi). Hazırlık anahtarı ve önbelleği değiştirilmedi: kimlik
+  katmanı saklı `cut_step` dizisinden tek başına duran tepeleri ek kesim sayar
+  (`refine_cuts`: ≥ 0,03 ve çevre medyanının ≥ 6 katı; komşu karede yarısı kadar
+  değişim varsa flaş/logo geçişidir) ve parça ile numaraları orada böler. Yeni
+  video okuması yok.
+- **Görünüm modeli iki geçişle kurulur** (plandaki "en az 20 kesit"): ilk geçiş
+  yalnızca seçim karelerini kullanır; güvenli (≥ 0,75), temiz (örtüşmesiz)
+  parçalardan dövüşçü başına videoya yayılmış en çok 40 örnek ve iki dövüşçünün
+  yanında ≥ 5 kare görülen dövüşçü boyundaki kişilerden (hakem, köşe ekibi) en
+  çok 60 "üçüncü kişi" örneği alınır; ikinci geçiş aynı kuralları bu modelle
+  çalıştırır. Örnek yayında 38 / 40 örnek (34 / 36 çekimden) ve 52 üçüncü kişi.
+- **Üçüncü kişi yalnızca dövüşçü boyundaysa referanstır.** Kafes arkasındaki
+  küçük seyirciler kaba görünümleriyle kırmızı köşeye %92–94 benziyor ve onu
+  eliyordu; zaten kimlik alamadıkları için (kutu < en büyüğün %35'i) referans da
+  olmazlar.
+- **Konumsuz yerleştirmede model tabanı:** kesimden ya da uzun kayıptan sonra
+  aday, dövüşçünün en az tipik örneğinin diğer örneklerine benzerliği − 0,08
+  kadar modele benzemelidir (örnek yayında ≈ 0,88). Bu eşik, maç sonrası seyirci
+  çekiminde kırmızı-beyaz bayraklı bir seyircinin mavi köşe sanılmasını kapattı
+  (yalnızca "diğer dövüşçüden daha çok benziyor" yetmez).
+- **Örtüşmede kare bazında doğrulama:** karenin kendi görünümü dövüşçüye, diğer
+  dövüşçü ve üçüncü kişilerden 0,08 daha çok benziyorsa kare "takipte" sayılır
+  (vuruş mesafesinde kutular sürekli örtüşür; eskiden karelerin %23–25'i
+  "örtüşme"ydi). Doğrulanamayan kare izleyici sürekliliğiyle taşınır ve güveni
+  düşer (yakınında doğrulanmış kare varsa × 0,75, yoksa × 0,45). Kesimden sonra
+  örtüşen kutudan da kimlik kurulabilir, ama iki kat farkla (0,16).
+- **Bir dövüşçü diğerinin tam önündeyken iki kutu da öndekine benzer:** örtüşen
+  başka bir kutu da aynı dövüşçüye benziyorsa kare doğrulanmış sayılmaz
+  (sentetik testin yakaladığı açık: kimlik arkadaki iskelete geçiyordu).
+- **Geriye dönük sahip düzeltmesi yapılmaz** (plandaki "örtüşme boyunca atanan
+  olayların sahibini düzelt" yerine): takasın hangi karede olduğu bilinemez;
+  doğrulanamayan örtüşme kareleri "belirsiz" olur ve orada olay üretilmez,
+  taşınan karelerdeki olayların `attribution_confidence` değeri düşer. Kesin
+  olmayan olayı gerçekmiş gibi kaydetmeme kuralının gereği.
+- **Boy oranı ölçülür, karar için kullanılmaz** (plandaki "boy oranı"): örnek
+  yayında kutu yüksekliği oranı 0,98; aynı sıklette fark %1–3, perspektif farkı
+  bunun birkaç katı. `AppearanceSummary.height_ratio` olarak raporlanır.
+- **Geçici numara değişimi son sonuç üzerinden sayılır** (kesimlerde ve iz
+  koptuğunda bir kez). Eski sayım ileri ve geri geçişleri topluyordu; tek
+  seçimle 124 gösteriyordu, aynı sonuçta yeni tanımla 90'dır. Kesim sayısı
+  arttığı (36 → 70) ve daha çok kare izlendiği için sayı düşmedi (90 → 102):
+  bu bir izleyici ölçüsüdür, kimlik hatası değildir.
+- **`attribution_confidence`:** olayın aktörünün (aktörsüz olayda iki dövüşçünün
+  küçüğü) olay karelerindeki ortalama kimlik güveni; `attribution_min` (0,5,
+  `MotionSettings`) altı "Kime ait belirsiz" (`attribution_uncertain`). Bu
+  olaylar listede ve sayımlarda kalır, momentuma girmez (kullanıcı kararı;
+  `MOMENTUM_VERSION` 3, formül ve ağırlıklar aynı); momentum kartı kaç olayın
+  dışarıda kaldığını yazar. Örnek yayında ve sentetik klipte böyle olay çıkmadı
+  (en düşük 0,70 ve 0,75); davranış sentetik testlerle denendi.
+- **Veri kalitesi kare başına bit maskesidir** (`quality.npy`): ölçülemez +
+  dört neden (eksik görüntü, uzak/kötü kamera açısı, örtüşen dövüşçüler, düşük
+  görüntü kalitesi). Özet tek fonksiyondur (`quality.summarize`: herhangi bir
+  kare aralığı, dışlanan bölümler dövüş süresi değildir); API tüm maç ve etkin
+  rauntlar için döner (`GET /jobs/{id}/tracking/quality`), tarayıcı aynı hesabı
+  oynatma anına kadar olan kapsam için zaman çizelgesinden yapar
+  (`model/quality.ts`); ikisi `shared/fixtures/track-quality.json` ile denetlenir
+  (`python -m tests.support.quality_fixture`). Bulanıklık ve çözünürlük eşikleri
+  örnek yayında hiç tetiklenmedi (yayın net ve yakın): geçici değerlerdir.
+- **Kapsam (2.5):** tutarsızlığın nedeni "ölçülebilen süre"nin oynatma anını,
+  diğer kimlik satırlarının tüm videoyu izlemesiydi. Artık yan panellerin tümü
+  tek kapsamı kullanır: Şu ana kadar · Raunt · Tüm maç (`model/scope.ts` →
+  `scopeRange`, Bölüm 5 de bunu kullanacak). Momentum kapsamsızdır (oynatma
+  anındaki değer). MP4/CSV dışa aktarma "şu ana kadar"ı yansıtmaya devam eder.
+- **Eski analizler:** açılır; `TrackingSummary.version < 6` ise
+  `identity_outdated` bandı çıkar, veri kalitesi satırları "tüm video" etiketiyle
+  eski toplamları gösterir, kapsam yalnızca istatistiklere uygulanır.
+- **Ölçüm (ayar seti; doğruluk değildir).** Aynı video, aynı seçim (kare 3142),
+  karalama kopyası; "önce" = kimlik sürüm 5 sonucu, iki sütun da yeni tanımlarla
+  hesaplandı:
+
+| Kapsam | Dövüşçü | | Geçici numara değişimi | Örtüşme | Belirsiz | En uzun belirsiz | Ölçülebilir |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tüm video | Volkanovski (kırmızı) | önce | 90 (eski sayım: 124) | %23,4 | 59,1 sn | 22,1 sn | %82,9 |
+| | | sonra | 102 | %6,2 | 30,6 sn | 8,2 sn | %89,4 |
+| | Topuria (mavi) | önce | 87 | %24,9 | 21,3 sn | 4,3 sn | %90,8 |
+| | | sonra | 89 | %4,4 | 19,6 sn | 4,3 sn | %92,4 |
+| Dövüş süresi (R1+R2) | Volkanovski | önce | 89 | %24,5 | 35,5 sn | 11,6 sn | %86,7 |
+| | | sonra | 99 | %6,3 | 11,9 sn | 1,6 sn | %92,8 |
+| | Topuria | önce | 82 | %24,6 | 14,7 sn | 3,2 sn | %93,2 |
+| | | sonra | 86 | %3,9 | 8,4 sn | 2,1 sn | %95,1 |
+| R1 | Volkanovski | önce → sonra | 51 → 59 | %24,8 → %4,7 | 17,8 → 3,5 sn | 11,6 → 1,3 sn | %88,8 → %94,7 |
+| | Topuria | önce → sonra | 51 → 54 | %23,8 → %4,2 | 11,0 → 8,0 sn | 3,2 → 2,1 sn | %91,8 → %93,7 |
+| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %8,5 | 17,7 → 8,4 sn | 4,4 → 1,6 sn | %83,7 → %90,1 |
+| | Topuria | önce → sonra | 31 → 32 | %25,9 → %3,5 | 3,7 → 0,3 sn | 1,2 → 0,1 sn | %95,3 → %97,1 |
+
+  Sentetik tekrar klibi (83 sn, tek seçim): kırmızı köşe belirsiz 73,0 → 1,7 sn,
+  ölçülebilir %11 → %97; olay 2 → 15; tekrarın içindeki 2 tekme dışlandı (aynı
+  tekmeler canlı bölümde de sayılıyor). Örnek yayında olay 113 → 131, dışlanan 1.
+  **Gözle denetim:** 108 kare (70 kesimin her birinden 20 kare sonrası + yeni
+  kazanılan aralıklardan 38 kare, ızgara görsellerle): 107 doğru, 1 yanlış (maç
+  sonrası seyirci çekimi; model tabanıyla kapatıldı, o kare artık belirsiz). Son
+  sonuçta 26 kare yeniden bakıldı: hata yok. Kalan belirsiz süre çoğunlukla bir
+  dövüşçünün diğerinin arkasında kaldığı ya da sırtı dönük, şortu kadraj dışı
+  yakın planlardır.
+- **Süre:** kimlik adımı 2,7 → 6,3 sn (iki geçiş + doğrulama), kalite maskesi
+  0,01 sn; 9 dakikalık videoda toplam analiz süresine etkisi ≈ %0,1 (poz 3091 sn).
+- **Bilinen sınırlar:** tek yayın ve ondan türetilen kliple ayarlandı; şort
+  renkleri çok farklı (siyah / kırmızı). Benzer şortlu dövüşçülerde model tabanı
+  ve doğrulama payları yetmeyebilir; sistem o durumda belirsiz bırakır. Ek kesim
+  kuralı yalnızca ani kesimi bulur (yumuşak geçişleri değil). Dışa aktarılan
+  JSON'a raunt bazlı kalite özeti henüz eklenmedi.
+- (c) `v2/bolum-2` dalında; merge/push kullanıcının sözüyle. Bölüm 2 bitince
+  `local/fa-data` ve `local/replay-clip` silinecek (kullanıcı onayı bekleniyor).
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →

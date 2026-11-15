@@ -148,7 +148,7 @@ export type JobType = "analysis" | "export";
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "OutdatedReason".
  */
-export type OutdatedReason = "broadcast_missing" | "broadcast_outdated";
+export type OutdatedReason = "broadcast_missing" | "broadcast_outdated" | "identity_outdated";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "BroadcastNoteCode".
@@ -233,9 +233,16 @@ export type TrackState = "tracked" | "occluded" | "uncertain";
  * via the `definition` "SkeletonFormat".
  */
 export type SkeletonFormat = "coco17";
+/**
+ * What lowers the confidence of a fighter's data on a frame.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "QualityCause".
+ */
+export type QualityCause = "no_footage" | "camera" | "overlap" | "image";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.9.0.
+ * MMA Fight Analyzer data contracts, schema version 1.10.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
@@ -262,6 +269,7 @@ export interface FightAnalyzerContracts {
   Scorecards?: Scorecards;
   SegmentExclusions?: SegmentExclusions;
   SelectionCandidates?: SelectionCandidates;
+  TrackQualityReport?: TrackQualityReport;
   TrackingTimeline?: TrackingTimeline;
   UploadLimits?: UploadLimits;
 }
@@ -349,6 +357,14 @@ export interface FightEvent {
    * Fighter performing the action.
    */
   actor: FighterId | null;
+  /**
+   * How sure the identity of the fighter(s) is over the event's frames (the actor; both for an event without one). None: analysed before identities carried it.
+   */
+  attribution_confidence: number | null;
+  /**
+   * Below the attribution threshold: 'Kime ait belirsiz'. Not part of the momentum.
+   */
+  attribution_uncertain: boolean;
   /**
    * Detector confidence, not ground truth.
    */
@@ -1530,6 +1546,10 @@ export interface ScoringSummary {
   exclusions: ExcludedSegment[];
   final_red_share: number;
   parameters: MomentumParameters;
+  /**
+   * Events left out because it is uncertain whose they are ('Kime ait belirsiz').
+   */
+  unattributed_events: number;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1538,8 +1558,16 @@ export interface ScoringSummary {
 export interface TrackingSummary {
   anchor_conflicts: number;
   anchors: FighterAnchor[];
+  /**
+   * None: not enough confident stretches.
+   */
+  appearance: AppearanceSummary | null;
   cache_hit: boolean;
   cache_key: string;
+  /**
+   * Camera cuts the preparation missed, found by the identity layer (frames).
+   */
+  extra_cuts: number[];
   fighters: FighterTrackStats[];
   /**
    * Times a fighter's identity moved directly onto a track another person held.
@@ -1553,6 +1581,35 @@ export interface TrackingSummary {
    */
   swap_corrections: number;
   uncertain_segments: UncertainSegment[];
+  /**
+   * Version of the identity layer (0: before version 6).
+   */
+  version: number;
+}
+/**
+ * The appearance model the identities were assigned with (v2 Bölüm 2c): samples of each
+ * fighter's shorts and torso from confident stretches all over the video, and of the third
+ * persons (referee, corner staff) seen next to both fighters.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "AppearanceSummary".
+ */
+export interface AppearanceSummary {
+  blue_samples: number;
+  blue_shots: number;
+  /**
+   * Red / blue box height while both stand apart (median). Reported only: it is not used to tell the fighters apart.
+   */
+  height_ratio: number | null;
+  red_samples: number;
+  /**
+   * Camera shots the red corner's samples come from.
+   */
+  red_shots: number;
+  /**
+   * Samples of people who are neither fighter.
+   */
+  third_samples: number;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1750,6 +1807,10 @@ export interface MomentumTimeline {
    * Semantic version of the contract this document follows.
    */
   schema_version: string;
+  /**
+   * Events left out of the ledger because it is uncertain whose they are (outside excluded parts).
+   */
+  unattributed_event_ids: string[];
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -2068,6 +2129,76 @@ export interface SelectionCandidate {
   timestamp_ms: number;
 }
 /**
+ * Data quality for the whole bout and for every round in effect.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "TrackQualityReport".
+ */
+export interface TrackQualityReport {
+  fps: number;
+  job_id: string;
+  /**
+   * Semantic version of the contract this document follows.
+   */
+  schema_version: string;
+  scopes: QualityScope[];
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "QualityScope".
+ */
+export interface QualityScope {
+  end_frame: number;
+  /**
+   * @maxItems 2
+   */
+  fighters: TrackQuality[];
+  /**
+   * Round number; None: the whole bout.
+   */
+  round: number | null;
+  start_frame: number;
+}
+/**
+ * Data quality of one fighter in a frame range (excluded parts are not fight time).
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "TrackQuality".
+ */
+export interface TrackQuality {
+  /**
+   * Largest first; a frame can have several causes.
+   */
+  causes: CauseShare[];
+  fighter_id: FighterId;
+  /**
+   * Frames of fight time in the range.
+   */
+  frames: number;
+  /**
+   * Times the temporary tracker id under the fighter changed.
+   */
+  identity_changes: number;
+  longest_uncertain_ms: number;
+  measurable_share: number;
+  /**
+   * Overlap frames carried by tracker continuity.
+   */
+  occluded_share: number;
+  uncertain_ms: number;
+}
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "CauseShare".
+ */
+export interface CauseShare {
+  cause: QualityCause;
+  /**
+   * Share of the fight time in the range with this cause.
+   */
+  share: number;
+}
+/**
  * Run-length encoded identity states for the whole video (for the UI timeline).
  *
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -2089,8 +2220,32 @@ export interface TrackingTimeline {
  * via the `definition` "FighterTimeline".
  */
 export interface FighterTimeline {
+  /**
+   * Frames at which the temporary tracker id under the fighter changed.
+   */
+  changes: number[];
   fighter_id: FighterId;
+  /**
+   * None: analysed before the quality data existed (process again).
+   */
+  quality: QualityRun[] | null;
   runs: TrackStateRun[];
+}
+/**
+ * A stretch of frames that is not measurable or has causes that lower the confidence.
+ * Frames in no run are measurable without a known cause.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "QualityRun".
+ */
+export interface QualityRun {
+  causes: QualityCause[];
+  end_frame: number;
+  /**
+   * Identity verified with a detection and enough of the body measured.
+   */
+  measurable: boolean;
+  start_frame: number;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -2122,4 +2277,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.9.0";
+export const SCHEMA_VERSION = "1.10.0";

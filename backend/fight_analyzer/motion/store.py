@@ -8,7 +8,7 @@ cache/momentum/<key>/  momentum ledger and sampled shares for one parameter set
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -36,8 +36,8 @@ from .camera import CAMERA_VERSION, CameraTrack
 from .events import ADVANCING, NEUTRAL, RETREATING, Analysis, MovementRun
 from .kinematics import GROUNDED, STANDING, TRANSITION
 
-EVENTS_VERSION = 2  # 2: possible impact (head jolt) on contact strikes
-MOMENTUM_VERSION = 2  # 2: excluded parts
+EVENTS_VERSION = 3  # 2: possible impact (head jolt) on contact strikes; 3: attribution confidence
+MOMENTUM_VERSION = 3  # 2: excluded parts; 3: events of uncertain attribution earn nothing
 MANIFEST = "manifest.json"
 CAMERA_ARRAYS = ("to_ref", "segment", "known", "inliers")
 SIGNAL_ARRAYS = ("sample_ms", "valid", "activity", "hand_speed", "foot_speed", "approach", "movement", "posture",
@@ -62,6 +62,7 @@ class MomentumData:
     m: np.ndarray  # [2, S]
     red_share: np.ndarray  # [S]
     insufficient: np.ndarray  # [S] bool
+    unattributed: list[str] = field(default_factory=list)  # event ids left out: uncertain whose they are
 
 
 def _entry(cache_root: Path, kind: str, key: str) -> Path:
@@ -227,14 +228,16 @@ def compute_momentum(data: EventsData, s: MomentumSettings, segments: list[Exclu
     m = momentum_mod.totals(contributions, t, s.half_life_s, excl.intervals(segments, fps))
     red = momentum_mod.red_share(m[0], m[1], s.prior)
     insufficient = ~(data.signals["valid"][0] & data.signals["valid"][1])
-    return MomentumData(contributions=contributions, sample_ms=t, m=m, red_share=red, insufficient=insufficient)
+    return MomentumData(contributions=contributions, sample_ms=t, m=m, red_share=red, insufficient=insufficient,
+                        unattributed=momentum_mod.unattributed(data.events, segments))
 
 
 def write_momentum(cache_root: Path, key: str, inputs: dict, data: MomentumData) -> None:
     with staging_dir(_entry(cache_root, "momentum", key)) as stage:
         _write(stage, inputs, {"sample_ms": data.sample_ms, "m": data.m, "red_share": data.red_share,
                                "insufficient": data.insufficient},
-               {"contributions": [c.model_dump(mode="json") for c in data.contributions]})
+               {"contributions": [c.model_dump(mode="json") for c in data.contributions],
+                "unattributed": list(data.unattributed)})
 
 
 def momentum_timeline(job_id: str, parameters: MomentumParameters, data: MomentumData,
@@ -245,7 +248,8 @@ def momentum_timeline(job_id: str, parameters: MomentumParameters, data: Momentu
         sample_ms=[round(float(t), 1) for t in data.sample_ms],
         red_share=[round(float(v), 3) for v in data.red_share], m_red=[round(float(v), 4) for v in data.m[0]],
         m_blue=[round(float(v), 4) for v in data.m[1]], insufficient=[bool(v) for v in data.insufficient],
-        contributions=data.contributions, exclusions=list(exclusions))
+        contributions=data.contributions, exclusions=list(exclusions),
+        unattributed_event_ids=list(data.unattributed))
 
 
 def read_momentum(cache_root: Path, key: str) -> MomentumData | None:
@@ -255,6 +259,7 @@ def read_momentum(cache_root: Path, key: str) -> MomentumData | None:
     manifest, a = got
     try:
         return MomentumData(contributions=[MomentumContribution.model_validate(c) for c in manifest["contributions"]],
-                            sample_ms=a["sample_ms"], m=a["m"], red_share=a["red_share"], insufficient=a["insufficient"])
+                            sample_ms=a["sample_ms"], m=a["m"], red_share=a["red_share"], insufficient=a["insufficient"],
+                            unattributed=[str(i) for i in manifest.get("unattributed", [])])
     except (KeyError, ValueError):
         return None

@@ -16,6 +16,11 @@ probability.
 
 Excluded parts (replays etc., see exclusions.py) earn nothing and are not fight
 time: time runs on fight time, so the momentum holds its value through them.
+
+Events of which it is uncertain whose they are ("Kime ait belirsiz",
+`attribution_uncertain`) earn nothing either: points for the wrong fighter
+would move the share twice. The formula and the weights are unchanged; the
+events left out are reported (`unattributed`).
 """
 
 from __future__ import annotations
@@ -68,7 +73,7 @@ def ledger(events: Iterable[FightEvent], runs: Iterable[MovementRun], s: Momentu
             add(fighter, source, event_id, a, b, seconds * (b - a) / whole if whole > 0 else 0, per_s)
 
     for e in events:
-        if e.actor is None or excl.frame_excluded(excl.event_frame(e), segments):
+        if e.actor is None or e.attribution_uncertain or excl.frame_excluded(excl.event_frame(e), segments):
             continue
         at = e.peak_ms if e.peak_ms is not None else e.start_ms
         if e.type in (EventType.punch, EventType.knee):
@@ -89,6 +94,14 @@ def ledger(events: Iterable[FightEvent], runs: Iterable[MovementRun], s: Momentu
                      s.advance_per_s)
     out.sort(key=lambda c: (c.start_ms, c.contribution_id))
     return out
+
+
+def unattributed(events: Iterable[FightEvent], segments: Sequence[ExcludedSegment] = ()) -> list[str]:
+    """Ids of the events the ledger leaves out because it is uncertain whose they are
+    (events in excluded parts are out for that reason and not listed here)."""
+    return [e.event_id for e in events
+            if e.actor is not None and e.attribution_uncertain
+            and not excl.frame_excluded(excl.event_frame(e), segments)]
 
 
 def decayed(c: MomentumContribution, t_ms: np.ndarray | float, half_life_s: float,

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { navigate } from "../../app/router";
 import type { TrackingSummary, UncertainReason } from "../../contracts/generated";
-import { formatDuration, formatNumber } from "../../labels";
+import { TRACKING_LABELS, UI_LABELS, formatDuration, formatNumber } from "../../labels";
+import { HelpTip } from "../../ui";
 import type { Clock } from "../../player/clock";
 import { formatClock } from "../../player/clock";
 
@@ -80,6 +81,16 @@ export function TrackingLog({ jobId, tracking, cuts, fps, clock, time, names }: 
         <div><dt>Kamera kesimi</dt><dd className="num">{cuts.length}</dd></div>
         <div><dt>Seçim noktası</dt><dd className="num">{tracking.anchors.length}</dd></div>
       </dl>
+      <p className="tsum__model">
+        {tracking.appearance
+          ? TRACKING_LABELS.appearance(tracking.appearance.red_samples, tracking.appearance.blue_samples,
+                                       tracking.appearance.third_samples)
+          : TRACKING_LABELS.noAppearance}
+        {tracking.extra_cuts.length > 0 && ` · ${TRACKING_LABELS.extraCuts(tracking.extra_cuts.length)}`}
+        <HelpTip label={UI_LABELS.help(TRACKING_LABELS.appearanceTerm)} align="start">
+          {TRACKING_LABELS.appearanceHelp}
+        </HelpTip>
+      </p>
       {shown.length === 0 ? (
         <p className="events__none">{entries.length ? "Bu filtrede kayıt yok." : "Belirsizlik veya kontrol noktası yok."}</p>
       ) : (

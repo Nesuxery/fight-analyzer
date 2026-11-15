@@ -66,6 +66,12 @@ class FightEvent(Contract):
     measures: dict[str, float] = Field(
         default_factory=dict, description="Measured values behind the detection (body units, seconds, cosines).")
     confidence: float = Field(ge=0, le=1, description="Detector confidence, not ground truth.")
+    attribution_confidence: float | None = Field(
+        default=None, ge=0, le=1, description=(
+            "How sure the identity of the fighter(s) is over the event's frames (the actor; both for an event "
+            "without one). None: analysed before identities carried it."))
+    attribution_uncertain: bool = Field(
+        default=False, description="Below the attribution threshold: 'Kime ait belirsiz'. Not part of the momentum.")
     data_origin: DataOrigin
     note: str | None = None
 

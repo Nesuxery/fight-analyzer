@@ -88,6 +88,15 @@ saklanır. Video ve üzerindeki iskelet ve efekt renkleri iki temada aynıdır.
    iskeletler, altta zaman çizelgesi bulunur. Olay listesinde bir olaya
    tıklayınca video olaydan 1 sn önceye gider. Kısayollar: Boşluk oynat/duraklat,
    ←/→ 1 sn, `,` `.` bir kare, S iskelet, E olay efektleri, D mesafe, F tam ekran.
+   Videonun altındaki **Kapsam** seçici yan panellerin hangi aralığı
+   gösterdiğini belirler: **Şu ana kadar** (videonun başından oynatma anına),
+   **Raunt** (seçtiğiniz rauntun tamamı) ya da **Tüm maç**. Her panelin altında
+   aralık yazar. "Veri kalitesi" bölümü aynı aralık için dövüşçünün ne kadar
+   ölçülebildiğini, belirsiz süreyi ve güveni düşüren nedenleri (eksik görüntü,
+   uzak ya da kötü kamera açısı, örtüşen dövüşçüler, düşük görüntü kalitesi)
+   gösterir. Momentum kapsamdan etkilenmez; her zaman oynatma anındaki değerdir.
+   Olay listesinde **"Kime ait belirsiz"** etiketi, olay anında kimlik güveninin
+   düşük olduğunu söyler: olay sayılır ama momentuma puan eklemez.
 5. **Dışlanan bölümler (tekrar, raunt arası, giriş, maç sonrası):** Dövüş
    süresi olmayan bölümler otomatik dışlanır ve zaman çizelgesinin altındaki
    **"Dışlanan bölümler"** listesinde "otomatik" etiketi, nedeni, güveni ve

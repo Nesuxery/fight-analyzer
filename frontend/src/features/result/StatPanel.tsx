@@ -45,11 +45,12 @@ export function StatTerm({ term, side }: { term: { label: string; help: string }
  * Side panel of one corner. Metrics are grouped: striking, movement and
  * pressure, control, and (real analyses only) data quality.
  */
-export function StatPanel({ side, name, stats, untilS, demo, emptyNote = L.empty, quality }: {
+export function StatPanel({ side, name, stats, scopeNote, demo, emptyNote = L.empty, quality }: {
   side: Side;
   name: string | null;
   stats: StatsView;
-  untilS: number | null;
+  /** Which stretch of the bout the numbers belong to (null: nothing measured yet). */
+  scopeNote: string | null;
   demo: boolean;
   emptyNote?: string;
   /** Rows of the "Veri kalitesi" group; left out when there is no tracking data (Demo). */
@@ -113,7 +114,7 @@ export function StatPanel({ side, name, stats, untilS, demo, emptyNote = L.empty
         </dl>
       </StatGroup>
       <footer className="stats__foot">
-        {hasData && untilS !== null ? L.interval(formatClock(untilS)) : emptyNote}
+        {hasData && scopeNote !== null ? scopeNote : emptyNote}
       </footer>
       {quality && <StatGroup icon={<IconSignal size={16} />} title={L.groups.quality}>{quality}</StatGroup>}
     </section>

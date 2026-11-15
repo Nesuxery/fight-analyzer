@@ -155,7 +155,8 @@ def test_parts_in_effect_are_the_users_and_the_automatic_ones_merged():
 
 # ---- on the job ---------------------------------------------------------------------------------------------
 
-def analysis(store: JobStore, *, version: int = 2, segments: list[ExcludedSegment] | None = None) -> str:
+def analysis(store: JobStore, *, version: int = 2, segments: list[ExcludedSegment] | None = None,
+             tracking=None) -> str:
     job = store.create_job(params={
         "selection": {"anchors": [{"frame_index": 0, "red_detection_id": 0, "blue_detection_id": 1}]}})
     store.claim_next("w")
@@ -171,6 +172,8 @@ def analysis(store: JobStore, *, version: int = 2, segments: list[ExcludedSegmen
         broadcast=BroadcastSummary(cache_key="b", cache_hit=False, version=version, method="test", ocr_available=True,
                                    clock_share=0.9, rounds=[R1, R2], segments=segments or [], scorebug_frame=4800,
                                    processing_s=1.0))
+    if tracking is not None:
+        store.merge_outputs(job.job_id, "w", tracking=tracking)
     store.finish(job.job_id, "w", JobStatus.completed)
     return job.job_id
 
@@ -208,6 +211,21 @@ def test_an_analysis_from_before_replay_detection_asks_for_reprocessing(client: 
     job = client.get(f"/api/v1/jobs/{analysis(store, version=1)}").json()
     assert job["outdated"] == ["broadcast_outdated"]
     assert job["auto_exclusions"] == [] and len(job["rounds"]) == 2  # opens as before; nothing is excluded behind its back
+
+
+def test_identities_from_before_the_appearance_model_ask_for_reprocessing(client: TestClient, store: JobStore):
+    from fight_analyzer.contracts import TrackingSummary
+
+    def with_tracking(version: int) -> dict:
+        summary = TrackingSummary(cache_key="i", cache_hit=False, method="m", version=version, anchors=[], shots=[],
+                                  fighters=[], identity_switches=0, swap_corrections=0, anchor_conflicts=0,
+                                  uncertain_segments=[], review_points=[])
+        return client.get(f"/api/v1/jobs/{analysis(store, tracking=summary)}").json()
+
+    assert with_tracking(0)["outdated"] == ["identity_outdated"]  # opens as before, with the banner
+    assert with_tracking(6)["outdated"] == []
+    old = with_tracking(5)
+    assert client.get(f"/api/v1/jobs/{old['job_id']}/tracking/quality").status_code in (409, 410)
 
 
 def test_the_users_own_parts_are_always_stored_as_manual(client: TestClient, store: JobStore):

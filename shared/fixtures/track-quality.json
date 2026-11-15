@@ -1,0 +1,976 @@
+{
+ "description": "Data quality per frame range; see backend/tests/support/quality_fixture.py",
+ "fps": 29.97002997002997,
+ "frame_count": 1200,
+ "exclusions": [
+  {
+   "start_frame": 0,
+   "end_frame": 89,
+   "reason": "intro",
+   "note": null,
+   "source": "auto",
+   "auto_id": null,
+   "confidence": null,
+   "signals": []
+  },
+  {
+   "start_frame": 600,
+   "end_frame": 659,
+   "reason": "replay",
+   "note": null,
+   "source": "manual",
+   "auto_id": null,
+   "confidence": null,
+   "signals": []
+  },
+  {
+   "start_frame": 1150,
+   "end_frame": 1199,
+   "reason": "post_fight",
+   "note": null,
+   "source": "auto",
+   "auto_id": null,
+   "confidence": null,
+   "signals": []
+  }
+ ],
+ "fighters": [
+  {
+   "fighter_id": "fighter_a",
+   "runs": [
+    {
+     "start_frame": 0,
+     "end_frame": 10,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 11,
+     "end_frame": 52,
+     "state": "uncertain"
+    },
+    {
+     "start_frame": 53,
+     "end_frame": 56,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 57,
+     "end_frame": 189,
+     "state": "uncertain"
+    },
+    {
+     "start_frame": 190,
+     "end_frame": 263,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 264,
+     "end_frame": 275,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 276,
+     "end_frame": 379,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 380,
+     "end_frame": 447,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 448,
+     "end_frame": 487,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 488,
+     "end_frame": 513,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 514,
+     "end_frame": 630,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 631,
+     "end_frame": 633,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 634,
+     "end_frame": 656,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 657,
+     "end_frame": 716,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 717,
+     "end_frame": 732,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 733,
+     "end_frame": 847,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 848,
+     "end_frame": 880,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 881,
+     "end_frame": 968,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 969,
+     "end_frame": 976,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 977,
+     "end_frame": 980,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 981,
+     "end_frame": 1014,
+     "state": "uncertain"
+    },
+    {
+     "start_frame": 1015,
+     "end_frame": 1078,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 1079,
+     "end_frame": 1139,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 1140,
+     "end_frame": 1199,
+     "state": "tracked"
+    }
+   ],
+   "quality": [
+    {
+     "start_frame": 11,
+     "end_frame": 52,
+     "measurable": false,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 53,
+     "end_frame": 56,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 57,
+     "end_frame": 121,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 122,
+     "end_frame": 189,
+     "measurable": false,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 190,
+     "end_frame": 216,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 217,
+     "end_frame": 263,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 276,
+     "end_frame": 379,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 448,
+     "end_frame": 487,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 488,
+     "end_frame": 513,
+     "measurable": true,
+     "causes": [
+      "camera"
+     ]
+    },
+    {
+     "start_frame": 514,
+     "end_frame": 575,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 576,
+     "end_frame": 630,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 634,
+     "end_frame": 656,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 657,
+     "end_frame": 716,
+     "measurable": true,
+     "causes": [
+      "camera"
+     ]
+    },
+    {
+     "start_frame": 717,
+     "end_frame": 732,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 750,
+     "end_frame": 765,
+     "measurable": true,
+     "causes": [
+      "image"
+     ]
+    },
+    {
+     "start_frame": 766,
+     "end_frame": 809,
+     "measurable": true,
+     "causes": [
+      "camera",
+      "image"
+     ]
+    },
+    {
+     "start_frame": 848,
+     "end_frame": 880,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 969,
+     "end_frame": 976,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 981,
+     "end_frame": 1014,
+     "measurable": false,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 1079,
+     "end_frame": 1139,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 1140,
+     "end_frame": 1169,
+     "measurable": true,
+     "causes": [
+      "camera",
+      "image"
+     ]
+    },
+    {
+     "start_frame": 1170,
+     "end_frame": 1184,
+     "measurable": true,
+     "causes": [
+      "camera"
+     ]
+    },
+    {
+     "start_frame": 1185,
+     "end_frame": 1199,
+     "measurable": true,
+     "causes": [
+      "camera",
+      "image"
+     ]
+    }
+   ],
+   "changes": [
+    0,
+    11,
+    53,
+    190,
+    323,
+    380,
+    514,
+    576,
+    634,
+    717,
+    733,
+    766,
+    848,
+    887,
+    946,
+    977,
+    981,
+    1079,
+    1140,
+    1170
+   ]
+  },
+  {
+   "fighter_id": "fighter_b",
+   "runs": [
+    {
+     "start_frame": 0,
+     "end_frame": 170,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 171,
+     "end_frame": 223,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 224,
+     "end_frame": 230,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 231,
+     "end_frame": 301,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 302,
+     "end_frame": 403,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 404,
+     "end_frame": 416,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 417,
+     "end_frame": 428,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 429,
+     "end_frame": 536,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 537,
+     "end_frame": 563,
+     "state": "uncertain"
+    },
+    {
+     "start_frame": 564,
+     "end_frame": 683,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 684,
+     "end_frame": 721,
+     "state": "uncertain"
+    },
+    {
+     "start_frame": 722,
+     "end_frame": 793,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 794,
+     "end_frame": 812,
+     "state": "uncertain"
+    },
+    {
+     "start_frame": 813,
+     "end_frame": 988,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 989,
+     "end_frame": 995,
+     "state": "occluded"
+    },
+    {
+     "start_frame": 996,
+     "end_frame": 1147,
+     "state": "tracked"
+    },
+    {
+     "start_frame": 1148,
+     "end_frame": 1199,
+     "state": "uncertain"
+    }
+   ],
+   "quality": [
+    {
+     "start_frame": 0,
+     "end_frame": 35,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 36,
+     "end_frame": 72,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 73,
+     "end_frame": 170,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 224,
+     "end_frame": 230,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 302,
+     "end_frame": 348,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 349,
+     "end_frame": 403,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 417,
+     "end_frame": 428,
+     "measurable": true,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 537,
+     "end_frame": 563,
+     "measurable": false,
+     "causes": [
+      "overlap"
+     ]
+    },
+    {
+     "start_frame": 684,
+     "end_frame": 721,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 794,
+     "end_frame": 812,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 951,
+     "end_frame": 988,
+     "measurable": false,
+     "causes": [
+      "image"
+     ]
+    },
+    {
+     "start_frame": 989,
+     "end_frame": 995,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    },
+    {
+     "start_frame": 996,
+     "end_frame": 1043,
+     "measurable": true,
+     "causes": [
+      "image"
+     ]
+    },
+    {
+     "start_frame": 1044,
+     "end_frame": 1069,
+     "measurable": true,
+     "causes": [
+      "camera",
+      "image"
+     ]
+    },
+    {
+     "start_frame": 1070,
+     "end_frame": 1120,
+     "measurable": false,
+     "causes": [
+      "image"
+     ]
+    },
+    {
+     "start_frame": 1121,
+     "end_frame": 1128,
+     "measurable": true,
+     "causes": [
+      "image"
+     ]
+    },
+    {
+     "start_frame": 1148,
+     "end_frame": 1199,
+     "measurable": false,
+     "causes": [
+      "no_footage"
+     ]
+    }
+   ],
+   "changes": [
+    0,
+    53,
+    73,
+    139,
+    171,
+    404,
+    429,
+    484,
+    537,
+    564,
+    684,
+    722,
+    813,
+    837,
+    863,
+    989,
+    996,
+    1070,
+    1121,
+    1129
+   ]
+  }
+ ],
+ "cases": [
+  {
+   "start": 0,
+   "end": 1199,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 1000,
+     "measurable_share": 0.503,
+     "occluded_share": 0.422,
+     "uncertain_ms": 4471.1,
+     "longest_uncertain_ms": 3336.7,
+     "identity_changes": 15,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.395
+      },
+      {
+       "cause": "overlap",
+       "share": 0.161
+      },
+      {
+       "cause": "camera",
+       "share": 0.137
+      },
+      {
+       "cause": "image",
+       "share": 0.07
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 1000,
+     "measurable_share": 0.683,
+     "occluded_share": 0.209,
+     "uncertain_ms": 2869.5,
+     "longest_uncertain_ms": 1267.9,
+     "identity_changes": 17,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.201
+      },
+      {
+       "cause": "image",
+       "share": 0.171
+      },
+      {
+       "cause": "overlap",
+       "share": 0.094
+      },
+      {
+       "cause": "camera",
+       "share": 0.026
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 90,
+   "end": 599,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 510,
+     "measurable_share": 0.3078,
+     "occluded_share": 0.5961,
+     "uncertain_ms": 3336.7,
+     "longest_uncertain_ms": 3336.7,
+     "identity_changes": 5,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.5588
+      },
+      {
+       "cause": "overlap",
+       "share": 0.2333
+      },
+      {
+       "cause": "camera",
+       "share": 0.051
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 510,
+     "measurable_share": 0.6824,
+     "occluded_share": 0.3961,
+     "uncertain_ms": 900.9,
+     "longest_uncertain_ms": 900.9,
+     "identity_changes": 7,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.2647
+      },
+      {
+       "cause": "overlap",
+       "share": 0.1843
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 0,
+   "end": 433,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 344,
+     "measurable_share": 0.2703,
+     "occluded_share": 0.5174,
+     "uncertain_ms": 3336.7,
+     "longest_uncertain_ms": 3336.7,
+     "identity_changes": 3,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.532
+      },
+      {
+       "cause": "overlap",
+       "share": 0.2762
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 344,
+     "measurable_share": 0.6076,
+     "occluded_share": 0.5872,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 4,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.3924
+      },
+      {
+       "cause": "overlap",
+       "share": 0.1948
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 610,
+   "end": 650,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 0,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": []
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 0,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": []
+    }
+   ]
+  },
+  {
+   "start": 700,
+   "end": 700,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 1,
+     "measurable_share": 1.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "camera",
+       "share": 1.0
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 1,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 33.4,
+     "longest_uncertain_ms": 33.4,
+     "identity_changes": 0,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 1.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 1100,
+   "end": 1199,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 50,
+     "measurable_share": 0.2,
+     "occluded_share": 0.8,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 1,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.8
+      },
+      {
+       "cause": "camera",
+       "share": 0.2
+      },
+      {
+       "cause": "image",
+       "share": 0.2
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 50,
+     "measurable_share": 0.54,
+     "occluded_share": 0.0,
+     "uncertain_ms": 66.7,
+     "longest_uncertain_ms": 66.7,
+     "identity_changes": 2,
+     "causes": [
+      {
+       "cause": "image",
+       "share": 0.58
+      },
+      {
+       "cause": "no_footage",
+       "share": 0.04
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "start": 0,
+   "end": 0,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 0,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": []
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 0,
+     "measurable_share": 0.0,
+     "occluded_share": 0.0,
+     "uncertain_ms": 0.0,
+     "longest_uncertain_ms": 0.0,
+     "identity_changes": 0,
+     "causes": []
+    }
+   ]
+  },
+  {
+   "start": 300,
+   "end": 1150,
+   "fighters": [
+    {
+     "fighter_id": "fighter_a",
+     "frames": 790,
+     "measurable_share": 0.5873,
+     "occluded_share": 0.4101,
+     "uncertain_ms": 1134.5,
+     "longest_uncertain_ms": 1134.5,
+     "identity_changes": 14,
+     "causes": [
+      {
+       "cause": "no_footage",
+       "share": 0.3696
+      },
+      {
+       "cause": "camera",
+       "share": 0.1734
+      },
+      {
+       "cause": "image",
+       "share": 0.0886
+      },
+      {
+       "cause": "overlap",
+       "share": 0.0835
+      }
+     ]
+    },
+    {
+     "fighter_id": "fighter_b",
+     "frames": 790,
+     "measurable_share": 0.7101,
+     "occluded_share": 0.1532,
+     "uncertain_ms": 2869.5,
+     "longest_uncertain_ms": 1267.9,
+     "identity_changes": 15,
+     "causes": [
+      {
+       "cause": "image",
+       "share": 0.2165
+      },
+      {
+       "cause": "no_footage",
+       "share": 0.143
+      },
+      {
+       "cause": "overlap",
+       "share": 0.119
+      },
+      {
+       "cause": "camera",
+       "share": 0.0329
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

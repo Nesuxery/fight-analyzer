@@ -28,6 +28,7 @@ from fight_analyzer.contracts import (
     MotionTimeline,
     PoseChunk,
     PosePreview,
+    QualityScope,
     RoundEdits,
     Scorecards,
     ScorebugRegion,
@@ -35,6 +36,7 @@ from fight_analyzer.contracts import (
     SelectionCandidate,
     SelectionCandidates,
     TrackingTimeline,
+    TrackQualityReport,
 )
 from fight_analyzer.contracts.common import JOB_ID_PATTERN
 from fight_analyzer.media.analysis_video import video_path
@@ -50,6 +52,7 @@ from fight_analyzer.pipeline import scoring as scoring_stage
 from fight_analyzer.pose.cache import CacheCorrupt, PoseArrays, load_arrays, read_manifest
 from fight_analyzer.pose.preview import image_name, read_preview
 from fight_analyzer.tracking import prep as prep_mod
+from fight_analyzer.tracking import quality as quality_mod
 from fight_analyzer.tracking import results as identity_results
 
 from ..deps import SettingsDep, StoreDep
@@ -270,9 +273,36 @@ def tracking_timeline(store: StoreDep, settings: SettingsDep, job_id: JobId) -> 
     ident = identity_results.read_arrays(settings.cache_dir, tr.cache_key)
     if ident is None:
         raise ApiProblem(410, "tracking_missing", "Takip sonucu önbellekte bulunamadı.")
-    cuts = job.outputs.tracking_prep.cuts if job.outputs.tracking_prep else []
+    # the identity layer's shots include the cuts the preparation missed
+    cuts = ([s.start_frame for s in tr.shots[1:]] if tr.shots
+            else job.outputs.tracking_prep.cuts if job.outputs.tracking_prep else [])
     return TrackingTimeline(job_id=job_id, frame_count=int(ident["state"].shape[0]), fps=av.video.fps,
                             cuts=cuts, fighters=identity_results.timeline(ident))
+
+
+@router.get("/{job_id}/tracking/quality", response_model=TrackQualityReport)
+def tracking_quality(store: StoreDep, settings: SettingsDep, job_id: JobId) -> TrackQualityReport:
+    """Data quality of both fighters for the whole bout and every round in effect (excluded
+    parts are not fight time). The browser computes the same for the scope that follows the
+    playhead from the tracking timeline."""
+    job = _job(store, job_id)
+    tr, av = job.outputs.tracking, job.outputs.analysis_video
+    if tr is None or av is None:
+        raise ApiProblem(409, "tracking_not_ready", "Kimlik takibi henüz yok.")
+    ident = identity_results.read_arrays(settings.cache_dir, tr.cache_key)
+    if ident is None:
+        raise ApiProblem(410, "tracking_missing", "Takip sonucu önbellekte bulunamadı.")
+    if "quality" not in ident or "change" not in ident:
+        raise ApiProblem(409, "quality_outdated", "Bu analiz eski sürümle yapıldı; veri kalitesi için yeniden işleyin.")
+    frames = int(ident["state"].shape[0])
+    segments = job.outputs.scoring.exclusions if job.outputs.scoring else scoring_stage.excluded_parts(job)
+    excluded = quality_mod.excluded_mask(segments, frames)
+    spans = [(None, 0, frames - 1), *((r.index, r.start_frame, min(r.end_frame, frames - 1)) for r in job.rounds)]
+    return TrackQualityReport(job_id=job_id, fps=av.video.fps, scopes=[
+        QualityScope(round=index, start_frame=a, end_frame=b,
+                     fighters=quality_mod.summarize(ident["state"], ident["quality"], ident["change"], a, b,
+                                                    av.video.fps, excluded))
+        for index, a, b in spans])
 
 
 @lru_cache(maxsize=4)

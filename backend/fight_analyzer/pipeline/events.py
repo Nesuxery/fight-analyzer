@@ -24,7 +24,7 @@ from .base import RateMeter, overall
 STAGE = PipelineStage.events
 METHOD = ("Kamera hareketi arka plandan (optik akış + RANSAC); eklemler gövde boyuna göre ölçekli, "
           "One-Euro ile yumuşatılmış, hızlar zaman farkından; vuruş denemesi = tek hız tepesi + uzanma + "
-          "rakibe yönelim; temas yalnızca 2B 'olası'.")
+          "rakibe yönelim; temas yalnızca 2B 'olası'. Her olay kimlik güveninden bir sahiplik güveni taşır.")
 
 
 def run(ctx: JobContext) -> None:
@@ -71,7 +71,7 @@ def run(ctx: JobContext) -> None:
         ctx.report(overall(STAGE, 0.85), "Eklem hızları ve olaylar", detail=meter.detail(total))
         kin = tuple(kinematics.compute(arrays, ident["state"], ident["det"], prep.track_id, track, f, ms)
                     for f in (0, 1))
-        analysis = events_mod.analyze(arrays, track, kin, ms)
+        analysis = events_mod.analyze(arrays, track, kin, ms, ident["conf"])
         data = motion_store.events_data(analysis, arrays.timestamp_ms, track, ms)
         motion_store.write_events(cache_root, ekey, einputs, data)
     summary = EventsSummary(

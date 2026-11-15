@@ -76,6 +76,44 @@ class TrackingSettings:
 
 
 @dataclass(frozen=True)
+class IdentitySettings:
+    """Identity layer on top of the tracking preparation (tracking/identity.py, quality.py).
+    Kept apart from TrackingSettings on purpose: every field there is part of the
+    preparation cache key. These are part of the identity cache key only. Starting
+    design values, tuned on one sample broadcast."""
+
+    # Camera cuts the preparation missed (two shots of the same canvas change the colour
+    # histogram little): an isolated peak of the frame-to-frame colour change.
+    extra_cut_floor: float = 0.03  # the usual change is ~0.004, the 99th percentile ~0.01
+    extra_cut_relative: float = 6.0  # times the median change around the frame
+    extra_cut_isolation: float = 0.5  # a neighbour frame this close to the peak: flash or wipe, not a cut
+    # Appearance model: samples of each fighter from confident stretches all over the video.
+    model_samples: int = 40  # per fighter, spread over the video (at least 20 are aimed for)
+    model_min_samples: int = 20
+    model_min_confidence: float = 0.75
+    model_min_weight: float = 4.0  # clean appearance evidence of a sampled stretch (summed quality)
+    # Placing a fighter without a position: at least as much like the model as his least typical
+    # sample is like the rest of them, less this.
+    model_tolerance: float = 0.08
+    # Third persons (referee, corner staff): seen next to both fighters for this many frames.
+    third_min_frames: int = 5
+    third_samples: int = 60
+    # Inside an overlap a frame counts as verified when its own appearance says so.
+    verify_margin: float = 0.08  # more like this fighter than like the other one or a third person
+    verify_window_s: float = 1.0  # an unverified overlap frame this close to a verified one is "recent"
+    confidence_verified: float = 0.9  # factors on the identity confidence inside overlaps
+    confidence_recent: float = 0.75
+    confidence_unverified: float = 0.45
+    # Data quality (quality.py): what lowers the confidence of a frame.
+    far_height_share: float = 0.25  # fighter's box below this share of the frame height: far camera
+    low_keypoint_conf: float = 0.5  # mean confidence of the body joints
+    joint_min_conf: float = 0.5  # a joint below this is not a measurement (as MotionSettings.kp_min_conf)
+    min_body_joints: int = 6  # of 12, needed for measurements (as in the motion stage)
+    low_resolution_px: int = 110  # box height on a 1080-line frame
+    blur_energy: float = 0.06  # mean gradient energy of shorts and torso below this: blurred
+
+
+@dataclass(frozen=True)
 class MotionSettings:
     """Motion signals and event detection. Lengths are in torso lengths ("body
     units", mid-shoulders to mid-hips), times in seconds: nothing depends on the
@@ -114,6 +152,9 @@ class MotionSettings:
     # lengths, relative to his shoulders, beyond his movement just before) within the window.
     impact_head_jolt: float = 0.3
     impact_window_s: float = 0.25
+    # Whose event: mean identity confidence of the actor over the event's frames. Below this
+    # the event is "Kime ait belirsiz" (listed and counted, but no momentum points).
+    attribution_min: float = 0.5
     # Movement and positions
     advance_speed: float = 0.5  # toward (+) / away (-) from the opponent
     advance_smooth_s: float = 0.3
@@ -249,6 +290,7 @@ class Settings:
     transcode: TranscodeSettings = field(default_factory=TranscodeSettings)
     pose: PoseSettings = field(default_factory=PoseSettings)
     tracking: TrackingSettings = field(default_factory=TrackingSettings)
+    identity: IdentitySettings = field(default_factory=IdentitySettings)
     motion: MotionSettings = field(default_factory=MotionSettings)
     momentum: MomentumSettings = field(default_factory=MomentumSettings)
     ruleset: RulesetSettings = field(default_factory=RulesetSettings)

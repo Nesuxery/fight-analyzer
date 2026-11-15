@@ -204,7 +204,8 @@ export function identityAt(timeline: TrackingTimeline | null, fighterId: string,
 
 /** Uncertainty labels of an event: what it is not certain about, in plain words. */
 export function eventTags(e: FightEvent, scored: Set<string> | null, timeline: TrackingTimeline | null,
-                          segments: readonly ExcludedSegment[] = []): EventTag[] {
+                          segments: readonly ExcludedSegment[] = [],
+                          unattributed?: (confidencePct: number) => EventTag): EventTag[] {
   const tags: EventTag[] = [];
   if (isFrameExcluded(eventFrame(e), segments)) {
     tags.push({ label: "Dışlandı", tone: "muted",
@@ -223,6 +224,10 @@ export function eventTags(e: FightEvent, scored: Set<string> | null, timeline: T
     tags.push({ label: "Düşük güven", tone: "muted",
                 title: `Dedektör güveni %${Math.round(e.confidence * 100)}; yanlış tespit olabilir.` });
   }
+  // "Kime ait belirsiz": the text comes from the caller (labels.ts)
+  if (e.attribution_uncertain && unattributed) {
+    tags.push(unattributed(Math.round((e.attribution_confidence ?? 0) * 100)));
+  }
   if (e.actor && identityAt(timeline, e.actor, eventFrame(e)) === "occluded") {
     tags.push({ label: "Kimlik örtüşmede", tone: "muted",
                 title: "Olay anında dövüşçüler üst üsteydi; kimlik önceki karelerden taşındı." });
@@ -236,7 +241,8 @@ export function eventTags(e: FightEvent, scored: Set<string> | null, timeline: T
 
 export function toTimelineEvents(events: FightEvent[], contributions: MomentumContribution[] | null = null,
                                  timeline: TrackingTimeline | null = null,
-                                 segments: readonly ExcludedSegment[] = []): TimelineEvent[] {
+                                 segments: readonly ExcludedSegment[] = [],
+                                 unattributed?: (confidencePct: number) => EventTag): TimelineEvent[] {
   const scored = contributions ? new Set(contributions.map((c) => c.event_id).filter((id) => id !== null)) : null;
   return [...events].sort((a, b) => (a.peak_ms ?? a.start_ms) - (b.peak_ms ?? b.start_ms)).map((e) => ({
     id: e.event_id,
@@ -248,7 +254,7 @@ export function toTimelineEvents(events: FightEvent[], contributions: MomentumCo
     significant: MAJOR.has(e.type),
     note: e.note ?? null,
     origin: e.data_origin,
-    tags: eventTags(e, scored, timeline, segments),
+    tags: eventTags(e, scored, timeline, segments, unattributed),
     excluded: isFrameExcluded(eventFrame(e), segments),
   }));
 }
@@ -295,30 +301,38 @@ export function motionSums(motion: MotionTimeline, iv: Intervals = []): MotionSu
 const samplesUpTo = (tMs: number, sums: MotionSums): number =>
   Math.min(sums.count, Math.max(0, Math.floor(tMs / 1000 * sums.hz) + 1));
 
-/** Statistics of one side from the start up to the presented frame (tMs = frameMs(frame)).
- * Events in excluded parts are not counted and control time does not accrue in them. */
+/** Samples that lie before time tMs (those a range starting there leaves out). */
+const samplesBefore = (tMs: number, sums: MotionSums): number =>
+  Math.min(sums.count, Math.max(0, Math.ceil(tMs / 1000 * sums.hz - 1e-9)));
+
+/** Statistics of one side up to the presented frame (tMs = frameMs(frame)), from the start
+ * of the video or, for a round scope, from `fromFrame` (see model/scope.ts).
+ * Events in excluded parts are not counted and control time does not accrue in them.
+ * The MP4 export mirrors the default (from the start). */
 export function measuredStats(side: Side, frame: number, tMs: number, events: FightEvent[],
                               sums: MotionSums, segments: readonly ExcludedSegment[] = [],
-                              iv: Intervals = []): StatsView {
+                              iv: Intervals = [], fromFrame = 0, fromMs = 0): StatsView {
   const fighter = side === "red" ? "fighter_a" : "fighter_b";
   const upto = samplesUpTo(tMs, sums);
-  const mine = events.filter((e) => e.actor === fighter && eventFrame(e) <= frame &&
+  const from = fromFrame > 0 ? Math.min(upto, samplesBefore(fromMs, sums)) : 0;
+  const mine = events.filter((e) => e.actor === fighter && eventFrame(e) <= frame && eventFrame(e) >= fromFrame &&
     !isFrameExcluded(eventFrame(e), segments));
   const enough = (samples: number) => samples / sums.hz >= MIN_SHARE_SAMPLES_S;
-  const actN = sums.actN[side][upto]!;
-  const moveN = sums.moveN[side][upto]!;
-  const adv = sums.adv[side][upto]!;
-  const ret = sums.ret[side][upto]!;
+  const actN = sums.actN[side][upto]! - sums.actN[side][from]!;
+  const moveN = sums.moveN[side][upto]! - sums.moveN[side][from]!;
+  const adv = sums.adv[side][upto]! - sums.adv[side][from]!;
+  const ret = sums.ret[side][upto]! - sums.ret[side][from]!;
   const moving = adv + ret;
   let control = 0;
-  for (const e of mine) {
-    if (e.type !== "ground_control") continue;
-    control += outsideMs(e.start_ms, Math.min(e.end_ms, tMs), iv) / 1000;
+  for (const e of events) {  // a control stretch that began before the range counts for its part inside
+    if (e.type !== "ground_control" || e.actor !== fighter || isFrameExcluded(eventFrame(e), segments)) continue;
+    if (eventFrame(e) > frame) continue;
+    control += outsideMs(Math.max(e.start_ms, fromMs), Math.min(e.end_ms, tMs), iv) / 1000;
   }
   return {
     strikeAttempts: mine.filter((e) => e.type === "punch" || e.type === "knee").length,
     kicks: mine.filter((e) => e.type === "kick").length,
-    activity: enough(actN) ? Math.round((sums.act[side][upto]! / actN) * 100) : null,
+    activity: enough(actN) ? Math.round(((sums.act[side][upto]! - sums.act[side][from]!) / actN) * 100) : null,
     pressure: enough(moveN) ? Math.round((adv / moveN) * 100) : null,
     advance: enough(moveN) && moving > 0 ? Math.round((adv / moving) * 100) : enough(moveN) ? 0 : null,
     retreat: enough(moveN) && moving > 0 ? Math.round((ret / moving) * 100) : enough(moveN) ? 0 : null,

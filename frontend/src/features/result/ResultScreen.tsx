@@ -8,9 +8,9 @@ import type { DemoState } from "../../demo/DemoContext";
 import { renderDemo } from "../../demo/render";
 import { DEMO_DURATION_S, DEMO_FPS, DEMO_FRAME } from "../../demo/script";
 import { useJob } from "../../hooks/useJob";
-import { JOB_STATUS_LABELS } from "../../labels";
+import { JOB_STATUS_LABELS, RESULT_LABELS } from "../../labels";
 import { EMPTY_STATS } from "../../model/analysis";
-import { PlaybackClock, useClock, useDisposeClock } from "../../player/clock";
+import { PlaybackClock, formatClock, useClock, useDisposeClock } from "../../player/clock";
 import { DEFAULT_LAYERS } from "../../player/draw";
 import type { Layers } from "../../player/draw";
 import { VideoStage } from "../../player/VideoStage";
@@ -180,7 +180,8 @@ function ResultView({ data, clock, actions, empty }: {
                      demo={demo} actions={actions} />
       <div className="result__left">
         <StatPanel side="red" name={data?.names.red ?? null} stats={statsFor("red")}
-                   untilS={data ? snap.time : null} demo={demo} />
+                   scopeNote={data ? RESULT_LABELS.stats.interval(formatClock(0), formatClock(snap.time)) : null}
+                   demo={demo} />
       </div>
       <div className="result__stage">
         {data ? (
@@ -192,7 +193,8 @@ function ResultView({ data, clock, actions, empty }: {
       </div>
       <div className="result__right">
         <StatPanel side="blue" name={data?.names.blue ?? null} stats={statsFor("blue")}
-                   untilS={data ? snap.time : null} demo={demo} />
+                   scopeNote={data ? RESULT_LABELS.stats.interval(formatClock(0), formatClock(snap.time)) : null}
+                   demo={demo} />
       </div>
       <div className="result__controls">
         <PlaybackBar clock={clock} snap={snap} layers={layers} onLayers={setLayers} disabled={disabled} />

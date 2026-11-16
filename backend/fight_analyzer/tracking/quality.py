@@ -10,8 +10,9 @@ Per frame and fighter a small bit mask is stored with the identity result:
   - camera: a far camera (his box is small in the frame), or a view in which he
     could not be told apart (after a camera cut, look-alike candidates);
   - overlap: the fighters overlap and the frame could not be verified by its own
-    appearance (the identity is carried by tracker continuity), or the identity
-    was lost in an overlap;
+    appearance (the identity is carried by tracker continuity), the identity
+    was placed from an overlapping box and not confirmed since, or it was lost
+    in an overlap;
   - image: low image quality: few pixels, blur (little gradient energy on shorts
     and torso), low keypoint confidence.
 

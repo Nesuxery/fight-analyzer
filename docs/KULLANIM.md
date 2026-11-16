@@ -96,7 +96,9 @@ saklanır. Video ve üzerindeki iskelet ve efekt renkleri iki temada aynıdır.
    uzak ya da kötü kamera açısı, örtüşen dövüşçüler, düşük görüntü kalitesi)
    gösterir. Momentum kapsamdan etkilenmez; her zaman oynatma anındaki değerdir.
    Olay listesinde **"Kime ait belirsiz"** etiketi, olay anında kimlik güveninin
-   düşük olduğunu söyler: olay sayılır ama momentuma puan eklemez.
+   düşük olduğunu söyler: olay sayılır ama momentuma puan eklemez. Kamera
+   kesiminden hemen sonra dövüşçüler iç içe görünüyorsa kimlik, dövüşçüler
+   birkaç kare ayrı görülene kadar düşük güvenli ("Örtüşme") sayılır.
 5. **Dışlanan bölümler (tekrar, raunt arası, giriş, maç sonrası):** Dövüş
    süresi olmayan bölümler otomatik dışlanır ve zaman çizelgesinin altındaki
    **"Dışlanan bölümler"** listesinde "otomatik" etiketi, nedeni, güveni ve

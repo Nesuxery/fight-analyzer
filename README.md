@@ -342,7 +342,7 @@ eşiği bu yüzden düşük tutulmuştur.
 - Dövüşçü başına: takipte / örtüşme / belirsiz kare sayısı, belirsiz süre ve en
   uzun belirsiz aralık, yeniden bulma, geçici numara değişimi (son sonuç
   üzerinden, her değişim bir kez), ortalama güven. Kapsamlı veri kalitesi için
-  bkz. "Kimlik takibi sürüm 6 ve veri kalitesi".
+  bkz. "Kimlik takibi ve veri kalitesi".
 - **Olası kimlik değişimi:** bir dövüşçü, kısa süre önce diğer dövüşçüye ait
   olan geçici ize geçtiğinde sayılır. **Takas düzeltmesi:** izleyici izi
   sürdürdüğü hâlde görünüm başka kişi dediğinde. Bunlar doğruluk ölçüsü değil,
@@ -773,7 +773,7 @@ geri alınır.
   Köşe görüntüsü rauntlar bulunmuşsa "raunt arası", bulunamamışsa yine "ara"
   olarak dışlanır (raunt yokken "mola" adı verilemez).
 
-## Kimlik takibi sürüm 6 ve veri kalitesi (v2 Bölüm 2c)
+## Kimlik takibi ve veri kalitesi (v2 Bölüm 2c, kimlik sürüm 7)
 
 `backend/fight_analyzer/tracking/identity.py`, `tracking/quality.py`,
 `frontend/src/model/scope.ts`, `model/quality.ts`. Ayarlar `IdentitySettings`
@@ -794,17 +794,27 @@ geri alınır.
   ikinci geçiş aynı kuralları bu modelle çalıştırır. Konum bilgisi yokken
   (kesim, uzun kayıp) aday modele en az "en az tipik örnek − 0,08" kadar
   benzemelidir. Kutu yüksekliği oranı ölçülür ve raporlanır, karar için
-  kullanılmaz. Özet: `TrackingSummary.appearance`.
+  kullanılmaz (duruş ve kamera uzaklığıyla kareden kareye %20'ye varan
+  oynama, aynı sıkletteki %1–3'lük boy farkını örter). Özet:
+  `TrackingSummary.appearance`.
 - **Örtüşmede doğrulama:** örtüşen kutudaki kare, kendi görünümü dövüşçüye diğer
   dövüşçüden ve üçüncü kişilerden 0,08 daha çok benziyorsa ve örtüşen başka bir
   kutu da aynı dövüşçüye benzemiyorsa "takipte"dir; değilse izleyici
   sürekliliğiyle taşınır ("örtüşme") ve kimlik güveni düşer (× 0,75 / × 0,45).
   Geriye dönük sahip değiştirme yapılmaz.
+- **Örtüşen kutudan kurulan kimlik (sürüm 7):** kesimden ya da uzun kayıptan
+  sonra kimlik örtüşen bir kutudan (tek karenin görünümüyle, iki kat farkla)
+  kurulduysa, dövüşçü örtüşmesiz 5 karede (`acquire_confirm_frames`) kendi
+  görünümüyle doğrulanana kadar kareleri "örtüşme" durumunda ve × 0,45 güvenle
+  tutulur; ölçülebilir kalır, ama o karelerdeki olay "Kime ait belirsiz" olur.
+  Doğrulanınca tutulan kareler olağan kurallara döner; önce kesim gelirse düşük
+  güvenli kalır.
 - **Olay sahipliği:** her olay `attribution_confidence` taşır (aktörün olay
   karelerindeki ortalama kimlik güveni). 0,5'in altı `attribution_uncertain`
-  ("Kime ait belirsiz"): olay listede ve sayımlarda kalır, momentuma puan
-  eklemez; momentum kartı ve `MomentumTimeline.unattributed_event_ids` kaç olayın
-  dışarıda kaldığını gösterir. Puanlamadaki ağırlığını Bölüm 4 belirleyecek.
+  ("Kime ait belirsiz"): olay listede ve şimdilik sayımlarda kalır, momentuma
+  puan eklemez; momentum kartı ve `MomentumTimeline.unattributed_event_ids` kaç
+  olayın dışarıda kaldığını gösterir. Bölüm 3'te dövüşçü sayımlarından çıkıp
+  ayrı bir "belirsiz" sayısı olacak; puanlamadaki ağırlığını Bölüm 4 belirleyecek.
 - **Veri kalitesi:** kare başına "ölçülemez" ve dört neden (eksik görüntü, uzak
   ya da kötü kamera açısı, örtüşen dövüşçüler, düşük görüntü kalitesi:
   çözünürlük, bulanıklık, düşük eklem güveni). Bir aralığın özeti: ölçülebilir
@@ -828,27 +838,29 @@ geri alınır.
 | Kapsam | Dövüşçü | | Geçici numara değişimi | Örtüşme | Belirsiz | En uzun belirsiz | Ölçülebilir |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Tüm video | Volkanovski (kırmızı) | önce | 90 (eski sayım: 124) | %23,4 | 59,1 sn | 22,1 sn | %82,9 |
-| | | sonra | 102 | %6,2 | 31,0 sn | 8,2 sn | %89,3 |
+| | | sonra | 102 | %6,5 | 31,0 sn | 8,2 sn | %89,3 |
 | | Topuria (mavi) | önce | 87 | %24,9 | 21,3 sn | 4,3 sn | %90,8 |
-| | | sonra | 89 | %4,4 | 19,8 sn | 4,3 sn | %92,4 |
+| | | sonra | 89 | %4,5 | 19,8 sn | 4,3 sn | %92,4 |
 | Dövüş süresi (R1+R2) | Volkanovski | önce | 89 | %24,5 | 35,5 sn | 11,6 sn | %86,7 |
-| | | sonra | 99 | %6,2 | 12,2 sn | 1,6 sn | %92,7 |
+| | | sonra | 99 | %6,4 | 12,2 sn | 1,6 sn | %92,7 |
 | | Topuria | önce | 82 | %24,6 | 14,7 sn | 3,2 sn | %93,2 |
 | | | sonra | 86 | %3,9 | 8,5 sn | 2,1 sn | %95,1 |
 | R1 | Volkanovski | önce → sonra | 51 → 59 | %24,8 → %4,6 | 17,8 → 3,7 sn | 11,6 → 1,3 sn | %88,8 → %94,6 |
 | | Topuria | önce → sonra | 51 → 54 | %23,8 → %4,2 | 11,0 → 8,1 sn | 3,2 → 2,1 sn | %91,8 → %93,6 |
-| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %8,5 | 17,7 → 8,5 sn | 4,4 → 1,6 sn | %83,7 → %90,0 |
+| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %9,0 | 17,7 → 8,5 sn | 4,4 → 1,6 sn | %83,7 → %90,0 |
 | | Topuria | önce → sonra | 31 → 32 | %25,9 → %3,5 | 3,7 → 0,4 sn | 1,2 → 0,1 sn | %95,3 → %97,1 |
 
   Hazırlıkta 36 kesim bulunmuştu, 34 ek kesim bulundu. Sentetik tekrar klibinde
   (83 sn) kırmızı köşe belirsiz 73,0 → 1,7 sn, olay 2 → 15, tekrarın içindeki 2
   tekme dışlandı. 108 karelik gözle denetimde 107 kare doğru, 1 yanlış (maç
-  sonrası seyirci çekimi; düzeltildi). Kimlik adımı 2,7 → 6,3 sn (poz çıkarımı
-  3091 sn: toplam süreye etkisi ≈ %0,1).
+  sonrası seyirci çekimi; düzeltildi). Örtüşen kutudan 44 kimlik kuruldu, 40'ı
+  onaylandı; onaylanmayan 4'ünün kareleri (toplam 1,8 sn) düşük güvenli.
+  Kimlik adımı 2,7 → 6,4 sn (poz çıkarımı 3091 sn: toplam süreye etkisi ≈ %0,1).
 - **Sınırlar:** tek yayınla ayarlandı; şort renkleri çok farklıydı. Geçici numara
   değişimi sayısı düşmedi (kesim sayısı arttı; bu bir izleyici ölçüsüdür).
   Bulanıklık/çözünürlük eşikleri bu yayında tetiklenmedi. Dışa aktarılan JSON'da
-  raunt bazlı kalite özeti yok.
+  raunt bazlı kalite özeti yok (Bölüm 4'te `JudgingResult.data_quality` ile
+  gelecek).
 
 ## AI hakemlik (Aşama 9)
 

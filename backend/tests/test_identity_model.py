@@ -172,6 +172,56 @@ def test_one_fighter_in_front_of_the_other_is_verified_on_neither_box():
     assert (result.state[140:] == TRACKED).all() and np.allclose(result.conf[140:], 1.0)
 
 
+# ---- placed from an overlapping box after a cut -------------------------------------------------------------
+
+def cut_into_striking_range(apart_from: int | None = None) -> Scene:
+    """After the cut at 60 the fighters stand at striking range (their boxes overlap, both are
+    visible); with `apart_from` they step apart from that frame on."""
+    scene = Scene(actors={"A": RED, "B": BLUE}, frames=150, shots={0: (70, 90, 60), 60: (110, 70, 40)})
+    scene.path("A", [(0, 160, FLOOR, HEIGHT), (59, 180, FLOOR, HEIGHT)])
+    scene.path("B", [(0, 470, FLOOR, HEIGHT), (59, 450, FLOOR, HEIGHT)])
+    stay = apart_from if apart_from is not None else 149
+    a = [(60, 350, FLOOR, HEIGHT), (stay, 350, FLOOR, HEIGHT)]
+    b = [(60, 285, FLOOR, HEIGHT), (stay, 285, FLOOR, HEIGHT)]
+    if apart_from is not None:
+        a += [(apart_from + 30, 470, FLOOR, HEIGHT), (149, 470, FLOOR, HEIGHT)]
+        b += [(apart_from + 30, 170, FLOOR, HEIGHT), (149, 170, FLOOR, HEIGHT)]
+    moved(scene, "A", 60, a)
+    moved(scene, "B", 60, b)
+    return scene
+
+
+def test_an_identity_placed_from_an_overlapping_box_is_held_at_low_confidence():
+    # never apart in the new shot: one frame's appearance placed them, nothing confirms it
+    _, prep, _, result, ev = run(cut_into_striking_range(), [(10, "A", "B")])
+    assert prep.cuts == [60] and ev.wrong == [0, 0]
+    after = slice(60, 150)
+    assert result.held[after].all() and not result.held[:60].any()
+    assert (result.state[after] == OCCLUDED).all() and (result.det[after] >= 0).all()  # kept, not dropped
+    assert (result.conf[after] <= I.confidence_unverified + 1e-6).all()
+    assert [f.uncertain_frames for f in result.fighters] == [0, 0]
+
+
+def test_a_few_verified_frames_without_overlap_confirm_the_held_identity():
+    _, prep, _, result, ev = run(cut_into_striking_range(apart_from=90), [(10, "A", "B")])
+    assert ev.wrong == [0, 0] and not result.held.any()
+    # the frames held up to the confirmation count as any verified overlap frame
+    assert (result.state[60:] == TRACKED).all()
+    assert np.allclose(result.conf[60:90], I.confidence_verified) and np.allclose(result.conf[100:], 1.0)
+    # with a count that is never reached the same frames stay held
+    _, _, _, waiting, ev = run(cut_into_striking_range(apart_from=90), [(10, "A", "B")],
+                               replace(I, acquire_confirm_frames=1000))
+    assert ev.wrong == [0, 0] and waiting.held[60:].all()
+    assert (waiting.conf[60:] <= I.confidence_unverified + 1e-6).all()
+
+
+def test_a_selection_inside_the_shot_stands_in_for_the_confirmation():
+    # the pass from the second selection follows both through the shot: its result counts
+    _, _, _, result, ev = run(cut_into_striking_range(), [(10, "A", "B"), (140, "A", "B")])
+    assert ev.wrong == [0, 0] and not result.held.any()
+    assert (result.state[60:] == TRACKED).all()
+
+
 # ---- temporary-id changes -----------------------------------------------------------------------------------
 
 def test_id_changes_are_counted_once_on_the_final_result():

@@ -190,14 +190,24 @@ def test_merge_prefers_the_pass_that_crossed_fewer_cuts():
     shots = np.array([0] * 5 + [1] * 5)
     fwd = out([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     bwd = out([0, 1, 2, 30, 4, 5, 6, 70, 8, 9])
-    state, det, _, reason, conflicts = identity._merge(fwd, bwd, [0, 9], shots)
+    state, det, _, reason, _, conflicts = identity._merge(fwd, bwd, [0, 9], shots)
     assert det[3, 0] == 3  # same shot as the first anchor: the forward pass wins
     assert det[7, 0] == 70  # same shot as the second anchor: the backward pass wins
     assert conflicts == 0
     # equal number of cuts crossed (anchor shots 0 and 2, frame in shot 1): undecided
     shots = np.array([0, 0, 0, 1, 1, 1, 1, 2, 2, 2])
-    state, det, _, reason, conflicts = identity._merge(fwd, bwd, [0, 9], shots)
+    state, det, _, reason, _, conflicts = identity._merge(fwd, bwd, [0, 9], shots)
     assert state[3, 0] == UNCERTAIN and det[3, 0] == -1 and conflicts == 2  # one per fighter
+    # Both passes agree on a frame, but one of them only holds the identity as unconfirmed
+    # (placed from an overlapping box): the other one's result counts. Held by both: stays held.
+    fwd, bwd = out(list(range(10))), out(list(range(10)))
+    for o, frames in ((fwd, (4, 5, 6)), (bwd, (6, 7))):
+        for t in frames:
+            o.state[t, 0], o.conf[t, 0], o.held[t, 0] = identity.OCCLUDED, 0.6, True
+    state, det, conf, _, held, _ = identity._merge(fwd, bwd, [0, 9], np.zeros(10, int))
+    assert held[:, 0].tolist() == [t == 6 for t in range(10)] and not held[:, 1].any()
+    assert (state[[4, 5, 7], 0] == TRACKED).all() and np.allclose(conf[[4, 5, 7], 0], 1.0)
+    assert state[6, 0] == identity.OCCLUDED and np.isclose(conf[6, 0], 0.6) and (det[:, 0] == np.arange(10)).all()
     assert reason[3, 0] == REASONS.index(UncertainReason.anchor_conflict)
 
 

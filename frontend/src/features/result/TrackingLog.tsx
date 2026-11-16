@@ -27,6 +27,8 @@ interface Entry {
   kind: Kind;
   side: "red" | "blue" | null;
   text: string;
+  /** Tells apart two entries of one kind on the same frame for the same fighter. */
+  detail?: string;
 }
 
 /** Everything worth checking about identities, each with a jump and a fix action. */
@@ -49,7 +51,8 @@ export function TrackingLog({ jobId, tracking, cuts, fps, clock, time, names }: 
                  text: `Takip belirsiz · ${formatDuration(dur < 1 ? Math.max(dur, 0.1) : dur)} · ${REASONS[seg.reason]}` });
     }
     for (const p of tracking.review_points) {
-      out.push({ frame: p.frame_index, kind: "review", side: sideOf(p.fighter_id), text: REVIEW[p.kind] ?? p.kind });
+      out.push({ frame: p.frame_index, kind: "review", side: sideOf(p.fighter_id), text: REVIEW[p.kind] ?? p.kind,
+                 detail: p.kind });
     }
     return out.sort((a, b) => a.frame - b.frame);
   }, [tracking, cuts, fps]);
@@ -96,7 +99,7 @@ export function TrackingLog({ jobId, tracking, cuts, fps, clock, time, names }: 
       ) : (
         <ol className="events__list">
           {shown.map((e) => (
-            <li key={`${e.kind}-${e.frame}-${e.side}`}
+            <li key={`${e.kind}-${e.frame}-${e.side}-${e.detail ?? ""}`}
                 className={`tlog tlog--${e.kind}${Math.abs(e.frame - current) < fps / 2 ? " is-current" : ""}`}>
               <span className="evt__time num">{formatClock(e.frame / fps, true)}</span>
               <span className={`evt__side evt__side--${e.side ?? "none"}`}>

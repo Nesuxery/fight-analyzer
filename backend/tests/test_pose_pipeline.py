@@ -226,8 +226,8 @@ def test_selection_runs_identity_tracking(env: Env, first: dict):
         assert all(d["track_id"] is not None for d in dets.values() if d["fighter_id"])
     timeline = env.client.get(f"/api/v1/jobs/{job_id}/tracking/timeline").json()
     assert all(run["state"] != "uncertain" for f in timeline["fighters"] for run in f["runs"])
-    # identity version 6: the result says how it was made, and carries the data quality
-    assert tracking["version"] == 6 and tracking["extra_cuts"] == [] and job["outdated"] == []
+    # since identity version 6 the result says how it was made, and carries the data quality
+    assert tracking["version"] == 7 and tracking["extra_cuts"] == [] and job["outdated"] == []
     assert all(f["quality"] is not None for f in timeline["fighters"])
     report = env.client.get(f"/api/v1/jobs/{job_id}/tracking/quality").json()
     (bout,) = report["scopes"]  # no rounds on this clip: the whole video only

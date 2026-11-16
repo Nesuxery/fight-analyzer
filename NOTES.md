@@ -243,10 +243,12 @@ Bölüm 2.4–2.5'te; aşamadan sonra commit, notlar, kısa rapor, onay beklenir
   1,3 GB yükleme dosyası; yeniden işleme kaynak dosyayı ister; (b)'de eklenen
   sentetik tekrar klibinin işi 45531e64 de burada). `.claude/launch.json`
   "fa-scratch" yapılandırması buraya bakar (8010/5183). Kullanıcının gerçek işine
-  dokunulmaz. **Bölüm 2 bitince `local/fa-data` silinir** (kullanıcı onayladı).
+  dokunulmaz. `local/fa-data` ve `local/replay-clip` **Bölüm 3 bitene kadar
+  kalır** (kullanıcı kararı, 16 Kasım 2026; önceki "Bölüm 2 bitince silinir"
+  kararının yerine).
 
 ### Kimlik takibi ve veri kalitesi (v2 Bölüm 2c, 15 Kasım 2026)
-Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
+Kod: `tracking/identity.py` (sürüm 7), `tracking/quality.py`, ayarlar
 `IdentitySettings` (kimlik önbellek anahtarına girer; hazırlık anahtarına girmez).
 - **Asıl kök neden kaçan kamera kesimleriydi.** Örnek yayında hazırlık 36 kesim
   bulmuş, 34'ünü kaçırmıştı (aynı kafes zeminine bakan iki kamera arasında renk
@@ -281,6 +283,25 @@ Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
   "örtüşme"ydi). Doğrulanamayan kare izleyici sürekliliğiyle taşınır ve güveni
   düşer (yakınında doğrulanmış kare varsa × 0,75, yoksa × 0,45). Kesimden sonra
   örtüşen kutudan da kimlik kurulabilir, ama iki kat farkla (0,16).
+- **Örtüşen kutudan kurulan kimlik onaylanana kadar düşük güvenlidir** (sürüm 7,
+  kullanıcı kararı 16 Kasım 2026: "tamamen kapatma"). Konum bilgisi yokken
+  (kesim ya da uzun kayıp sonrası) kimlik örtüşen bir kutudan, yani tek karenin
+  görünümüyle kurulduysa, dövüşçünün kareleri "örtüşme" durumunda ve × 0,45
+  güvenle tutulur (`IdentityResult.held`); kareler ölçülebilir kalır. Dövüşçü
+  **örtüşmesiz 5 karede** kendi görünümüyle doğrulanınca
+  (`acquire_confirm_frames`; izleyici sürekliliği kopmadan) kimlik onaylanır:
+  o ana kadar tutulan kareler ve sonrası olağan kurallara döner. Kamera kesimi
+  ya da görünümle yeniden yerleştirme beklemeyi bitirir; tutulan kareler düşük
+  güvenli kalır. İki seçim arasındaki bölgede diğer geçiş aynı kutuyu onaylı
+  taşıdıysa onun sonucu geçerlidir. × 0,45 güven `attribution_min` (0,5)
+  altındadır: bu karelerdeki olay "Kime ait belirsiz" olur. Örnek yayında
+  örtüşen kutudan 44 kimlik kuruldu; 40'ı onaylandı (ortanca 10–13 kare
+  sonra), 4'ü onaylanmadan kesime ya da kayba vardı: Volkanovski 49 kare
+  (1,6 sn; 38'i nakavt anından hemen önce, 08:47,5–08:48,8), Topuria 5 kare.
+  Belirsiz ve ölçülebilir süreler değişmedi; yalnızca "örtüşme" payı arttı
+  (aşağıdaki tablo). Bu karelerde sahipliği eşiğin altına inen olay yok:
+  "Kime ait belirsiz" olay yine çıkmadı (olay sayıları aynı: 131 ve 15). `IDENTITY_SINCE` 6'da kaldı: sürüm 6 sonuçları bantsız açılır
+  (fark yalnızca bu karelerin güveni).
 - **Bir dövüşçü diğerinin tam önündeyken iki kutu da öndekine benzer:** örtüşen
   başka bir kutu da aynı dövüşçüye benziyorsa kare doğrulanmış sayılmaz
   (sentetik testin yakaladığı açık: kimlik arkadaki iskelete geçiyordu). Görünümü
@@ -290,13 +311,21 @@ Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
   bu kareler "belirsiz" olur (eskiden kesim karesinde hemen eşleşme olursa
   kalıyordu).
 - **Geriye dönük sahip düzeltmesi yapılmaz** (plandaki "örtüşme boyunca atanan
-  olayların sahibini düzelt" yerine): takasın hangi karede olduğu bilinemez;
+  olayların sahibini düzelt" yerine; kullanıcı 16 Kasım 2026'da onayladı):
+  takasın hangi karede olduğu bilinemez;
   doğrulanamayan örtüşme kareleri "belirsiz" olur ve orada olay üretilmez,
   taşınan karelerdeki olayların `attribution_confidence` değeri düşer. Kesin
   olmayan olayı gerçekmiş gibi kaydetmeme kuralının gereği.
-- **Boy oranı ölçülür, karar için kullanılmaz** (plandaki "boy oranı"): örnek
-  yayında kutu yüksekliği oranı 0,98; aynı sıklette fark %1–3, perspektif farkı
-  bunun birkaç katı. `AppearanceSummary.height_ratio` olarak raporlanır.
+- **Boy oranı ölçülür, karar için kullanılmaz** (plandaki "boy oranı";
+  kullanıcı 16 Kasım 2026'da onayladı). Neden: ölçülen şey boy değil, kutu
+  yüksekliğidir ve duruşa (eğilme, çömelme, tekme) ve kameraya uzaklığa göre
+  kareden kareye oynar. Örnek yayında iki dövüşçü ayrı dururken (9572 kare)
+  kırmızı / mavi kutu yüksekliği oranının ortancası 0,985, ama karelerin %10'unda
+  0,81'in altında, %10'unda 1,20'nin üstünde; kırmızı kutu karelerin %46'sında
+  daha yüksek. Aynı sıklette gerçek boy farkı %1–3'tür: bu gürültünün çok
+  altında kalır ve bir karede kimin kim olduğunu söyleyemez; karara girerse
+  öne eğilen ya da uzakta duran dövüşçüyü yanlış kişiye iter. Bu yüzden yalnızca
+  `AppearanceSummary.height_ratio` olarak raporlanır.
 - **Geçici numara değişimi son sonuç üzerinden sayılır** (kesimlerde ve iz
   koptuğunda bir kez). Eski sayım ileri ve geri geçişleri topluyordu; tek
   seçimle 124 gösteriyordu, aynı sonuçta yeni tanımla 90'dır. Kesim sayısı
@@ -305,10 +334,11 @@ Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
 - **`attribution_confidence`:** olayın aktörünün (aktörsüz olayda iki dövüşçünün
   küçüğü) olay karelerindeki ortalama kimlik güveni; `attribution_min` (0,5,
   `MotionSettings`) altı "Kime ait belirsiz" (`attribution_uncertain`). Bu
-  olaylar listede ve sayımlarda kalır, momentuma girmez (kullanıcı kararı;
-  `MOMENTUM_VERSION` 3, formül ve ağırlıklar aynı); momentum kartı kaç olayın
-  dışarıda kaldığını yazar. Örnek yayında ve sentetik klipte böyle olay çıkmadı
-  (en düşük 0,70 ve 0,75); davranış sentetik testlerle denendi.
+  olaylar listede ve şimdilik sayımlarda kalır, momentuma girmez (kullanıcı
+  kararı; `MOMENTUM_VERSION` 3, formül ve ağırlıklar aynı); momentum kartı kaç
+  olayın dışarıda kaldığını yazar. Sayımlardan çıkmaları Bölüm 3'ün işidir
+  (aşağıda "Bölüm 3 ve 4 için notlar"). Örnek yayında ve sentetik klipte böyle
+  olay çıkmadı (en düşük 0,70 ve 0,75); davranış sentetik testlerle denendi.
 - **Veri kalitesi kare başına bit maskesidir** (`quality.npy`): ölçülemez +
   dört neden (eksik görüntü, uzak/kötü kamera açısı, örtüşen dövüşçüler, düşük
   görüntü kalitesi). Özet tek fonksiyondur (`quality.summarize`: herhangi bir
@@ -336,16 +366,16 @@ Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
 | Kapsam | Dövüşçü | | Geçici numara değişimi | Örtüşme | Belirsiz | En uzun belirsiz | Ölçülebilir |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Tüm video | Volkanovski (kırmızı) | önce | 90 (eski sayım: 124) | %23,4 | 59,1 sn | 22,1 sn | %82,9 |
-| | | sonra | 102 | %6,2 | 31,0 sn | 8,2 sn | %89,3 |
+| | | sonra | 102 | %6,5 | 31,0 sn | 8,2 sn | %89,3 |
 | | Topuria (mavi) | önce | 87 | %24,9 | 21,3 sn | 4,3 sn | %90,8 |
-| | | sonra | 89 | %4,4 | 19,8 sn | 4,3 sn | %92,4 |
+| | | sonra | 89 | %4,5 | 19,8 sn | 4,3 sn | %92,4 |
 | Dövüş süresi (R1+R2) | Volkanovski | önce | 89 | %24,5 | 35,5 sn | 11,6 sn | %86,7 |
-| | | sonra | 99 | %6,2 | 12,2 sn | 1,6 sn | %92,7 |
+| | | sonra | 99 | %6,4 | 12,2 sn | 1,6 sn | %92,7 |
 | | Topuria | önce | 82 | %24,6 | 14,7 sn | 3,2 sn | %93,2 |
 | | | sonra | 86 | %3,9 | 8,5 sn | 2,1 sn | %95,1 |
 | R1 | Volkanovski | önce → sonra | 51 → 59 | %24,8 → %4,6 | 17,8 → 3,7 sn | 11,6 → 1,3 sn | %88,8 → %94,6 |
 | | Topuria | önce → sonra | 51 → 54 | %23,8 → %4,2 | 11,0 → 8,1 sn | 3,2 → 2,1 sn | %91,8 → %93,6 |
-| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %8,5 | 17,7 → 8,5 sn | 4,4 → 1,6 sn | %83,7 → %90,0 |
+| R2 | Volkanovski | önce → sonra | 38 → 40 | %24,2 → %9,0 | 17,7 → 8,5 sn | 4,4 → 1,6 sn | %83,7 → %90,0 |
 | | Topuria | önce → sonra | 31 → 32 | %25,9 → %3,5 | 3,7 → 0,4 sn | 1,2 → 0,1 sn | %95,3 → %97,1 |
 
   Sentetik tekrar klibi (83 sn, tek seçim): kırmızı köşe belirsiz 73,0 → 1,7 sn,
@@ -359,21 +389,42 @@ Kod: `tracking/identity.py` (sürüm 6), `tracking/quality.py`, ayarlar
   belirsiz oldu). Kalan belirsiz süre çoğunlukla bir
   dövüşçünün diğerinin arkasında kaldığı ya da sırtı dönük, şortu kadraj dışı
   yakın planlardır.
-- **Süre:** kimlik adımı 2,7 → 6,3 sn (iki geçiş + doğrulama), kalite maskesi
+- **Süre:** kimlik adımı 2,7 → 6,4 sn (iki geçiş + doğrulama), kalite maskesi
   0,01 sn; 9 dakikalık videoda toplam analiz süresine etkisi ≈ %0,1 (poz 3091 sn).
 - **Bilinen sınırlar:** tek yayın ve ondan türetilen kliple ayarlandı; şort
   renkleri çok farklı (siyah / kırmızı). Benzer şortlu dövüşçülerde model tabanı
   ve doğrulama payları yetmeyebilir; sistem o durumda belirsiz bırakır. Ek kesim
   kuralı yalnızca ani kesimi bulur (yumuşak geçişleri değil). Dışa aktarılan
-  JSON'a raunt bazlı kalite özeti henüz eklenmedi.
+  JSON'da raunt bazlı kalite özeti yok; Bölüm 4'te gelecek (aşağıdaki notlar).
 - **İnceleme (tek küçük ajan, yalnızca kimlik/kalite diff'i):** yuvarlama ve
   neden sırası eşitliği, boş aralık, kullanılmayan `model_min_samples` ayarı
-  (kaldırıldı), yukarıdaki iki uç durum düzeltildi. Bilerek bırakılan: kesimden
-  sonra örtüşen kutudan tek karenin görünümüyle kimlik kurulması (model tabanı +
-  iki kat fark + "başka kutu benzemiyor" koşuluyla; 108 karelik denetimde hata
-  vermedi, benzer şortlu dövüşçülerde yeniden bakılmalı).
-- (c) `v2/bolum-2` dalında; merge/push kullanıcının sözüyle. Bölüm 2 bitince
-  `local/fa-data` ve `local/replay-clip` silinecek (kullanıcı onayı bekleniyor).
+  (kaldırıldı), yukarıdaki iki uç durum düzeltildi. İncelemenin bilerek
+  bıraktığı konu (kesimden sonra örtüşen kutudan tek karenin görünümüyle kimlik
+  kurulması) kullanıcı kararıyla sürüm 7'de "onaylanana kadar düşük güvenli"
+  oldu (yukarıda); benzer şortlu dövüşçülerde yeniden bakılmalı.
+- **Sürüm 7 sonrası ekran denetimi (16 Kasım 2026):** karalama kopyasındaki iki
+  iş yeniden işlendi (kimlik sürüm 7; inceleme düzeltmeleri de bu sonuçta).
+  Kapsam (Şu ana kadar · Raunt · Tüm maç) ve veri kalitesi satırları API
+  değerleriyle aynı, iki temada; tutulan karede (08:48) kırmızı köşe "Örtüşme"
+  görünüyor ve iskelet doğru kişide. Takip kaydında aynı karede aynı dövüşçüye
+  iki kontrol kaydı düşünce çıkan React anahtar uyarısı düzeltildi
+  (`TrackingLog`: anahtara kayıt türü eklendi).
+- (c) `v2/bolum-2` dalında; merge/push kullanıcının sözüyle.
+
+### Bölüm 3 ve 4 için notlar (kullanıcı kararları, 16 Kasım 2026)
+- **Bölüm 3, `RoundFeatures`:** "Kime ait belirsiz" olaylar
+  (`FightEvent.attribution_uncertain`) dövüşçü sayımlarına girmez; raunt
+  özelliklerinde ayrı bir "belirsiz" sayısı olarak tutulur ve arayüzde öyle
+  gösterilir. Bugün yan paneldeki sayımlarda duruyorlar (yalnızca momentum
+  dışında); `RoundFeatures` yazılırken yan panel sayımları da aynı ayrımı
+  kullanır. Olay sahipliği düzeltmeleri (3.6) bu olayları bir dövüşçüye
+  bağlayabilmelidir.
+- **Bölüm 4, `JudgingResult.data_quality`:** raunt bazlı veri kalitesi özeti
+  dışa aktarılan JSON'a bu alanla gelir; şimdi eklenmedi. Kaynak hazır:
+  `tracking/quality.py` → `summarize` (herhangi bir kare aralığı) ve
+  `GET /jobs/{id}/tracking/quality` (tüm maç + etkin rauntlar).
+- **Karalama verisi:** `local/fa-data` ve `local/replay-clip` Bölüm 3 bitene
+  kadar kalır.
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →

@@ -487,7 +487,8 @@ BROADCAST = BroadcastSettings()
 # Broadcast analyses from this version on find replays, stoppages and non-fight parts.
 NONFIGHT_SINCE = 2
 # Identity results from this version on use the appearance model and carry the data quality
-# (tracking/identity.py IDENTITY_VERSION 6).
+# (tracking/identity.py IDENTITY_VERSION 6). Version 7 only lowers the confidence of some
+# frames: results of version 6 stay current enough to open without the banner.
 IDENTITY_SINCE = 6
 
 

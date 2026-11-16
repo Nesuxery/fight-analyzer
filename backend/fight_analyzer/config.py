@@ -105,6 +105,10 @@ class IdentitySettings:
     confidence_verified: float = 0.9  # factors on the identity confidence inside overlaps
     confidence_recent: float = 0.75
     confidence_unverified: float = 0.45
+    # A fighter placed from an overlapping box (after a cut or a long gap, by one frame's
+    # appearance) keeps the unverified confidence until his own appearance is verified on
+    # this many frames without an overlap.
+    acquire_confirm_frames: int = 5
     # Data quality (quality.py): what lowers the confidence of a frame.
     far_height_share: float = 0.25  # fighter's box below this share of the frame height: far camera
     low_keypoint_conf: float = 0.5  # mean confidence of the body joints

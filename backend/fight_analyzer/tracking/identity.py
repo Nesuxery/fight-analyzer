@@ -50,6 +50,16 @@ Since version 6 (v2 Bölüm 2c):
   where a swap inside an overlap cannot be timed, the frames are `uncertain`.
 - The number of temporary-id changes is counted on the final result (once
   per change, whatever the number of selections).
+
+Since version 7:
+
+- A fighter placed from an overlapping box without a position (after a cut or
+  a long gap; one frame's appearance decides) is held at a low confidence:
+  his frames are `occluded` with the unverified factor until his own
+  appearance is verified on `acquire_confirm_frames` frames without an
+  overlap. From then on, and for the frames held up to there, the usual
+  rules apply. A camera cut, or being placed anew by appearance, ends the
+  wait: what was held stays at the low confidence.
 """
 
 from __future__ import annotations
@@ -74,7 +84,9 @@ from .appearance import mean_descriptor, similarity
 from .prep import PrepData
 from .tracklets import Segment, segments_from
 
-IDENTITY_VERSION = 6  # 6: missed cuts, appearance model (two runs), verified overlap frames
+# 6: missed cuts, appearance model (two runs), verified overlap frames
+# 7: an identity placed from an overlapping box is held at a low confidence until confirmed
+IDENTITY_VERSION = 7
 TRACKED, OCCLUDED, UNCERTAIN = 0, 1, 2
 REASONS = list(UncertainReason)
 FIGHTERS = (FighterId.fighter_a, FighterId.fighter_b)
@@ -236,6 +248,7 @@ class _RunOutput:
     det: np.ndarray
     conf: np.ndarray
     reason: np.ndarray
+    held: np.ndarray  # [F, 2] bool: placed from an overlapping box and not confirmed since
     reacquisitions: list[int] = field(default_factory=lambda: [0, 0])
     swap_corrections: int = 0
     identity_switches: int = 0
@@ -265,6 +278,11 @@ class _Propagation:
         self.third_refs: list[np.ndarray] = []
         self.third_version = 0
         self._third_cache: dict[tuple, float] = {}
+        # Placed from an overlapping box without a position: the frames written since (with
+        # what they would be once confirmed) and the clean verified frames counted so far.
+        self.unconfirmed = [False, False]
+        self.held: list[list[tuple[int, int, float]]] = [[], []]
+        self.confirmations = [0, 0]
         fps = ctx.fps
         self.short_gap = max(1, round(self.s.short_gap_s * fps))
         self.motion_gap = max(1, round(self.s.motion_gap_s * fps))
@@ -389,6 +407,34 @@ class _Propagation:
                 self.third_refs = (self.third_refs + [seg.desc])[-MAX_THIRD_REFS:]
                 self.third_version += 1
 
+    def _linked(self, f: int, seg: _Seg, t: int, last, after_cut) -> bool:
+        """The segment can continue where fighter f was last seen: same shot, short gap."""
+        prev = last[f]
+        return (prev is not None and not after_cut[f] and prev[0].shot == seg.shot
+                and abs(t - prev[1]) <= self.motion_gap)
+
+    def _end_wait(self, f: int) -> None:
+        """Nothing that follows can confirm what was held: it stays at the low confidence."""
+        self.unconfirmed[f], self.held[f], self.confirmations[f] = False, [], 0
+
+    def _hold(self, t: int, f: int, d: int, base: float) -> None:
+        """A frame of a fighter placed from an overlapping box: low confidence until his own
+        appearance is verified on a few frames without an overlap; then the frames held up to
+        there get back what the usual rules gave them."""
+        out = self.out
+        self.held[f].append((t, int(out.state[t, f]), float(out.conf[t, f])))
+        out.state[t, f], out.conf[t, f], out.held[t, f] = OCCLUDED, base, True
+        if self.ctx.prep.contact[d] or not self._verified(f, d):
+            return
+        self.confirmations[f] += 1
+        if self.confirmations[f] < self.ctx.i.acquire_confirm_frames:
+            return
+        for pt, state, conf in self.held[f]:
+            out.held[pt, f] = False
+            if out.det[pt, f] >= 0:  # not dropped as an unconfirmed overlap frame since
+                out.state[pt, f], out.conf[pt, f] = state, conf
+        self._end_wait(f)
+
     def _exit_motion(self, seg: _Seg, t: int) -> tuple[np.ndarray, np.ndarray, float]:
         """Centre, per-frame velocity (in travel direction) and height where the fighter was last seen."""
         frames = seg.base.frames
@@ -424,6 +470,7 @@ class _Propagation:
                 for f in (0, 1):  # camera cut: positions mean nothing in the new shot
                     if provisional[f]:  # nothing after the cut can confirm what was carried before it
                         self._drop_provisional(f, provisional)
+                    self._end_wait(f)
                     cur[f] = None
                     lost_since[f] = t
                     lost_reason[f] = UncertainReason.camera_cut
@@ -468,6 +515,8 @@ class _Propagation:
                     else:  # carried by continuity; the confidence is set once all frames are known
                         out.det[t, f], out.state[t, f], out.conf[t, f] = d, OCCLUDED, conf[f]
                         provisional[f].append(t)
+                    if self.unconfirmed[f] and d is not None:
+                        self._hold(t, f, d, conf[f])
                     continue
                 gap = abs(t - lost_since[f])
                 if not after_cut[f] and gap < self.short_gap and lost_reason[f] != UncertainReason.ambiguous:
@@ -511,9 +560,8 @@ class _Propagation:
         disc = own - other
         app_term = min(1.0, max(0.0, 0.5 + 2.0 * disc)) if app_valid else 0.5
         prev = last[f]
-        gap = abs(t - prev[1]) if prev else 10**9
-        use_motion = prev is not None and not after_cut[f] and prev[0].shot == seg.shot and gap <= self.motion_gap
-        if use_motion:
+        if self._linked(f, seg, t, last, after_cut):
+            gap = abs(t - prev[1])
             center, vel, height = self._exit_motion(prev[0], prev[1])
             d = seg.det_at[t]
             box = self.ctx.arrays.boxes[d]
@@ -621,6 +669,11 @@ class _Propagation:
                 self._drop_provisional(f, provisional)
             else:
                 provisional[f] = []
+        if not self._linked(f, seg, t, last, after_cut):
+            # placed by appearance alone: nothing links him to what was held before, and from
+            # an overlapping box one frame's appearance decided
+            self._end_wait(f)
+            self.unconfirmed[f] = seg.contact
         cur[f] = seg
         conf[f] = float(min(1.0, max(0.05, total * min(1.0, 0.5 + margin / 0.3))))
         after_cut[f] = False
@@ -648,6 +701,7 @@ class IdentityResult:
     swap_corrections: int
     anchor_conflicts: int
     change: np.ndarray | None = None  # [F, 2] bool: the temporary id under the fighter changed at this frame
+    held: np.ndarray | None = None  # [F, 2] bool: placed from an overlapping box, never confirmed (low confidence)
     shot_id: np.ndarray | None = None  # [F] camera shots, the extra cuts included
     extra_cuts: list[int] = field(default_factory=list)
     model: AppearanceModel | None = None
@@ -655,7 +709,8 @@ class IdentityResult:
 
 def _empty(frames: int) -> _RunOutput:
     return _RunOutput(state=np.full((frames, 2), UNCERTAIN, np.int8), det=np.full((frames, 2), -1, np.int64),
-                      conf=np.zeros((frames, 2), np.float32), reason=np.full((frames, 2), -1, np.int8))
+                      conf=np.zeros((frames, 2), np.float32), reason=np.full((frames, 2), -1, np.int8),
+                      held=np.zeros((frames, 2), bool))
 
 
 def _anchor_refs(ctx: _Context, anchors: list[tuple[int, int, int]]) -> list[list[tuple[int, np.ndarray]]]:
@@ -675,12 +730,14 @@ def _merge(fwd: _RunOutput, bwd: _RunOutput, anchor_frames: list[int], shot_id: 
     pass exists, after the last only the forward one. In between both do: a verified
     result fills the other's uncertainty; on disagreement the pass that crossed fewer
     camera cuts (so relied less on appearance alone) wins, and equal cuts mean the
-    frame stays uncertain (anchor_conflict)."""
+    frame stays uncertain (anchor_conflict). Where both agree and only one of them holds
+    the identity as unconfirmed, the other one's result counts."""
     frames = fwd.state.shape[0]
     state, det, conf, reason = fwd.state.copy(), fwd.det.copy(), fwd.conf.copy(), fwd.reason.copy()
+    held = fwd.held.copy()
     first = anchor_frames[0]
-    state[:first], det[:first], conf[:first], reason[:first] = (
-        bwd.state[:first], bwd.det[:first], bwd.conf[:first], bwd.reason[:first])
+    state[:first], det[:first], conf[:first], reason[:first], held[:first] = (
+        bwd.state[:first], bwd.det[:first], bwd.conf[:first], bwd.reason[:first], bwd.held[:first])
     shot = shot_id.astype(np.int64)
     both = np.zeros(frames, bool)
     hops_f = np.zeros(frames, np.int64)
@@ -696,15 +753,18 @@ def _merge(fwd: _RunOutput, bwd: _RunOutput, anchor_frames: list[int], shot_id: 
         clash = (both & f_known & b_known & (fwd.det[:, f] != bwd.det[:, f])
                  & (fwd.det[:, f] >= 0) & (bwd.det[:, f] >= 0))
         take_b = (both & ~f_known & b_known) | (clash & (hops_b < hops_f))
-        state[take_b, f], det[take_b, f], conf[take_b, f] = bs[take_b], bwd.det[take_b, f], bwd.conf[take_b, f]
-        reason[take_b, f] = -1
         agree = both & f_known & b_known & ~clash
-        conf[agree, f] = np.maximum(fwd.conf[agree, f], bwd.conf[agree, f])
+        take_b |= agree & fwd.held[:, f] & ~bwd.held[:, f]
+        state[take_b, f], det[take_b, f], conf[take_b, f] = bs[take_b], bwd.det[take_b, f], bwd.conf[take_b, f]
+        reason[take_b, f], held[take_b, f] = -1, bwd.held[take_b, f]
+        same = agree & (fwd.held[:, f] == bwd.held[:, f])
+        conf[same, f] = np.maximum(fwd.conf[same, f], bwd.conf[same, f])
         tie = clash & (hops_f == hops_b)
+        held[tie, f] = False
         state[tie, f], det[tie, f], conf[tie, f] = UNCERTAIN, -1, 0.0
         reason[tie, f] = REASONS.index(UncertainReason.anchor_conflict)
         conflicts += int(np.count_nonzero(np.diff(tie.astype(np.int8)) == 1) + int(tie[0]))
-    return state, det, conf, reason, conflicts
+    return state, det, conf, reason, held, conflicts
 
 
 def _spread(items: list[tuple[int, float, object]], frames: int, count: int) -> list:
@@ -784,7 +844,7 @@ def _propagate(ctx: _Context, resolved: list[tuple[int, int, int]], refs, model:
         start = resolved[k - 1][0] + 1 if k > 0 else 0
         _Propagation(ctx, refs, +1, fwd, model).run(frame, (red, blue), end)
         _Propagation(ctx, refs, -1, bwd, model).run(frame, (red, blue), start)
-    state, det, conf, reason, conflicts = _merge(fwd, bwd, [a[0] for a in resolved], ctx.shot_id)
+    state, det, conf, reason, held, conflicts = _merge(fwd, bwd, [a[0] for a in resolved], ctx.shot_id)
     # Never one detection for both fighters.
     dup = (det[:, 0] >= 0) & (det[:, 0] == det[:, 1])
     loser = np.where(conf[:, 0] >= conf[:, 1], 1, 0)
@@ -792,7 +852,8 @@ def _propagate(ctx: _Context, resolved: list[tuple[int, int, int]], refs, model:
         f = int(loser[t])
         state[t, f], det[t, f], conf[t, f] = UNCERTAIN, -1, 0.0
         reason[t, f] = REASONS.index(UncertainReason.ambiguous)
-    return state, det, conf, reason, conflicts, fwd, bwd
+    held &= (det >= 0) & (state == OCCLUDED)
+    return state, det, conf, reason, held, conflicts, fwd, bwd
 
 
 def _nearest(mask: np.ndarray) -> np.ndarray:
@@ -826,18 +887,19 @@ def assign(ctx: _Context, anchors: list[FighterAnchor]) -> IdentityResult:
                                         for d in a.detection_ids()))
                       for a in anchors)
     refs = _anchor_refs(ctx, resolved)
-    state, det, conf, reason, conflicts, fwd, bwd = _propagate(ctx, resolved, refs, None)
+    state, det, conf, reason, held, conflicts, fwd, bwd = _propagate(ctx, resolved, refs, None)
     model = build_model(ctx, state, det, conf)
     if model.usable:  # second run: the same rules with the model as references
-        state, det, conf, reason, conflicts, fwd, bwd = _propagate(ctx, resolved, refs, model)
+        state, det, conf, reason, held, conflicts, fwd, bwd = _propagate(ctx, resolved, refs, model)
 
     fps = ctx.fps
     # Overlap frames that could not be verified: the identity rests on tracker continuity,
-    # the less so the longer nothing was verified.
+    # the less so the longer nothing was verified. An identity placed from an overlapping
+    # box and never confirmed is unverified however close a verified frame is.
     window = max(1, round(ctx.i.verify_window_s * fps))
     for f in (0, 1):
         carried = (state[:, f] == OCCLUDED) & (det[:, f] >= 0)
-        recent = _nearest(state[:, f] == TRACKED) <= window
+        recent = (_nearest(state[:, f] == TRACKED) <= window) & ~held[:, f]
         conf[carried & recent, f] *= ctx.i.confidence_recent
         conf[carried & ~recent, f] *= ctx.i.confidence_unverified
     change = track_change_frames(ctx, det)
@@ -871,7 +933,7 @@ def assign(ctx: _Context, anchors: list[FighterAnchor]) -> IdentityResult:
                           uncertain_segments=segments, review_points=review,
                           identity_switches=fwd.identity_switches + bwd.identity_switches,
                           swap_corrections=fwd.swap_corrections + bwd.swap_corrections,
-                          anchor_conflicts=conflicts, change=change, shot_id=ctx.shot_id,
+                          anchor_conflicts=conflicts, change=change, held=held, shot_id=ctx.shot_id,
                           extra_cuts=list(ctx.extra_cuts), model=model if model.usable else None)
 
 

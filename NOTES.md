@@ -427,6 +427,16 @@ Kod: `tracking/identity.py` (sürüm 7), `tracking/quality.py`, ayarlar
   `GET /jobs/{id}/tracking/quality` (tüm maç + etkin rauntlar).
 - **Karalama verisi:** `local/fa-data` ve `local/replay-clip` Bölüm 3 bitene
   kadar kalır.
+- **Bölüm 3 planına kullanıcı yanıtları (17 Kasım 2026):** (1) dirsek ve yerde vuruş
+  momentumda "vuruş denemesi" ağırlığıyla, formül aynı (3a'da yapıldı); (2) (c)'deki
+  düzeltmeler momentumu da etkiler: sayımlar, kartlar ve momentum tek etkin olay
+  listesini kullanır; (3) (b)'de klinç kontrolü ayrı bir alanda, düşük güvenli
+  tahmin; merkez tutma "ölçülmedi" diye işaretlenir; (4) (c)'de oynatma anı kapsamı
+  API'den gelir, hızlı sarmada eski istekler iptal edilir ve yalnızca son isteğin
+  sonucu gösterilir; (5) grappling için kullanıcının Masaüstündeki
+  `full-fights/khabib_vs_dustin` kaydı yalnızca yerelde kullanılır (repoya ve
+  testlere girmez); (6) git akışı Bölüm 2'deki gibi (dal `v2/bolum-3`, aşama başına
+  commit, merge/push kullanıcının sözüyle); (7) nakavt için kimlik çıkarımı (3a'da).
 
 ### Vuruş olayları ve hasar sinyalleri (v2 Bölüm 3a, 17 Kasım 2026)
 Bölüm 3 üç aşamada yapılıyor (a: vuruş olayları ve hasar sinyalleri, b: grappling

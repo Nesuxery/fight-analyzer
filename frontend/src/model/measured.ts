@@ -19,6 +19,7 @@
  * through them. The ledger from the API already leaves their points out.
  */
 import type {
+  DamageSignal,
   ExcludedSegment,
   FightEvent,
   MomentumContribution,
@@ -28,10 +29,10 @@ import type {
   TrackingTimeline,
   TrackState,
 } from "../contracts/generated";
-import type { EventTag, Side, StatsView, TimelineEvent } from "./analysis";
+import type { DamageView, EventTag, Side, StatsView, TimelineEvent } from "./analysis";
 
 export const SOURCE_LABELS: Record<MomentumSource, string> = {
-  strike_attempt: "Vuruş denemesi (yumruk, diz)",
+  strike_attempt: "Vuruş denemesi (yumruk, diz, dirsek, yerde vuruş)",
   kick_attempt: "Tekme denemesi",
   contact_bonus: "Olası temas eki",
   advance: "İlerleme süresi",
@@ -178,6 +179,8 @@ export function sampleAt(sampleMs: number[], tMs: number): number {
 }
 
 const MAJOR = new Set(["knockdown", "takedown"]);
+/** Counted as "Vuruş denemeleri" (kicks are counted apart); the export counts the same (frames.py). */
+export const HAND_STRIKES: ReadonlySet<string> = new Set(["punch", "knee", "elbow", "ground_strike"]);
 
 /** When an event happens (its peak; the end for time-based ones such as control). */
 export function eventMoment(e: FightEvent): number {
@@ -256,6 +259,28 @@ export function toTimelineEvents(events: FightEvent[], contributions: MomentumCo
     origin: e.data_origin,
     tags: eventTags(e, scored, timeline, segments, unattributed),
     excluded: isFrameExcluded(eventFrame(e), segments),
+    outcome: e.outcome ?? null,
+    zone: e.target_zone ?? null,
+    significantStrike: e.significant ?? null,
+  }));
+}
+
+/** Damage signals as list rows, in time order (signals in excluded parts are marked, not dropped). */
+export function toDamageViews(signals: readonly DamageSignal[], segments: readonly ExcludedSegment[] = []): DamageView[] {
+  return [...signals].sort((a, b) => a.time_ms - b.time_ms).map((d) => ({
+    id: d.signal_id,
+    type: d.type,
+    kind: d.kind,
+    side: sideOfFighter(d.by_fighter)!,
+    target: sideOfFighter(d.target_fighter)!,
+    startS: d.time_ms / 1000,
+    endS: d.end_ms === null ? null : d.end_ms / 1000,
+    severity: d.severity,
+    confidence: d.confidence,
+    inferred: d.evidence.includes("identity_inferred"),
+    uncertain: d.attribution_uncertain,
+    excluded: isFrameExcluded(d.frame, segments),
+    note: d.note,
   }));
 }
 
@@ -330,7 +355,7 @@ export function measuredStats(side: Side, frame: number, tMs: number, events: Fi
     control += outsideMs(Math.max(e.start_ms, fromMs), Math.min(e.end_ms, tMs), iv) / 1000;
   }
   return {
-    strikeAttempts: mine.filter((e) => e.type === "punch" || e.type === "knee").length,
+    strikeAttempts: mine.filter((e) => HAND_STRIKES.has(e.type)).length,
     kicks: mine.filter((e) => e.type === "kick").length,
     activity: enough(actN) ? Math.round(((sums.act[side][upto]! - sums.act[side][from]!) / actN) * 100) : null,
     pressure: enough(moveN) ? Math.round((adv / moveN) * 100) : null,

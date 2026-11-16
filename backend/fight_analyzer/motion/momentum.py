@@ -1,8 +1,9 @@
 """Experimental momentum: a ledger of points with exponential decay.
 
-Every point has a source in the ledger (a strike attempt, its possible
-contact, time spent advancing, estimated ground control, a possible knockdown
-or takedown with enough evidence), so the score at any moment can be split
+Every point has a source in the ledger (a strike attempt - punch, knee, elbow
+or ground strike, or a kick -, its possible contact, time spent advancing,
+estimated ground control, a possible knockdown or takedown with enough
+evidence), so the score at any moment can be split
 into its parts and the effect of a single event can be shown exactly.
 
     m(t) = sum of points earned before t, each halved every `half_life_s`
@@ -42,7 +43,7 @@ from fight_analyzer.contracts import (
 )
 
 from . import exclusions as excl
-from .events import FIGHTERS, MovementRun
+from .events import FIGHTERS, HAND_STRIKES, STRIKE_TYPES, MovementRun
 
 
 def parameters(s: MomentumSettings) -> MomentumParameters:
@@ -76,11 +77,11 @@ def ledger(events: Iterable[FightEvent], runs: Iterable[MovementRun], s: Momentu
         if e.actor is None or e.attribution_uncertain or excl.frame_excluded(excl.event_frame(e), segments):
             continue
         at = e.peak_ms if e.peak_ms is not None else e.start_ms
-        if e.type in (EventType.punch, EventType.knee):
+        if e.type in HAND_STRIKES:  # elbows and ground strikes weigh as much as a punch
             add(e.actor, MomentumSource.strike_attempt, e.event_id, at, at, 1, s.strike_attempt)
         elif e.type == EventType.kick:  # never also a punch
             add(e.actor, MomentumSource.kick_attempt, e.event_id, at, at, 1, s.kick_attempt)
-        if e.type in (EventType.punch, EventType.knee, EventType.kick) and e.possible_contact:
+        if e.type in STRIKE_TYPES and e.possible_contact:
             add(e.actor, MomentumSource.contact_bonus, e.event_id, at, at, 1, s.contact_bonus)
         if e.type == EventType.ground_control:
             add_span(e.actor, MomentumSource.control, e.event_id, e.start_ms, e.end_ms,

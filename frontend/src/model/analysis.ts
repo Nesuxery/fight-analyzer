@@ -5,7 +5,7 @@
  * stage; until then the UI works on these view types. A `null` value always
  * means "no measurement" and is rendered as "—", never as a guessed number.
  */
-import type { DataOrigin, EventType } from "../contracts/generated";
+import type { DamageKind, DamageType, DataOrigin, EventType, StrikeOutcome, TargetZone } from "../contracts/generated";
 
 /** Corner colours. Red = fighter_a, blue (drawn in cyan) = fighter_b. */
 export type Side = "red" | "blue";
@@ -65,6 +65,30 @@ export interface TimelineEvent {
   tags?: EventTag[];
   /** In a part the user excluded (e.g. a replay): listed, not counted or scored. */
   excluded?: boolean;
+  /** Strikes (schema 1.11.0 on): estimated outcome, target zone and significant strike. */
+  outcome?: StrikeOutcome | null;
+  zone?: TargetZone | null;
+  significantStrike?: boolean | null;
+}
+
+/** A damage signal in the event list (an estimate; v2 Bölüm 3a). */
+export interface DamageView {
+  id: string;
+  type: DamageType;
+  kind: DamageKind;
+  /** Credited fighter (the one who caused it) and the damaged one. */
+  side: Side;
+  target: Side;
+  startS: number;
+  endS: number | null;
+  severity: number;
+  confidence: number;
+  /** Whose it is was inferred from the other fighter (knockdowns). */
+  inferred: boolean;
+  /** Below the attribution threshold ("Kime ait belirsiz"). */
+  uncertain: boolean;
+  excluded: boolean;
+  note: string | null;
 }
 
 /** Ids of people visible in a frame (tracker ids in real data). */

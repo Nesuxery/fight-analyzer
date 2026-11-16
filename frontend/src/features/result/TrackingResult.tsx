@@ -37,6 +37,7 @@ import {
   sampleAt,
   shownShare,
   sideOfFighter,
+  toDamageViews,
   toTimelineEvents,
   totals,
 } from "../../model/measured";
@@ -199,6 +200,7 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
     () => (events ? toTimelineEvents(events.events, momentum?.contributions ?? null, timeline, segments,
                                      UNATTRIBUTED_TAG) : []),
     [events, momentum, timeline, segments]);
+  const damage = useMemo(() => (events ? toDamageViews(events.damage, segments) : []), [events, segments]);
   const series = useMemo<MomentumSeries | null>(() => (momentum ? {
     t: momentum.sample_ms.map((ms) => ms / 1000),
     red: momentum.red_share.map((v) => v / 100),
@@ -436,7 +438,7 @@ export function TrackingResult({ job: polled, onRecalculate }: { job: Job; onRec
         </div>
         {tab === "events" ? (
           <div className="evmom">
-            <EventList events={tEvents} clock={clock} time={snap.time} names={names} demo={false}
+            <EventList events={tEvents} damage={damage} clock={clock} time={snap.time} names={names} demo={false}
                        selectedId={selectedId} onSelect={setSelectedId}
                        emptyText={eventsKey ? R.noEvents : R.noMotion} />
             {momentum && (

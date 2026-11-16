@@ -51,33 +51,62 @@ class Fighter:
     actions: list[Action] = field(default_factory=list)
     present: Callable[[float], bool] = lambda t: True
     wrist_conf: Callable[[float], float] = lambda t: 0.9
+    hands: str = "up"  # "up": guard at the chin; "low": arms hanging (nothing in front of the face)
 
     def pose(self, t: float) -> np.ndarray:
-        """[17, 2] joints in torso units (y down)."""
-        st: dict = {"x": self.x, "lie": 0.0, "punch": {}, "kick": {}, "head": 0.0}
+        """[17, 2] joints in torso units (y down). The floor is at y = 1.62 while upright."""
+        st: dict = {"x": self.x, "lie": 0.0, "punch": {}, "kick": {}, "head": 0.0, "elbow": {}, "sit": 0.0,
+                    "dip": 0.0, "cover": 0.0, "push": 0.0, "step": {}, "leg": {}}
         for act in self.actions:
             act(t, st)
         theta = st["lie"] * math.pi / 2  # falls backwards
         up = np.array([-self.facing * math.sin(theta), -math.cos(theta)])
         fwd = self.facing * np.array([-up[1], up[0]])
         down = -up
-        hip = np.array([st["x"], 1.2 * st["lie"]])
+        x = st["x"] - self.facing * st["push"]  # pushed backwards
+        lowered = st["sit"] + st["dip"]  # hips down, feet stay on the floor
+        hip = np.array([x, 1.2 * st["lie"] + lowered])
         sh = hip + up
         ls, rs = sh + 0.25 * fwd, sh - 0.25 * fwd
         lh, rh = hip + 0.15 * fwd, hip - 0.15 * fwd
         # guard: hands near the chin, so a straight punch travels ~0.8 torso lengths
-        wrists = {"l": ls + 0.30 * fwd + 0.15 * down, "r": rs + 0.42 * fwd + 0.12 * down}
+        if self.hands == "low":
+            wrists = {"l": ls + 0.1 * fwd + 1.0 * down, "r": rs + 0.1 * fwd + 1.0 * down}
+        else:
+            wrists = {"l": ls + 0.30 * fwd + 0.15 * down, "r": rs + 0.42 * fwd + 0.12 * down}
+        if st["cover"]:  # forearms up in front of the face
+            side = np.array([up[1], -up[0]])
+            face = sh + 0.35 * up
+            for hand, s_ in (("l", 1), ("r", -1)):
+                cover = face + 0.3 * fwd + 0.07 * s_ * side
+                wrists[hand] = wrists[hand] + (cover - wrists[hand]) * st["cover"]
         for hand, (k, height, direction) in st["punch"].items():
             base = ls if hand == "l" else rs
             reach = base + 1.13 * direction * fwd + height * down
             wrists[hand] = wrists[hand] + (reach - wrists[hand]) * k
         ankles = {"l": lh + 0.25 * fwd + 1.62 * down, "r": rh - 0.25 * fwd + 1.62 * down}
+        if lowered and not st["lie"]:
+            for foot in ankles:
+                ankles[foot][1] = 1.62
+                ankles[foot] = ankles[foot] + 0.9 * st["sit"] * fwd  # sitting: legs out in front
+        for foot, dx in st["step"].items():
+            ankles[foot] = ankles[foot] + dx * fwd
+        for foot, dx in st["leg"].items():
+            ankles[foot] = ankles[foot] - dx * fwd  # the struck leg is knocked back
         for foot, (k, height) in st["kick"].items():
             base = lh if foot == "l" else rh
             target = base + 1.55 * fwd + height * up
             ankles[foot] = ankles[foot] + (target - ankles[foot]) * k
         le, lw = _ik(ls, wrists["l"], UPPER_ARM, FOREARM, down)
         re, rw = _ik(rs, wrists["r"], UPPER_ARM, FOREARM, down)
+        for hand, (k, height) in st["elbow"].items():  # elbow leads forward, forearm folded back
+            base = ls if hand == "l" else rs
+            strike_e = base + 0.6 * fwd - 0.1 * down + height * down
+            strike_w = base + 0.15 * fwd + 0.05 * down + height * down
+            if hand == "l":
+                le, lw = le + (strike_e - le) * k, lw + (strike_w - lw) * k
+            else:
+                re, rw = re + (strike_e - re) * k, rw + (strike_w - rw) * k
         lk, la = _ik(lh, ankles["l"], THIGH, SHIN, fwd)
         rk, ra = _ik(rh, ankles["r"], THIGH, SHIN, fwd)
         nose = sh + 0.35 * up + 0.1 * fwd - st["head"] * fwd  # head snapped back
@@ -111,6 +140,77 @@ def head_snap(t0: float, amount: float = 0.45, out_s: float = 0.08, back_s: floa
         if t0 <= t <= t0 + out_s + back_s:
             k = ease((t - t0) / out_s) if t < t0 + out_s else 1 - ease((t - t0 - out_s) / back_s)
             st["head"] = amount * k
+    return act
+
+
+def _pulse(t: float, t0: float, out_s: float, back_s: float | None) -> float | None:
+    """0..1 going out over out_s and (back_s given) back over back_s; None outside."""
+    if t < t0 or (back_s is not None and t > t0 + out_s + back_s):
+        return None
+    if t < t0 + out_s or back_s is None:
+        return ease((t - t0) / out_s)
+    return 1 - ease((t - t0 - out_s) / back_s)
+
+
+def elbow(t0: float, hand: str = "r", out_s: float = 0.12, back_s: float = 0.2, height: float = 0.0) -> Action:
+    """The elbow swings forward at shoulder height with the forearm folded back."""
+    def act(t: float, st: dict) -> None:
+        k = _pulse(t, t0, out_s, back_s)
+        if k is not None:
+            st["elbow"][hand] = (k, height)
+    return act
+
+
+def sit(t0: float, duration_s: float = 0.4, depth: float = 1.0) -> Action:
+    """Down to the floor sitting upright, legs out in front (as against the cage after a knockdown)."""
+    def act(t: float, st: dict) -> None:
+        k = _pulse(t, t0, duration_s, None)
+        if k is not None:
+            st["sit"] = depth * k
+    return act
+
+
+def dip(t0: float, amount: float = 0.35, out_s: float = 0.15, back_s: float = 0.4) -> Action:
+    """The knees give way and the hips dip, then come back (feet stay on the floor)."""
+    def act(t: float, st: dict) -> None:
+        k = _pulse(t, t0, out_s, back_s)
+        if k is not None:
+            st["dip"] = amount * k
+    return act
+
+
+def cover(t0: float, t1: float) -> Action:
+    """Both forearms up in front of the face between t0 and t1."""
+    def act(t: float, st: dict) -> None:
+        if t0 <= t <= t1:
+            st["cover"] = min(ease((t - t0) / 0.15), ease((t1 - t) / 0.15))
+    return act
+
+
+def pushed(t0: float, dist: float = 0.4, out_s: float = 0.15) -> Action:
+    """The whole body is pushed backwards (a hard body shot)."""
+    def act(t: float, st: dict) -> None:
+        k = _pulse(t, t0, out_s, None)
+        if k is not None:
+            st["push"] = dist * k
+    return act
+
+
+def step(t0: float, foot: str = "r", dx: float = 0.8, out_s: float = 0.12) -> Action:
+    """One foot moves quickly along the facing direction and stays (the stance width changes)."""
+    def act(t: float, st: dict) -> None:
+        k = _pulse(t, t0, out_s, None)
+        if k is not None:
+            st["step"][foot] = dx * k
+    return act
+
+
+def leg_hit(t0: float, foot: str = "l", amount: float = 0.4, out_s: float = 0.08, back_s: float = 0.3) -> Action:
+    """The struck leg is knocked back and returns."""
+    def act(t: float, st: dict) -> None:
+        k = _pulse(t, t0, out_s, back_s)
+        if k is not None:
+            st["leg"][foot] = amount * k
     return act
 
 

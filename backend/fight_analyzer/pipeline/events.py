@@ -24,7 +24,9 @@ from .base import RateMeter, overall
 STAGE = PipelineStage.events
 METHOD = ("Kamera hareketi arka plandan (optik akış + RANSAC); eklemler gövde boyuna göre ölçekli, "
           "One-Euro ile yumuşatılmış, hızlar zaman farkından; vuruş denemesi = tek hız tepesi + uzanma + "
-          "rakibe yönelim; temas yalnızca 2B 'olası'. Her olay kimlik güveninden bir sahiplik güveni taşır.")
+          "rakibe yönelim; hedef bölge ve sonuç (isabet/blok/ıska/belirsiz) 2B temas ve rakibin hemen sonraki "
+          "tepkisinden tahmin edilir; hasar sinyalleri (knockdown, ağır kafa vuruşu, sarsılma, zorunlu geri "
+          "çekilme) tahmindir. Her olay kimlik güveninden bir sahiplik güveni taşır.")
 
 
 def run(ctx: JobContext) -> None:
@@ -71,12 +73,15 @@ def run(ctx: JobContext) -> None:
         ctx.report(overall(STAGE, 0.85), "Eklem hızları ve olaylar", detail=meter.detail(total))
         kin = tuple(kinematics.compute(arrays, ident["state"], ident["det"], prep.track_id, track, f, ms)
                     for f in (0, 1))
-        analysis = events_mod.analyze(arrays, track, kin, ms, ident["conf"])
+        # falls of a fighter whose identity is not verified around them (see events.infer_presence)
+        inferred = events_mod.inferred_kinematics(arrays, ident["state"], ident["det"], ident["conf"], prep.track_id,
+                                                  track, kin, ms)
+        analysis = events_mod.analyze(arrays, track, kin, ms, ident["conf"], inferred=inferred)
         data = motion_store.events_data(analysis, arrays.timestamp_ms, track, ms)
         motion_store.write_events(cache_root, ekey, einputs, data)
     summary = EventsSummary(
-        cache_key=ekey, cache_hit=hit, method=METHOD, events=len(data.events),
-        camera_known_share=min(1.0, max(0.0, data.camera_known_share)),
+        cache_key=ekey, cache_hit=hit, version=motion_store.EVENTS_VERSION, method=METHOD, events=len(data.events),
+        damage_signals=len(data.damage), camera_known_share=min(1.0, max(0.0, data.camera_known_share)),
         fighters=[FighterEventCounts(fighter_id=fid, **stats)
                   for fid, stats in zip(events_mod.FIGHTERS, data.stats)])
     ctx.store.merge_outputs(ctx.job.job_id, ctx.worker_id, events=summary)

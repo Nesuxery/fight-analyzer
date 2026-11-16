@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 14 Kasım 2026 (v2 Bölüm 2b: yayın kesmeleri ve tekrar ayıklama). Ayrıntılı
+Son güncelleme: 17 Kasım 2026 (v2 Bölüm 3a: vuruş olayları ve hasar sinyalleri). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -24,14 +24,14 @@ CLAUDE.md geçerlidir.
   fight_analyzer.jobs`), Vite/React arayüzü. Hepsi `127.0.0.1`; `start.cmd` tek komut.
 - İş kaydı SQLite (WAL); işçi kalp atışı, 30 sn sonra yarım iş yeniden kuyruğa,
   2 denemeden sonra `worker_lost`.
-- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.8.0**);
+- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.11.0**);
   JSON Schema ve TS tipleri bundan üretilir, `check.cmd` güncelliğini denetler.
   Üretilen dosyalar (şema, TS tipleri, overlay dosyaları) `.gitattributes` ile her
   checkout'ta LF; denetim bayt bayt karşılaştırır ve gevşetilmedi.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
-  (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 5`, `CAMERA_VERSION 2`,
-  `EVENTS_VERSION 2`, `MOMENTUM_VERSION 2`, `BROADCAST_VERSION 3`); mantık değişince
+  (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 7`, `CAMERA_VERSION 2`,
+  `EVENTS_VERSION 4`, `MOMENTUM_VERSION 4`, `BROADCAST_VERSION 3`); mantık değişince
   ilgili sürüm artırılır, şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
 
 ### Video ve poz
@@ -56,7 +56,9 @@ CLAUDE.md geçerlidir.
   boyu/sn, fps'ten bağımsız. Düşük güvenli eklemler geçersiz.
 - Vuruş = "deneme"; 2B örtüşme = "olası temas"; knockdown/takedown "olası".
   Aşama 9'da **olası etki** eklendi: temasın hemen ardından rakibin başının
-  omuzlarına göre ≥0,3 gövde boyu savrulması (eşik doğrulanmadı).
+  omuzlarına göre ≥0,3 gövde boyu savrulması (eşik doğrulanmadı). v2 Bölüm 3a'dan
+  beri her vuruş ayrıca hedef bölge, tahmini sonuç (isabet/blok/ıska/belirsiz) ve
+  önemli vuruş bilgisi taşır; hasar sinyalleri ayrı bir listedir (aşağıda).
 - Momentum: açıklanabilir puan defteri, 20 sn yarı ömür,
   kırmızı % = 100·(m₁+4)/(m₁+m₂+8). Deneysel; "kazanma olasılığı değildir".
 
@@ -426,6 +428,100 @@ Kod: `tracking/identity.py` (sürüm 7), `tracking/quality.py`, ayarlar
 - **Karalama verisi:** `local/fa-data` ve `local/replay-clip` Bölüm 3 bitene
   kadar kalır.
 
+### Vuruş olayları ve hasar sinyalleri (v2 Bölüm 3a, 17 Kasım 2026)
+Bölüm 3 üç aşamada yapılıyor (a: vuruş olayları ve hasar sinyalleri, b: grappling
+durumları, kontrol ve baskınlık, c: `RoundFeatures` ve düzeltme katmanı); bu kararlar
+(a) içindir. Kod: `motion/strikes.py` (hedef bölge, sonuç), `motion/damage.py`
+(hasar sinyalleri, çıktı düşüşü), `motion/events.py`. Ayarlar `MotionSettings`'te
+(olay önbellek anahtarına girer) ve `FeatureSettings`'te (istek anında; hiçbir
+anahtara girmez). Şema 1.11.0, `EVENTS_VERSION` 4, `MOMENTUM_VERSION` 4. Poz,
+takip hazırlığı, kimlik (7), kamera ve yayın önbellekleri değişmedi: mevcut
+analizler `events_outdated` bandıyla açılır, "Yeniden işle" yalnızca olayları ve
+momentumu hesaplar (örnek yayında 18 sn).
+- **Sözleşme:** `FightEvent` + `target_zone`, `outcome`, `outcome_confidence`,
+  `significant`, `phase`, `evidence`; yeni türler `elbow`, `ground_strike`;
+  `DamageSignal` ve `EventTimeline.damage`; `EventsSummary.version` ve
+  `damage_signals`; `FighterEventCounts` + `landed_strikes`, `significant_attempts`,
+  `significant_landed`; `AnalysisExport.damage`. Eski olaylarda yeni alanlar boştur
+  ve arayüzde görünmez (uydurulmaz).
+- **Hedef bölge:** vuran yüzey (yumrukta bileğin 0,18 gövde boyu ötesi, tekmede ayak,
+  bilek ve kaval ortası, diz ve dirsekte eklemin kendisi) tepe anından 0,05 sn önce
+  ile 0,2 sn sonra arasında izlenir. Bölgeler: kafa çemberi, omuz ortası–kalça ortası
+  çizgisinin çevresi, uyluk ve kaval. Yumruk ve dirsek yalnızca kafa ve gövdeye
+  gider. Uzvun en çok yaklaştığı bölge hedeftir; temas anı uzvun bölgeye **ilk
+  ulaştığı** karedir (en derin örtüşme değil: tekme geri dönerken en derindir).
+- **Sonuç:** isabet = bölgeye ulaşma + hemen ardından net tepki (vuruş doğrultusunda
+  baş savrulması ≥ 0,15, gövdenin vuruş yönünde itilmesi ≥ 3,0 gövde boyu/sn, vurulan
+  bacağın diz ya da bileğinin oynaması ≥ 0,5); blok = korumaya (ön kol + eldiven,
+  yarıçap 0,22) değdi, tepki yok; ıska = hiçbir bölgeye ve korumaya 0,3'ten yakın
+  değil; gerisi "sonuç belirsiz". Belirsiz ıska değildir.
+- **Neden bu eşikler (ayar seti; doğruluk değildir):** ilk eşiklerle (doğrultusuz baş
+  hareketi 0,12, itilme 1,2, bacak 0,25) örnek yayında 26 isabet çıktı. Sistemin
+  sonucunu görmeden yapılan 72 vuruşluk ızgara denetiminde (her sonuç sınıfından
+  sabit seed'le; ≈ 34'ünde ben de karar veremedim, 8'i hiç vuruş değildi) isabet
+  dediklerinin yalnızca yarısında isabet gördüm. Dövüşçüler sürekli hareket ediyor
+  (gövde itilmesi ölçüsünün ortancası 0,84), kaçınan baş da oynuyor. Ayardan sonra
+  örnek yayında 5 isabet: işaretledikleri gördüklerimle uyumlu (3/3), ama gördüğüm
+  isabetlerin yalnızca 3/7'sini yakalıyor. **Temkinli tarafta bırakıldı.** Blok
+  denetimde iyi tuttu (eğilim verebildiğim 15'in 12'si).
+- **Önemli vuruş:** mesafede her vuruş; klinçte ve yerde yalnızca tepe hızı eşiğin
+  1,4 katını geçenler. Faz şimdilik mevcut klinç ve "yerde" kurallarından gelir;
+  (b)'de durum makinesine bağlanacak. Örnek yayında klinç yok: tüm vuruşlar mesafede.
+- **Dirsek:** dirsek önde (bileğin hızının en az 0,8'i), kol katlı (≤ 0,55 kol boyu),
+  omuz hizasına kalkar, rakibin üst gövdesine doğru 0,6 üst kol boyu uzanır ve kafa ya
+  da gövde bölgesine 0,35 içinde yaklaşır; dövüşçüler arası ≤ 1,2. Sentetik "koruma
+  kaldırma" klinç mesafesinde hâlâ dirsek görünebiliyor (bilinen sınır). Örnek yayında
+  3 dirsek; gerçek görüntüyle doğrulanmadı.
+- **Yerde vuruş:** rakip yerdeyken kol vuruşu; uzanma şartı yok, hız ≥ 4,0.
+  "Vuruş denemeleri" sayısına ve momentumda "vuruş denemesi" ağırlığına girer
+  (dirsek de; kullanıcı kararı). Momentum formülü aynı.
+- **Deneme tespitinde doğrulamada bulunan iki düzeltme** (planda "eşikler aynı
+  kalır" denmişti; bu ikisi eşik değil, hata): (1) tepe anı, uzvun rakibe doğru
+  hareket ettiği karelerin en hızlısıdır. Vuruş ve geri dönüşü tek hız bölümü
+  oluşturup geri dönüş daha hızlıysa deneme eleniyordu (nakavt kroşesi böyle
+  kaçıyordu). (2) Kendi tekmesi sırasındaki kol savruluşu (tekme bulunamasa bile:
+  hızlı ve yükselen bacak) ve ayaktaki rakibin kalça hizasının altına inen el
+  (tekmeyi tutma ya da bloklama) deneme sayılmaz. Örnek yayında vuruş denemeleri
+  129 → 126 (yumruk 107 → 99, tekme 19 → 20, diz 3 → 4, dirsek 0 → 3).
+- **"Yerde":** duruş "yerde", ya da kalça ayaktayken ölçülen yüksekliğinin %65'ine
+  indi (duvara yaslanıp oturan dövüşçü 2B'de dik görünür ve eski kural onu "geçiş"
+  sayıyordu). Belden eğilip vuran (bacaklar düz) artık "yerde" sayılmaz (kinematikte
+  düzeltme). Düşme = kararlı ayakta → kararlı yerde. Yere iniş, kontrol, "altında
+  kalanın kolları sayılmaz" ve sinyallerdeki duruş aynı tanımı kullanır.
+- **Knockdown / kayma / takedown:** öncesinde rakibin vuruşu varsa ve klinç yoksa
+  knockdown, ama vuruşların hepsi net ıskaysa kayma ("Yere indi; öncesindeki vuruş
+  isabet etmedi"); yakın temas varsa takedown; yoksa kayma.
+- **Nakavt (kullanıcı önerisi):** bir dövüşçü yüksek güvenle (≥ 0,75) izlenip
+  ayaktayken, diğerinin kimlikli bölümüne bitişik, aynı iz numarasındaki kişi 1,5 sn'ye
+  kadar o dövüşçü sayılır (`infer_presence`; yalnızca düşmeler için, kinematik yalnızca
+  çıkarım karelerinin ±4 sn çevresinde). Böyle bulunan knockdown "olası", güveni
+  ≤ 0,40, kanıtında `identity_inferred`; momentum puanı almaz (eşik 0,5). Öncesindeki
+  vuruş olay listesine eklenmez (kimlik o anda doğrulanmamıştı). **Örnek yayında:**
+  527,9 sn'de Volkanovski için olası knockdown; öncesindeki vuruş 0,43 sn önceki sol
+  kroşe (görüntüde yüze geliyor, sistem "olası temas" dedi). Görsel:
+  `local/bolum3a/nakavt-knockdown.jpg` (git'e girmez).
+- **Hasar sinyalleri:** knockdown, ağır kafa vuruşu (isabet + doğrultulu baş savrulması
+  ≥ 0,3), sarsılma, zorunlu geri çekilme. Çıktı düşüşü (kümülatif) raunda ve dışlanan
+  bölümlere bağlı olduğu için önbellekte değil, istek anında hesaplanır
+  (`GET /events` ≈ 20 ms ve dışa aktarma). İlk kurallarla örnek yayında 15 sarsılma ve
+  4 zorunlu geri çekilme çıktı; karelerle bakınca **19'u da** değişim sonrası normal
+  hareketti. Artık yalnızca isabetten sonra; sarsılma için kendi denemesi olmadan ve
+  kalça ≥ %30 çökerek. Örnek yayında yalnızca knockdown kalıyor. Sarsılma ve geri
+  çekilme gerçek bir sarsılma görüntüsüyle doğrulanmadı. Submission tehlikesi (b)'de,
+  görünür hasar bayrağı (c)'de.
+- **Momentum:** formül ve ağırlıklar aynı; girdiler değiştiği için örnek yayında son
+  pay kırmızı %54,4 → %52,0.
+- **Kaçan vuruş (3 × 8 sn; R1, R2, nakavt öncesi; kabaca, 0,13 sn arayla kareler):**
+  gözle ≈ 34 deneme, tespit ≈ 13 doğru (bir tekme iki kez sayıldı, bir kol tekmeyi
+  blokluyordu): kabaca %35–40. Arkadan yakın çekimde ve iç içe değişimde çoğu kaçıyor.
+- **Süre:** hareket aşaması 8,2 → 12,6 sn (kinematik 7,5, çıkarım kinematiği 3,8, olay
+  0,8, örnekleme 0,5); poz 3091 sn'ye göre ≈ +%0,14.
+- **Bilinen sınırlar:** tek yayınla ve aynı yayınla ayar; isabet temkinli (gerçek
+  isabetlerin çoğu "blok" ya da "belirsiz" kalıyor); 2B'de eldivenle yüz ayrılamıyor;
+  tekme kontrolü (check) ayrı bir sonuç değil; örnek yayında grappling yok (b için
+  kullanıcının Khabib–Poirier kaydı, yalnızca yerelde).
+- (a) `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
+
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →
   (eşitse) etkili agresiflik → (eşitse) alan kontrolü → 10-10.
@@ -595,9 +691,15 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
   oluşturmak ve `python -m fight_analyzer.validation` ile raporlamak (benzer şort,
   tekrar/ağır çekim, uzun klinç ve yer mücadelesi içeren klipler dahil).
 - [ ] Nakavt tespiti: düşen dövüşçünün kimliği belirsizleştiğinde/örtüştüğünde
-  knockdown kaçıyor (Volkanovski KO'su, Oliveira KO'su).
-- [ ] Uzak/örtülü koldan atılan vuruşlar ve yerde üstten vuruşlar (ground and
-  pound) büyük ölçüde sayılmıyor.
+  knockdown kaçıyor (Volkanovski KO'su, Oliveira KO'su). v2 3a: Volkanovski KO'su
+  kimlik çıkarımıyla "olası, düşük güven" olarak bulunuyor; Oliveira klibinde
+  denenmedi.
+- [ ] Uzak/örtülü koldan atılan vuruşlar büyük ölçüde sayılmıyor (örnek yayında
+  kabaca %35–40 yakalanıyor). Yerde üstten vuruş türü v2 3a'da eklendi; gerçek
+  ground and pound görüntüsüyle denenmedi.
+- [ ] Vuruş sonucu (v2 3a): isabet temkinli, gerçek isabetlerin çoğu "blok" ya da
+  "belirsiz" kalıyor; eşikler tek yayınla ayarlandı. Sarsılma ve zorunlu geri
+  çekilme gerçek bir sarsılma görüntüsüyle doğrulanmadı.
 - [ ] "Olası temas" yakın mesafede çok sık çıkıyor; "olası etki" eşiği (0,3) ve
   ölçüsü gerçek etiketli verilerle ayarlanmalı.
 - [ ] Hakem profili ağırlıkları ve 10-8 eşikleri gerçek resmi skor kartlarıyla

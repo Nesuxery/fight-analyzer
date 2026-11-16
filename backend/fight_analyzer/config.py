@@ -160,6 +160,73 @@ class MotionSettings:
     # Whose event: mean identity confidence of the actor over the event's frames. Below this
     # the event is "Kime ait belirsiz" (listed and counted, but no momentum points).
     attribution_min: float = 0.5
+    # Elbows: the elbow leads while the forearm stays folded, at close range.
+    elbow_peak: float = 4.5
+    elbow_fold: float = 0.55  # wrist to shoulder / arm length at the peak, at most
+    elbow_toward: float = 0.4
+    elbow_max_distance: float = 1.2
+    # ... and drives toward the opponent: reaches this far from the shoulder toward his upper body
+    # (upper-arm lengths), moves at least this fast relative to the wrist (raising the guard moves
+    # the wrist much more than the elbow) and comes this close to his head or body zone (beyond
+    # the zone's radius, torso lengths): a close-range strike.
+    elbow_reach: float = 0.6
+    elbow_lead: float = 0.8
+    elbow_near: float = 0.35
+    elbow_height: float = 0.2  # rises to at most this far below the shoulder line (covering up stays low)
+    # Strikes from the top on a grounded opponent: no reach is needed, less speed.
+    ground_strike_peak: float = 4.0
+    ground_strike_toward: float = 0.3
+    # Significant strikes: every strike at distance; in the clinch and on the ground only
+    # power strikes, whose peak speed is this many times the attempt threshold.
+    power_strength: float = 1.4
+    # Target zones of the opponent and the striking surface (strikes.py), torso lengths.
+    head_radius: float = 0.3
+    body_radius: float = 0.3  # around the line from mid-shoulders to mid-hips
+    leg_radius: float = 0.16
+    guard_radius: float = 0.22  # around forearm and glove (a glove is big: ~0.2 torso lengths)
+    fist_reach: float = 0.18  # the fist lies this far beyond the wrist, the foot beyond the ankle
+    zone_reach: float = 0.1  # gap to a zone that still counts as reaching it (2D keypoint noise)
+    miss_near: float = 0.3  # nearer than this to a zone or the guard, without reaching it: unknown, not missed
+    miss_gap: float = 0.6  # this far from everything: missed with the highest confidence
+    contact_before_s: float = 0.05  # the limb is followed from this long before the fastest moment
+    contact_window_s: float = 0.2  # ... until this long after it
+    # Reaction of the opponent within impact_window_s after the contact, needed for "landed".
+    # Tuned on the sample broadcast (a tuning set): fighters move all the time, slipping moves the
+    # head, stepping moves the legs, so only clear reactions count.
+    head_snap_min: float = 0.15  # head against the shoulders along the strike, beyond his movement just before
+    body_push_min: float = 3.0  # change of the torso velocity along the strike, torso lengths/s
+    leg_buckle_min: float = 0.5  # the struck leg's knee or ankle against the hips
+    # Arm motion that is not a punch: the fighter's own kick (legs moving fast and high), and the
+    # hand going below the opponent's hips (catching or blocking a kick) while he stands.
+    kick_motion: float = 0.8  # share of kick_peak that marks a kicking leg
+    punch_below_hips: float = 0.15  # torso lengths below his hip centre
+    # Falls: the hips come down to this share of their height above the feet while standing.
+    fall_upright: float = 1.3  # hips this far above the lower foot: a reference for standing
+    fall_reference_s: float = 1.0  # standing time the reference is taken from
+    fall_hold_s: float = 30.0  # the reference is kept this long after the fighter last stood
+    fall_height_share: float = 0.65
+    fall_close_s: float = 0.2  # shorter holes in "down" are closed
+    # A fall right after strikes that all clearly missed (this sure) is a slip, not a knockdown.
+    slip_missed_confidence: float = 0.6
+    # Knockdown with an inferred identity: while one fighter is followed with at least this
+    # confidence, the other person on the same tracker id just before / after the stretch in
+    # which he is identified is taken to be the other fighter, for falls only.
+    infer_min_confidence: float = 0.75
+    infer_window_s: float = 1.5
+    infer_max_gap_frames: int = 3
+    inferred_confidence_cap: float = 0.4  # such a knockdown stays "possible" with low confidence
+    infer_context_s: float = 4.0  # the inferred kinematics are computed this far around inferred frames
+    # Damage signals (damage.py). Starting values, tuned on one broadcast.
+    heavy_head_snap: float = 0.3  # along the strike
+    knockdown_long_s: float = 2.0  # staying down this long makes a knockdown more severe
+    wobble_window_s: float = 1.5  # after a landed strike
+    wobble_base_change: float = 0.6  # stance width change within wobble_base_s
+    wobble_base_s: float = 0.3
+    wobble_dip: float = 0.3  # the hips dip by this share of their height and come back (punching dips ~0.15-0.3)
+    wobble_steps: int = 3  # quick steps inside the window
+    retreat_window_s: float = 2.5  # after a landed strike
+    retreat_share: float = 0.6  # of the measured window spent moving away
+    retreat_measured_share: float = 0.5  # of the window that must be measured
     # Movement and positions
     advance_speed: float = 0.5  # toward (+) / away (-) from the opponent
     advance_smooth_s: float = 0.3
@@ -177,6 +244,22 @@ class MotionSettings:
     camera_width: int = 640
     camera_features: int = 400
     camera_min_inliers: int = 25
+
+
+@dataclass(frozen=True)
+class FeatureSettings:
+    """What is derived from the cached events at request time, because it depends on the
+    rounds and excluded parts, which the user can edit without processing again (not part
+    of any cache key). Starting design values."""
+
+    # Output drop (cumulative damage): after this many landed significant strikes, or one
+    # knockdown / heavy head strike / wobble, the fighter's pace and mobility for the rest of
+    # the round are compared with the part of the round before.
+    output_drop_landed: int = 5
+    output_drop_min_s: float = 45.0  # measured seconds needed before and after
+    output_drop_pace: float = 0.35  # drop of attempts per measured minute
+    output_drop_mobility: float = 0.2  # drop of the mean hand/foot activity
+    output_drop_max_confidence: float = 0.4  # fatigue and tactics lower the output too
 
 
 @dataclass(frozen=True)
@@ -297,6 +380,7 @@ class Settings:
     tracking: TrackingSettings = field(default_factory=TrackingSettings)
     identity: IdentitySettings = field(default_factory=IdentitySettings)
     motion: MotionSettings = field(default_factory=MotionSettings)
+    features: FeatureSettings = field(default_factory=FeatureSettings)
     momentum: MomentumSettings = field(default_factory=MomentumSettings)
     ruleset: RulesetSettings = field(default_factory=RulesetSettings)
     broadcast: BroadcastSettings = field(default_factory=BroadcastSettings)

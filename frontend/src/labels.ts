@@ -3,6 +3,7 @@
 import type { Screen } from "./app/router";
 import type {
   BroadcastNoteCode,
+  DamageType,
   EventType,
   ExclusionReason,
   ExclusionSignal,
@@ -12,6 +13,8 @@ import type {
   PipelineStage,
   RoundNoteCode,
   RoundSource,
+  StrikeOutcome,
+  TargetZone,
 } from "./contracts/generated";
 import type { Side } from "./model/analysis";
 
@@ -368,6 +371,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   punch: "Yumruk denemesi",
   kick: "Tekme denemesi",
   knee: "Diz denemesi",
+  elbow: "Dirsek denemesi",
+  ground_strike: "Yerde vuruş denemesi",
   clinch: "Klinç",
   takedown: "Olası takedown",
   ground_control: "Yer kontrolü (tahmini)",
@@ -417,7 +422,7 @@ export const RESULT_LABELS = {
     percent: "%",
     strikeAttempts: {
       label: "Vuruş denemeleri",
-      help: "Seçili kapsamda tespit edilen yumruk ve diz denemelerinin sayısı; tekmeler ayrı sayılır. Deneme, vuruşun isabet ettiği anlamına gelmez.",
+      help: "Seçili kapsamda tespit edilen yumruk, diz, dirsek ve yerde (üstten) vuruş denemelerinin sayısı; tekmeler ayrı sayılır. Deneme, vuruşun isabet ettiği anlamına gelmez; tahmini sonuç olay listesinde yazar.",
     },
     kicks: {
       label: "Tekmeler",
@@ -499,7 +504,7 @@ export const RESULT_LABELS = {
       `Kırmızı payı = 100 × (m₁ + ${prior}) / (m₁ + m₂ + ${twicePrior}), mavi = 100 − kırmızı. m₁ ve m₂ iki köşenin şu anki puan toplamıdır; her puan ${halfLife} saniyede yarıya iner.`,
     paramsTitle: "Model parametreleri (başlangıç tasarım değerleri; doğrulanmış ağırlıklar değildir)",
     params: {
-      strike_attempt: "Vuruş denemesi (yumruk, diz)",
+      strike_attempt: "Vuruş denemesi (yumruk, diz, dirsek, yerde vuruş)",
       kick_attempt: "Tekme denemesi (ayrıca yumruk sayılmaz)",
       contact_bonus: "Olası temas eki",
       advance_per_s: "İlerleme (saniye başına)",
@@ -551,6 +556,15 @@ export const RESULT_LABELS = {
       on_top_after: "Sonrasında üstte",
       head_jolt: "Rakibin baş hareketi (gövde boyu)",
       impact: "Olası etkili vuruş",
+      fold: "Kolun açıklığı (kol boyu)",
+      zone_gap: "Hedef bölgeye uzaklık (gövde boyu; 0 ve altı: ulaştı)",
+      guard_gap: "Rakibin koruma koluna uzaklık (gövde boyu)",
+      head_snap: "Rakibin başının savrulması (gövde boyu)",
+      body_push: "Rakibin gövdesinin itilmesi (gövde boyu/sn)",
+      leg_buckle: "Vurulan bacağın oynaması (gövde boyu)",
+      down_s: "Yerde kalma (sn)",
+      hip_share: "Kalça yüksekliği (ayaktaki payı)",
+      landed_before: "Öncesinde isabet (tahmini)",
     } as Record<string, string>,
   },
   /** Real-analysis result screen (TrackingResult). */
@@ -778,7 +792,7 @@ export const ROUND_EDIT_LABELS = {
 /** Banner on analyses made before the current version (CLAUDE.md: "eski sürümle yapıldı"). */
 export const OUTDATED_LABELS = {
   title: "Bu analiz eski sürümle yapıldı — yeniden işle",
-  text: "Raunt tespiti, tekrarların otomatik dışlanması, görünüm modeliyle kimlik takibi ve veri kalitesi gibi yeni adımların bir kısmı bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
+  text: "Raunt tespiti, tekrarların otomatik dışlanması, görünüm modeliyle kimlik takibi, veri kalitesi, vuruş sonuçları ve hasar sinyalleri gibi yeni adımların bir kısmı bu analizde yok. Pozlar önbellekten gelir; yeniden işleme birkaç dakika sürer.",
   action: "Yeniden işle",
   busy: "Yeniden işleme başlatılıyor…",
 };
@@ -788,6 +802,82 @@ export const EVENT_TAG_LABELS = {
   unattributed: "Kime ait belirsiz",
   unattributedHelp: (pct: number) =>
     `Olay anında dövüşçülerin kimlik güveni düşüktü (%${pct}): olay doğru dövüşçüye yazılmamış olabilir. Sayılır ama momentuma puan eklemez.`,
+};
+
+/** The event list of the "Olaylar ve momentum" tab (texts moved here in v2 Bölüm 3a). */
+export const EVENT_LIST_LABELS = {
+  region: "Olay listesi",
+  title: "Olaylar",
+  bothCorners: "İki köşe",
+  cornerFilter: "Köşe filtresi",
+  typeFilter: "Olay türü filtresi",
+  outcomeFilter: "Vuruş sonucu filtresi",
+  emptyTitle: "Olay yok",
+  emptyText: "Olay tespiti sonuçları geldiğinde burada zaman sırasıyla listelenir.",
+  noneInFilter: "Bu filtrede olay yok.",
+  seekTitle: (at: string, preRoll: number) => `${at} anına gider (olaydan ${preRoll} sn önce)`,
+  confidenceTitle: "Dedektör güveni; doğruluk garantisi değildir",
+  possible: "Olası",
+  /** Short chip names per event type (list rows use EVENT_LABELS). */
+  chips: {
+    punch: "Yumruk",
+    kick: "Tekme",
+    knee: "Diz",
+    elbow: "Dirsek",
+    ground_strike: "Yerde vuruş",
+    knockdown: "Olası knockdown",
+    takedown: "Olası takedown",
+    clinch: "Klinç",
+    ground_control: "Yer kontrolü",
+    stance_change: "Duruş değişimi",
+    other: "Diğer",
+  } as Record<EventType, string>,
+  damageChip: "Hasar sinyalleri",
+};
+
+/** What a strike did (v2 Bölüm 3a): estimated from 2D joints, never certain. */
+export const STRIKE_LABELS = {
+  outcome: { landed: "İsabet", blocked: "Blok", missed: "Iska", unknown: "Sonuç belirsiz" } as Record<StrikeOutcome, string>,
+  outcomeHelp: {
+    landed: "Vuran uzuv hedef bölgeye ulaştı ve rakip hemen ardından tepki verdi (başın ani savrulması, gövdenin itilmesi ya da bacağın oynaması). Tek kameradan, 2B iskeletten yapılan bir tahmindir.",
+    blocked: "Vuran uzuv rakibin ön koluna ya da eldivenine geldi ve hedef bölgede tepki görülmedi. Tahmindir.",
+    missed: "Vuran uzuv rakibin hiçbir bölgesine yaklaşmadı. Tahmindir.",
+    unknown: "Sonuç ayırt edilemedi: rakip ölçülemedi ya da uzuv 2B görüntüde bölgeyle örtüştü ama net bir tepki yok (önünden geçmiş, sıyırmış ya da hafif isabet etmiş olabilir). Iska anlamına gelmez.",
+  } as Record<StrikeOutcome, string>,
+  outcomeTitle: (help: string, pct: number | null) => (pct === null ? help : `${help} Sonuç güveni %${pct}.`),
+  zone: { head: "Kafa", body: "Gövde", leg: "Bacak" } as Record<TargetZone, string>,
+  zoneHelp: "Hedef bölge: vuran uzvun rakibe en çok yaklaştığı bölge.",
+  significant: "Önemli",
+  significantHelp: "Önemli vuruş: mesafede atılan her vuruş; klinçte ve yerde yalnızca güçlü vuruşlar. İsabet ettiği anlamına gelmez.",
+};
+
+/** Damage signals (v2 Bölüm 3a): signs that a fighter was damaged, after the ABC 2025 definition. */
+export const DAMAGE_LABELS = {
+  types: {
+    knockdown: "Olası knockdown",
+    heavy_head_strike: "Ağır kafa vuruşu",
+    wobble: "Sarsılma",
+    forced_retreat: "Zorunlu geri çekilme",
+    output_drop: "Çıktı düşüşü",
+    submission_danger: "Submission tehlikesi",
+    visible_injury: "Görünür hasar",
+  } as Record<DamageType, string>,
+  help: {
+    knockdown: "Rakibin vuruşundan hemen sonra kalçası ya da gövdesi zemine indi (oturma dahil).",
+    heavy_head_strike: "Kafaya isabet eden vuruştan sonra baş belirgin biçimde savruldu.",
+    wobble: "İsabetten hemen sonra denge kaybı: kalçanın çöküp toparlanması, duruşun ani değişmesi, düzensiz adımlar ya da eldivenin zemine değmesi.",
+    forced_retreat: "İsabetten sonraki saniyelerde yalnızca geri çekildi ve hiç vuruş denemedi.",
+    output_drop: "Hasardan sonra raundun geri kalanında vuruş temposu ve hareketliliği belirgin biçimde düştü (kümülatif hasar). Yorgunluk ya da taktik de aynı izi bırakabilir.",
+    submission_danger: "Tutulan boğma ya da eklem kilidi ve azalan kurtulma hareketleri.",
+    visible_injury: "Kullanıcının eklediği görünür hasar işareti.",
+  } as Record<DamageType, string>,
+  row: (type: string, target: string) => `Hasar: ${type} → ${target}`,
+  estimate: "AI tahmini",
+  estimateHelp: "Hasar 2B iskeletten doğrudan ölçülemez; bu, dolaylı göstergelerden yapılan bir tahmindir ve kesin değildir.",
+  cumulative: "Kümülatif",
+  inferred: "Kimlik çıkarımı",
+  inferredHelp: "Düşen kişinin kimliği o anda doğrulanamadı; diğer dövüşçü yüksek güvenle ayakta olduğu için düşen kişi o sayıldı. Olası, düşük güvenli.",
+  confidenceTitle: "Hasar sinyalinin güveni; doğruluk garantisi değildir",
 };
 
 /**
@@ -830,6 +920,7 @@ export const TIMELINE_LABELS = {
   slider: "Video konumu",
   legend: "Zaman çizelgesi işaretleri",
   punch: "Yumruk",
+  handStrikes: "Yumruk, dirsek, yerde vuruş",
   kick: "Tekme",
   knee: "Diz",
   contact: "Olası temas",
@@ -857,6 +948,8 @@ export const TIMELINE_LABELS = {
 export const EXCLUSION_LABELS = {
   title: "Dışlanan bölümler",
   help: "Dışlanan bölüm dövüş süresi sayılmaz: içindeki olaylar listede “Dışlandı” etiketiyle kalır ama sayılmaz ve puan üretmez; ilerleme, kontrol ve ölçülen süre birikmez; momentum bölüm boyunca donar. Otomatik bölümler raunt sınırlarından ve yayın sinyallerinden çıkarılan bir AI tahminidir; yanlış olanı tek tıkla geri alabilirsin.",
+  /** Tag of a list row inside an excluded part (the event tags in model/measured.ts use the same word). */
+  excludedTag: "Dışlandı",
   none: "Yok",
   auto: "otomatik",
   manual: "elle",

@@ -45,6 +45,7 @@ from fight_analyzer import judging, nonfight
 from fight_analyzer import rounds as rounds_mod
 from fight_analyzer.broadcast import clock as clock_mod
 from fight_analyzer.broadcast import store as broadcast_store
+from fight_analyzer.motion import damage as damage_mod
 from fight_analyzer.motion import exclusions as excl
 from fight_analyzer.motion import store as motion_store
 from fight_analyzer.pipeline import export as export_job
@@ -322,11 +323,18 @@ def _events_of(settings, job: Job) -> motion_store.EventsData:
 
 @router.get("/{job_id}/events", response_model=EventTimeline)
 def event_timeline(store: StoreDep, settings: SettingsDep, job_id: JobId) -> EventTimeline:
-    """Detected events (attempts, possible contact, possible knockdowns...)."""
+    """Detected events (attempts with their estimated outcome, possible knockdowns...) and damage
+    signals. The output drops depend on the rounds and excluded parts in effect, which can be
+    edited, so they are derived here from the cached events (well under a second)."""
     job = _job(store, job_id)
     data = _events_of(settings, job)
-    return EventTimeline(job_id=job_id, data_origin=DataOrigin.measured, video=job.outputs.analysis_video.video,
-                         fighters=job.fighters, events=data.events)
+    video = job.outputs.analysis_video.video
+    segments = job.outputs.scoring.exclusions if job.outputs.scoring else scoring_stage.excluded_parts(job)
+    windows = [(r.index, r.start_frame, r.end_frame) for r in job.rounds]
+    damage = damage_mod.with_output_drop(data.events, data.damage, data.signals, settings.motion.sample_hz, windows,
+                                         segments, video.fps, settings.features)
+    return EventTimeline(job_id=job_id, data_origin=DataOrigin.measured, video=video, fighters=job.fighters,
+                         events=data.events, damage=damage)
 
 
 @router.get("/{job_id}/motion", response_model=MotionTimeline)

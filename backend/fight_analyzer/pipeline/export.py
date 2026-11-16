@@ -41,6 +41,7 @@ from fight_analyzer.export.style import STYLE_PATH, load_style
 from fight_analyzer.jobs.store import CORNER_COLORS, DEFAULT_NAMES
 from fight_analyzer.jobs.worker import JobContext, JobFailed
 from fight_analyzer.media.analysis_video import video_path
+from fight_analyzer.motion import damage as damage_mod
 from fight_analyzer.motion import exclusions as excl
 from fight_analyzer.motion import store as motion_store
 from fight_analyzer.pose.cache import CacheCorrupt, load_arrays, read_manifest
@@ -129,6 +130,11 @@ def run_export(ctx: JobContext) -> None:
     momentum = motion_store.momentum_timeline(job_id, snap.scoring.parameters, mom, ctx.settings.motion.sample_hz,
                                               snap.scoring.exclusions)
     events = data.events
+    # the same damage signals as the result screen: output drops for the rounds the judges use
+    match = MatchSetup.model_validate(params.get("match") or {})
+    damage = damage_mod.with_output_drop(events, data.damage, data.signals, ctx.settings.motion.sample_hz,
+                                         [(r.number, r.start_frame, r.end_frame) for r in match.rounds],
+                                         momentum.exclusions, vid.fps, ctx.settings.features)
     frame_count = min(vid.frame_count, poses.frame_count)
     metrics = frames.compute(frame_count, vid.fps, events, motion, momentum)
     excluded_ids = excl.excluded_event_ids(events, momentum.exclusions)
@@ -156,7 +162,8 @@ def run_export(ctx: JobContext) -> None:
                 "overlay_style": json.loads(STYLE_PATH.read_text(encoding="utf-8")),
                 "export_options": options.model_dump(mode="json"),
             },
-            events=events, momentum_parameters=snap.scoring.parameters, momentum_contributions=mom.contributions,
+            events=events, damage=damage, momentum_parameters=snap.scoring.parameters,
+            momentum_contributions=mom.contributions,
             counts=snap.events.fighters, exclusions=momentum.exclusions,
             excluded_event_ids=sorted(excluded_ids), csv_columns=files.CSV_COLUMNS)
         fighters = bundle.fighters
@@ -164,8 +171,7 @@ def run_export(ctx: JobContext) -> None:
             events=events, runs=data.runs, signals=data.signals, sample_hz=ctx.settings.motion.sample_hz,
             ident_state=ident["state"], fps=vid.fps, frame_count=frame_count, exclusions=list(momentum.exclusions),
             names={f.fighter_id: f.display_name for f in fighters})
-        bundle.scorecards = judging.compute(job_id, fighters, MatchSetup.model_validate(params.get("match") or {}),
-                                            inputs)
+        bundle.scorecards = judging.compute(job_id, fighters, match, inputs)
         files.write_bundle(tmp[ExportFileKind.bundle], bundle)
 
         style = load_style()

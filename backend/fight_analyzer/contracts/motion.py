@@ -124,7 +124,7 @@ class AutoExclusionEdits(Contract):
 
 
 class MomentumSource(StrEnum):
-    strike_attempt = "strike_attempt"  # punch or knee
+    strike_attempt = "strike_attempt"  # punch, knee, elbow or ground strike
     kick_attempt = "kick_attempt"
     contact_bonus = "contact_bonus"  # possible contact of an attempt
     advance = "advance"  # time spent moving toward the opponent
@@ -185,9 +185,12 @@ class MomentumTimeline(VersionedContract):
 
 class FighterEventCounts(Contract):
     fighter_id: FighterId
-    strike_attempts: int = Field(ge=0, description="Punch and knee attempts.")
+    strike_attempts: int = Field(ge=0, description="Punch, knee, elbow and ground strike attempts.")
     kick_attempts: int = Field(ge=0)
     possible_contacts: int = Field(ge=0)
+    landed_strikes: int = Field(default=0, ge=0, description="Strikes estimated as landed (events version 4 on).")
+    significant_attempts: int = Field(default=0, ge=0, description="Significant strike attempts.")
+    significant_landed: int = Field(default=0, ge=0)
     possible_knockdowns: int = Field(ge=0, description="Knockdowns scored by this fighter.")
     possible_takedowns: int = Field(ge=0)
     control_s: float = Field(ge=0)
@@ -199,8 +202,10 @@ class FighterEventCounts(Contract):
 class EventsSummary(Contract):
     cache_key: str
     cache_hit: bool
+    version: int = Field(default=0, ge=0, description="EVENTS_VERSION of the result (0: stored before it was kept).")
     method: str
     events: int = Field(ge=0)
+    damage_signals: int = Field(default=0, ge=0)
     camera_known_share: float = Field(ge=0, le=1, description="Frames whose camera motion is known.")
     fighters: list[FighterEventCounts] = Field(max_length=2)
 

@@ -40,7 +40,8 @@ LN2 = math.log(2)
 MIN_SHARE_SAMPLES_S = 3  # shares from fewer measured seconds are noise -> empty
 SIDES = ("red", "blue")
 FIGHTER = {"red": FighterId.fighter_a, "blue": FighterId.fighter_b}
-STRIKES = {EventType.punch, EventType.kick, EventType.knee}
+STRIKES = {EventType.punch, EventType.kick, EventType.knee, EventType.elbow, EventType.ground_strike}
+HAND_STRIKES = {EventType.punch, EventType.knee, EventType.elbow, EventType.ground_strike}  # "Vuruş denemeleri"
 MAJOR = {EventType.knockdown, EventType.takedown}
 
 
@@ -176,7 +177,7 @@ def side_stats(side: str, frames: np.ndarray, t_ms: np.ndarray, events: Sequence
         part = _outside_ms(e.start_ms, np.minimum(e.end_ms, t_ms), list(iv)) / 1000
         control = control + np.where(event_frame(e) <= frames, part, 0.0)
     return {
-        "strike_attempts": count(lambda e: e.type in (EventType.punch, EventType.knee)),
+        "strike_attempts": count(lambda e: e.type in HAND_STRIKES),
         "kick_attempts": count(lambda e: e.type == EventType.kick),
         "possible_contacts": count(lambda e: e.possible_contact),
         "knockdowns": count(lambda e: e.type == EventType.knockdown),

@@ -490,6 +490,8 @@ NONFIGHT_SINCE = 2
 # (tracking/identity.py IDENTITY_VERSION 6). Version 7 only lowers the confidence of some
 # frames: results of version 6 stay current enough to open without the banner.
 IDENTITY_SINCE = 6
+# Events from this version on carry strike outcomes, target zones and damage signals (EVENTS_VERSION 4).
+EVENTS_SINCE = 4
 
 
 def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | None,
@@ -519,6 +521,8 @@ def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | Non
             outdated.append(OutdatedReason.broadcast_outdated)
         if outputs.tracking is not None and outputs.tracking.version < IDENTITY_SINCE:
             outdated.append(OutdatedReason.identity_outdated)
+        if outputs.events is not None and outputs.events.version < EVENTS_SINCE:
+            outdated.append(OutdatedReason.events_outdated)
     return {"bout": bout, "rounds": rounds, "round_notes": notes, "outdated": outdated,
             "auto_exclusions": auto_exclusions}
 

@@ -96,5 +96,5 @@ def test_the_left_out_events_survive_the_cache_and_reach_the_browser(tmp_path):
     timeline = MomentumTimeline.model_validate_json(
         store.momentum_timeline("0" * 32, mm.parameters(M), again, S.sample_hz).model_dump_json())
     assert timeline.unattributed_event_ids == [late]
-    # the key of the momentum cache changed with the rule
-    assert store.momentum_key("e", M)[1]["version"] == store.MOMENTUM_VERSION == 3
+    # the key of the momentum cache changed with the rule (3), and again with elbows and ground strikes (4)
+    assert store.momentum_key("e", M)[1]["version"] == store.MOMENTUM_VERSION == 4

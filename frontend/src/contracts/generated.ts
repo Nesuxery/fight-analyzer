@@ -15,11 +15,72 @@ export type FighterId = "fighter_a" | "fighter_b";
  */
 export type DataOrigin = "measured" | "demo";
 /**
+ * What an estimate (strike outcome, damage signal, knockdown) rests on.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "EvidenceSignal".
+ */
+export type EvidenceSignal =
+  | "zone_contact"
+  | "guard_contact"
+  | "no_reach"
+  | "head_snap"
+  | "body_push"
+  | "leg_buckle"
+  | "target_unmeasured"
+  | "strike_before"
+  | "hip_drop"
+  | "base_change"
+  | "knee_buckle"
+  | "unsteady_steps"
+  | "hand_on_floor"
+  | "retreat"
+  | "no_offense"
+  | "pace_drop"
+  | "mobility_drop"
+  | "identity_inferred";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "DamageKind".
+ */
+export type DamageKind = "immediate" | "cumulative";
+/**
+ * Damage signals, after the ABC definition of damage (2025 criteria).
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "DamageType".
+ */
+export type DamageType =
+  | "knockdown"
+  | "heavy_head_strike"
+  | "wobble"
+  | "forced_retreat"
+  | "output_drop"
+  | "submission_danger"
+  | "visible_injury";
+/**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "Limb".
  */
 export type Limb =
   "left_hand" | "right_hand" | "left_foot" | "right_foot" | "left_knee" | "right_knee";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "StrikeOutcome".
+ */
+export type StrikeOutcome = "landed" | "blocked" | "missed" | "unknown";
+/**
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "FightPhase".
+ */
+export type FightPhase = "distance" | "clinch" | "ground";
+/**
+ * Where a strike was aimed: the opponent's zone the striking limb came closest to.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "TargetZone".
+ */
+export type TargetZone = "head" | "body" | "leg";
 /**
  * Event categories. Adding a member is a minor schema version bump.
  *
@@ -30,6 +91,8 @@ export type EventType =
   | "punch"
   | "kick"
   | "knee"
+  | "elbow"
+  | "ground_strike"
   | "clinch"
   | "takedown"
   | "ground_control"
@@ -148,7 +211,8 @@ export type JobType = "analysis" | "export";
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "OutdatedReason".
  */
-export type OutdatedReason = "broadcast_missing" | "broadcast_outdated" | "identity_outdated";
+export type OutdatedReason =
+  "broadcast_missing" | "broadcast_outdated" | "identity_outdated" | "events_outdated";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "BroadcastNoteCode".
@@ -242,7 +306,7 @@ export type SkeletonFormat = "coco17";
 export type QualityCause = "no_footage" | "camera" | "overlap" | "image";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.10.0.
+ * MMA Fight Analyzer data contracts, schema version 1.11.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
@@ -290,6 +354,10 @@ export interface AnalysisExport {
   csv_columns: {
     [k: string]: string;
   };
+  /**
+   * Damage signals (estimates), as on screen.
+   */
+  damage: DamageSignal[];
   data_origin: DataOrigin;
   events: FightEvent[];
   /**
@@ -333,6 +401,10 @@ export interface FighterEventCounts {
   fighter_id: FighterId;
   kick_attempts: number;
   /**
+   * Strikes estimated as landed (events version 4 on).
+   */
+  landed_strikes: number;
+  /**
    * Time with valid measurements of this fighter.
    */
   measured_s: number;
@@ -344,9 +416,47 @@ export interface FighterEventCounts {
   possible_takedowns: number;
   retreat_s: number;
   /**
-   * Punch and knee attempts.
+   * Significant strike attempts.
+   */
+  significant_attempts: number;
+  significant_landed: number;
+  /**
+   * Punch, knee, elbow and ground strike attempts.
    */
   strike_attempts: number;
+}
+/**
+ * A sign that a fighter was damaged. An estimate with its confidence, never a fact.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "DamageSignal".
+ */
+export interface DamageSignal {
+  attribution_confidence: number | null;
+  attribution_uncertain: boolean;
+  by_fighter: FighterId;
+  confidence: number;
+  data_origin: DataOrigin;
+  /**
+   * Signals that last (retreat, output drop).
+   */
+  end_ms: number | null;
+  evidence: EvidenceSignal[];
+  frame: number;
+  kind: DamageKind;
+  /**
+   * The strike or knockdown it comes from.
+   */
+  linked_event_id: string | null;
+  measures: {
+    [k: string]: number;
+  };
+  note: string | null;
+  severity: number;
+  signal_id: string;
+  target_fighter: FighterId;
+  time_ms: number;
+  type: DamageType;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -373,6 +483,10 @@ export interface FightEvent {
   end_frame: number;
   end_ms: number;
   event_id: string;
+  /**
+   * Signals behind the estimate.
+   */
+  evidence: EvidenceSignal[];
   limb: Limb | null;
   /**
    * Striking joint at the peak.
@@ -386,20 +500,40 @@ export interface FightEvent {
   };
   note: string | null;
   /**
+   * Strikes: estimated result. None: not a strike, or analysed before schema 1.11.0.
+   */
+  outcome: StrikeOutcome | null;
+  /**
+   * How sure the outcome is (None for unknown).
+   */
+  outcome_confidence: number | null;
+  /**
    * Fastest moment of a strike / the fall.
    */
   peak_frame: number | null;
   peak_ms: number | null;
   /**
+   * Strikes: where the fight was at the peak.
+   */
+  phase: FightPhase | null;
+  /**
    * The striking limb overlapped the opponent in 2D; contact is not certain.
    */
   possible_contact: boolean;
+  /**
+   * Strikes: a significant strike (every strike at distance, power strikes in the clinch and on the ground). Says nothing about landing.
+   */
+  significant: boolean | null;
   start_frame: number;
   start_ms: number;
   /**
    * Fighter receiving the action.
    */
   target: FighterId | null;
+  /**
+   * Strikes: the opponent's zone the limb came closest to. None: not measurable.
+   */
+  target_zone: TargetZone | null;
   type: EventType;
 }
 /**
@@ -1060,6 +1194,10 @@ export interface ErrorResponse {
  * via the `definition` "EventTimeline".
  */
 export interface EventTimeline {
+  /**
+   * Damage signals (schema 1.11.0 on).
+   */
+  damage: DamageSignal[];
   data_origin: DataOrigin;
   events: FightEvent[];
   /**
@@ -1427,12 +1565,17 @@ export interface EventsSummary {
    * Frames whose camera motion is known.
    */
   camera_known_share: number;
+  damage_signals: number;
   events: number;
   /**
    * @maxItems 2
    */
   fighters: FighterEventCounts[];
   method: string;
+  /**
+   * EVENTS_VERSION of the result (0: stored before it was kept).
+   */
+  version: number;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -2277,4 +2420,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.10.0";
+export const SCHEMA_VERSION = "1.11.0";

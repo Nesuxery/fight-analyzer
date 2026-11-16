@@ -16,6 +16,7 @@ import numpy as np
 from fight_analyzer.config import MomentumSettings, MotionSettings
 from fight_analyzer.contracts import (
     SCHEMA_VERSION,
+    DamageSignal,
     ExcludedSegment,
     FighterId,
     FighterSignals,
@@ -36,8 +37,13 @@ from .camera import CAMERA_VERSION, CameraTrack
 from .events import ADVANCING, NEUTRAL, RETREATING, Analysis, MovementRun
 from .kinematics import GROUNDED, STANDING, TRANSITION
 
-EVENTS_VERSION = 3  # 2: possible impact (head jolt) on contact strikes; 3: attribution confidence
-MOMENTUM_VERSION = 3  # 2: excluded parts; 3: events of uncertain attribution earn nothing
+# 2: possible impact (head jolt) on contact strikes; 3: attribution confidence; 4: strike outcome, target zone,
+# significant strikes, elbows and ground strikes, falls from the hip height (sitting), knockdowns with an
+# inferred identity, damage signals
+EVENTS_VERSION = 4
+# 2: excluded parts; 3: events of uncertain attribution earn nothing; 4: elbows and ground strikes earn the
+# strike attempt weight
+MOMENTUM_VERSION = 4
 MANIFEST = "manifest.json"
 CAMERA_ARRAYS = ("to_ref", "segment", "known", "inliers")
 SIGNAL_ARRAYS = ("sample_ms", "valid", "activity", "hand_speed", "foot_speed", "approach", "movement", "posture",
@@ -53,6 +59,7 @@ class EventsData:
     stats: list[dict[str, float]]
     camera_known_share: float
     signals: dict[str, np.ndarray]  # SIGNAL_ARRAYS, sampled at MotionSettings.sample_hz
+    damage: list[DamageSignal] = field(default_factory=list)  # events version 4 on
 
 
 @dataclass
@@ -168,13 +175,14 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
 def events_data(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, s: MotionSettings) -> EventsData:
     return EventsData(events=analysis.events, runs=analysis.runs, stats=analysis.stats,
                       camera_known_share=round(camera.known_share, 3),
-                      signals=sample(analysis, ts_ms, camera, s.sample_hz))
+                      signals=sample(analysis, ts_ms, camera, s.sample_hz), damage=analysis.damage)
 
 
 def write_events(cache_root: Path, key: str, inputs: dict, data: EventsData) -> None:
     with staging_dir(_entry(cache_root, "events", key)) as stage:
         _write(stage, inputs, data.signals, {
             "events": [e.model_dump(mode="json") for e in data.events],
+            "damage": [d.model_dump(mode="json") for d in data.damage],
             "runs": [asdict(r) for r in data.runs], "stats": data.stats,
             "camera_known_share": data.camera_known_share})
 
@@ -187,7 +195,8 @@ def read_events(cache_root: Path, key: str) -> EventsData | None:
     try:
         return EventsData(events=[FightEvent.model_validate(e) for e in manifest["events"]],
                           runs=[MovementRun(**r) for r in manifest["runs"]], stats=manifest["stats"],
-                          camera_known_share=float(manifest["camera_known_share"]), signals=signals)
+                          camera_known_share=float(manifest["camera_known_share"]), signals=signals,
+                          damage=[DamageSignal.model_validate(d) for d in manifest.get("damage", [])])
     except (KeyError, TypeError, ValueError):
         return None
 

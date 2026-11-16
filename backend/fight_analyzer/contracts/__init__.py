@@ -24,7 +24,20 @@ from .broadcast import (
     ScreenRect,
 )
 from .common import SCHEMA_VERSION, DataOrigin
-from .events import EventTimeline, EventType, FightEvent, ImagePoint, Limb
+from .events import (
+    DamageKind,
+    DamageSignal,
+    DamageType,
+    EventTimeline,
+    EventType,
+    EvidenceSignal,
+    FightEvent,
+    FightPhase,
+    ImagePoint,
+    Limb,
+    StrikeOutcome,
+    TargetZone,
+)
 from .fighters import Fighter, FighterFrameState, FighterId, TrackState
 from .jobs import (
     TERMINAL_STATUSES,
@@ -160,8 +173,15 @@ __all__ = [
     "ComputeInfo",
     "DataOrigin",
     "ErrorResponse",
+    "DamageKind",
+    "DamageSignal",
+    "DamageType",
     "EventTimeline",
     "EventType",
+    "EvidenceSignal",
+    "FightPhase",
+    "StrikeOutcome",
+    "TargetZone",
     "DISCLAIMER",
     "FINISHES",
     "ConfidenceLevel",

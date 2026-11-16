@@ -10,7 +10,7 @@ import type { FightEvent } from "../contracts/generated";
 // explicit extension: this module also runs in the Node unit tests
 import { OVERLAY_STYLE } from "../contracts/overlayStyle.ts";
 
-const STRIKES = new Set(["punch", "kick", "knee"]);
+const STRIKES = new Set(["punch", "kick", "knee", "elbow", "ground_strike"]);
 const MAJOR = new Set(["knockdown", "takedown"]);
 
 export interface StrikeFlash { event: FightEvent; strength: number }

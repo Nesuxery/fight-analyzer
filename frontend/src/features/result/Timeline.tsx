@@ -275,7 +275,9 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
         {ticks.map((t) => <span key={t} style={{ left: pct(t) }}>{formatClock(t)}</span>)}
       </div>
       <ul className="tl__legend" aria-label={T.legend}>
-        {kinds.has("punch") && <li><span className="tl__key tl__key--punch" />{T.punch}</li>}
+        {(kinds.has("elbow") || kinds.has("ground_strike")) ? (
+          <li><span className="tl__key tl__key--punch" />{T.handStrikes}</li>
+        ) : kinds.has("punch") && <li><span className="tl__key tl__key--punch" />{T.punch}</li>}
         {kinds.has("kick") && <li><span className="tl__key tl__key--kick" />{T.kick}</li>}
         {kinds.has("knee") && <li><span className="tl__key tl__key--knee" />{T.knee}</li>}
         {events.some((e) => e.tags?.some((t) => t.label === "Olası temas")) && (

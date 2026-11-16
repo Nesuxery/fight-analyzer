@@ -20,6 +20,14 @@
           "title": "Csv Columns",
           "type": "object"
         },
+        "damage": {
+          "description": "Damage signals (estimates), as on screen.",
+          "items": {
+            "$ref": "#/$defs/DamageSignal"
+          },
+          "title": "Damage",
+          "type": "array"
+        },
         "data_origin": {
           "$ref": "#/$defs/DataOrigin"
         },
@@ -74,7 +82,7 @@
           "$ref": "#/$defs/MomentumParameters"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -126,6 +134,7 @@
         "source_keys",
         "settings",
         "events",
+        "damage",
         "momentum_parameters",
         "momentum_contributions",
         "counts",
@@ -679,7 +688,7 @@
           "type": "number"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -888,6 +897,171 @@
       "title": "CriterionMargin",
       "type": "object"
     },
+    "DamageKind": {
+      "enum": [
+        "immediate",
+        "cumulative"
+      ],
+      "title": "DamageKind",
+      "type": "string"
+    },
+    "DamageSignal": {
+      "additionalProperties": false,
+      "description": "A sign that a fighter was damaged. An estimate with its confidence, never a fact.",
+      "properties": {
+        "attribution_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attribution Confidence"
+        },
+        "attribution_uncertain": {
+          "default": false,
+          "title": "Attribution Uncertain",
+          "type": "boolean"
+        },
+        "by_fighter": {
+          "$ref": "#/$defs/FighterId",
+          "description": "The fighter credited with it (the opponent)."
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "data_origin": {
+          "$ref": "#/$defs/DataOrigin"
+        },
+        "end_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Signals that last (retreat, output drop).",
+          "title": "End Ms"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSignal"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/$defs/DamageKind"
+        },
+        "linked_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The strike or knockdown it comes from.",
+          "title": "Linked Event Id"
+        },
+        "measures": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Measures",
+          "type": "object"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "severity": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Severity",
+          "type": "number"
+        },
+        "signal_id": {
+          "minLength": 1,
+          "title": "Signal Id",
+          "type": "string"
+        },
+        "target_fighter": {
+          "$ref": "#/$defs/FighterId",
+          "description": "The fighter who was damaged."
+        },
+        "time_ms": {
+          "minimum": 0,
+          "title": "Time Ms",
+          "type": "number"
+        },
+        "type": {
+          "$ref": "#/$defs/DamageType"
+        }
+      },
+      "required": [
+        "signal_id",
+        "type",
+        "kind",
+        "frame",
+        "time_ms",
+        "end_ms",
+        "target_fighter",
+        "by_fighter",
+        "severity",
+        "confidence",
+        "attribution_confidence",
+        "attribution_uncertain",
+        "linked_event_id",
+        "evidence",
+        "measures",
+        "data_origin",
+        "note"
+      ],
+      "title": "DamageSignal",
+      "type": "object"
+    },
+    "DamageType": {
+      "description": "Damage signals, after the ABC definition of damage (2025 criteria).",
+      "enum": [
+        "knockdown",
+        "heavy_head_strike",
+        "wobble",
+        "forced_retreat",
+        "output_drop",
+        "submission_danger",
+        "visible_injury"
+      ],
+      "title": "DamageType",
+      "type": "string"
+    },
     "DataOrigin": {
       "description": "Where analysis values come from. Demo data must never be shown as measured.",
       "enum": [
@@ -948,7 +1122,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -966,6 +1140,14 @@
     "EventTimeline": {
       "additionalProperties": false,
       "properties": {
+        "damage": {
+          "description": "Damage signals (schema 1.11.0 on).",
+          "items": {
+            "$ref": "#/$defs/DamageSignal"
+          },
+          "title": "Damage",
+          "type": "array"
+        },
         "data_origin": {
           "$ref": "#/$defs/DataOrigin"
         },
@@ -990,7 +1172,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1006,7 +1188,8 @@
         "data_origin",
         "video",
         "fighters",
-        "events"
+        "events",
+        "damage"
       ],
       "title": "EventTimeline",
       "type": "object"
@@ -1017,6 +1200,8 @@
         "punch",
         "kick",
         "knee",
+        "elbow",
+        "ground_strike",
         "clinch",
         "takedown",
         "ground_control",
@@ -1045,6 +1230,12 @@
           "title": "Camera Known Share",
           "type": "number"
         },
+        "damage_signals": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Damage Signals",
+          "type": "integer"
+        },
         "events": {
           "minimum": 0,
           "title": "Events",
@@ -1061,18 +1252,52 @@
         "method": {
           "title": "Method",
           "type": "string"
+        },
+        "version": {
+          "default": 0,
+          "description": "EVENTS_VERSION of the result (0: stored before it was kept).",
+          "minimum": 0,
+          "title": "Version",
+          "type": "integer"
         }
       },
       "required": [
         "cache_key",
         "cache_hit",
+        "version",
         "method",
         "events",
+        "damage_signals",
         "camera_known_share",
         "fighters"
       ],
       "title": "EventsSummary",
       "type": "object"
+    },
+    "EvidenceSignal": {
+      "description": "What an estimate (strike outcome, damage signal, knockdown) rests on.",
+      "enum": [
+        "zone_contact",
+        "guard_contact",
+        "no_reach",
+        "head_snap",
+        "body_push",
+        "leg_buckle",
+        "target_unmeasured",
+        "strike_before",
+        "hip_drop",
+        "base_change",
+        "knee_buckle",
+        "unsteady_steps",
+        "hand_on_floor",
+        "retreat",
+        "no_offense",
+        "pace_drop",
+        "mobility_drop",
+        "identity_inferred"
+      ],
+      "title": "EvidenceSignal",
+      "type": "string"
     },
     "ExcludedSegment": {
       "additionalProperties": false,
@@ -1471,6 +1696,14 @@
           "title": "Event Id",
           "type": "string"
         },
+        "evidence": {
+          "description": "Signals behind the estimate.",
+          "items": {
+            "$ref": "#/$defs/EvidenceSignal"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
         "limb": {
           "anyOf": [
             {
@@ -1514,6 +1747,33 @@
           "default": null,
           "title": "Note"
         },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrikeOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Strikes: estimated result. None: not a strike, or analysed before schema 1.11.0."
+        },
+        "outcome_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How sure the outcome is (None for unknown).",
+          "title": "Outcome Confidence"
+        },
         "peak_frame": {
           "anyOf": [
             {
@@ -1541,11 +1801,36 @@
           "default": null,
           "title": "Peak Ms"
         },
+        "phase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FightPhase"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Strikes: where the fight was at the peak."
+        },
         "possible_contact": {
           "default": false,
           "description": "The striking limb overlapped the opponent in 2D; contact is not certain.",
           "title": "Possible Contact",
           "type": "boolean"
+        },
+        "significant": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Strikes: a significant strike (every strike at distance, power strikes in the clinch and on the ground). Says nothing about landing.",
+          "title": "Significant"
         },
         "start_frame": {
           "minimum": 0,
@@ -1569,6 +1854,18 @@
           "default": null,
           "description": "Fighter receiving the action."
         },
+        "target_zone": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetZone"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Strikes: the opponent's zone the limb came closest to. None: not measurable."
+        },
         "type": {
           "$ref": "#/$defs/EventType"
         }
@@ -1589,6 +1886,12 @@
         "location",
         "measures",
         "confidence",
+        "target_zone",
+        "outcome",
+        "outcome_confidence",
+        "significant",
+        "phase",
+        "evidence",
         "attribution_confidence",
         "attribution_uncertain",
         "data_origin",
@@ -1596,6 +1899,15 @@
       ],
       "title": "FightEvent",
       "type": "object"
+    },
+    "FightPhase": {
+      "enum": [
+        "distance",
+        "clinch",
+        "ground"
+      ],
+      "title": "FightPhase",
+      "type": "string"
     },
     "Fighter": {
       "additionalProperties": false,
@@ -1689,6 +2001,13 @@
           "title": "Kick Attempts",
           "type": "integer"
         },
+        "landed_strikes": {
+          "default": 0,
+          "description": "Strikes estimated as landed (events version 4 on).",
+          "minimum": 0,
+          "title": "Landed Strikes",
+          "type": "integer"
+        },
         "measured_s": {
           "description": "Time with valid measurements of this fighter.",
           "minimum": 0,
@@ -1716,8 +2035,21 @@
           "title": "Retreat S",
           "type": "number"
         },
+        "significant_attempts": {
+          "default": 0,
+          "description": "Significant strike attempts.",
+          "minimum": 0,
+          "title": "Significant Attempts",
+          "type": "integer"
+        },
+        "significant_landed": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Significant Landed",
+          "type": "integer"
+        },
         "strike_attempts": {
-          "description": "Punch and knee attempts.",
+          "description": "Punch, knee, elbow and ground strike attempts.",
           "minimum": 0,
           "title": "Strike Attempts",
           "type": "integer"
@@ -1728,6 +2060,9 @@
         "strike_attempts",
         "kick_attempts",
         "possible_contacts",
+        "landed_strikes",
+        "significant_attempts",
+        "significant_landed",
         "possible_knockdowns",
         "possible_takedowns",
         "control_s",
@@ -2235,7 +2570,7 @@
           "$ref": "#/$defs/PoseModelInfo"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2438,7 +2773,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2638,7 +2973,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3574,7 +3909,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3663,7 +3998,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3763,7 +4098,8 @@
       "enum": [
         "broadcast_missing",
         "broadcast_outdated",
-        "identity_outdated"
+        "identity_outdated",
+        "events_outdated"
       ],
       "title": "OutdatedReason",
       "type": "string"
@@ -4035,7 +4371,7 @@
           "title": "Processing S"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4099,7 +4435,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4164,7 +4500,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4224,7 +4560,7 @@
           "$ref": "#/$defs/ModelInfo"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4974,7 +5310,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5181,7 +5517,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5467,6 +5803,26 @@
       "title": "StageProgress",
       "type": "object"
     },
+    "StrikeOutcome": {
+      "enum": [
+        "landed",
+        "blocked",
+        "missed",
+        "unknown"
+      ],
+      "title": "StrikeOutcome",
+      "type": "string"
+    },
+    "TargetZone": {
+      "description": "Where a strike was aimed: the opponent's zone the striking limb came closest to.",
+      "enum": [
+        "head",
+        "body",
+        "leg"
+      ],
+      "title": "TargetZone",
+      "type": "string"
+    },
     "TrackQuality": {
       "additionalProperties": false,
       "description": "Data quality of one fighter in a frame range (excluded parts are not fight time).",
@@ -5546,7 +5902,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5804,7 +6160,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5959,7 +6315,7 @@
           "type": "integer"
         },
         "schema_version": {
-          "default": "1.10.0",
+          "default": "1.11.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -6165,7 +6521,7 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "MMA Fight Analyzer data contracts, schema version 1.10.0.",
+  "description": "MMA Fight Analyzer data contracts, schema version 1.11.0.",
   "properties": {
     "AnalysisExport": {
       "$ref": "#/$defs/AnalysisExport"
@@ -6270,5 +6626,5 @@
     "left_ankle",
     "right_ankle"
   ],
-  "x-schema-version": "1.10.0"
+  "x-schema-version": "1.11.0"
 }

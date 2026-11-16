@@ -70,6 +70,14 @@ class FighterKinematics:
         return out
 
 
+def hip_height(k: FighterKinematics) -> np.ndarray:
+    """Height of the hip centre above the lower foot, in torso lengths (NaN when not measured).
+    Image y grows downwards, so the lower foot is the larger y."""
+    lower = np.fmax(k.pos[:, LA, 1], k.pos[:, RA, 1])  # NaN only when neither ankle is measured
+    with np.errstate(all="ignore"):
+        return (lower - k.center[:, 1]) / k.scale
+
+
 def _time_window(ts: np.ndarray, idx: np.ndarray, t: int, half_s: float) -> np.ndarray:
     lo = np.searchsorted(ts[idx], ts[t] - half_s, side="left")
     hi = np.searchsorted(ts[idx], ts[t] + half_s, side="right")
@@ -183,7 +191,8 @@ def _posture(p: np.ndarray, ok: np.ndarray, scale: float) -> int:
     feet = [p[j, 1] for j in (LA, RA) if ok[j]]
     knees = [p[j, 1] for j in (LK, RK) if ok[j]]
     if angle >= 60:
-        return GROUNDED
+        # bent over at the waist on his legs (e.g. striking a downed opponent) is not down
+        return TRANSITION if feet and (max(feet) - hip_y) / scale >= 1.0 else GROUNDED
     if feet:
         drop = (max(feet) - hip_y) / scale  # how far the lower foot is below the hips
         if angle <= 40 and drop >= 1.0:

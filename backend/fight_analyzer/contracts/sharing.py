@@ -15,7 +15,7 @@ from typing import Any
 from pydantic import Field
 
 from .common import JOB_ID_PATTERN, Contract, DataOrigin, VersionedContract
-from .events import FightEvent
+from .events import DamageSignal, FightEvent
 from .fighters import Fighter
 from .judging import Scorecards
 from .motion import ExcludedSegment, FighterEventCounts, MomentumContribution, MomentumParameters
@@ -83,6 +83,7 @@ class AnalysisExport(VersionedContract):
     source_keys: SourceKeys
     settings: dict[str, Any] = Field(description="Pose, tracking, motion and momentum settings used.")
     events: list[FightEvent]
+    damage: list[DamageSignal] = Field(default_factory=list, description="Damage signals (estimates), as on screen.")
     momentum_parameters: MomentumParameters
     momentum_contributions: list[MomentumContribution]
     counts: list[FighterEventCounts] = Field(description="Whole video, before exclusions.")

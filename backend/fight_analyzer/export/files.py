@@ -33,7 +33,7 @@ CSV_COLUMNS: dict[str, str] = {
 _SIDE_COLUMNS: dict[str, str] = {
     "identity": "Kimlik durumu: tracked (takipte), occluded (örtüşme), uncertain (belirsiz)",
     "measured": "1 = dövüşçü bu örnekte güvenilir ölçüldü (10 Hz örnek)",
-    "strike_attempts": "Bu kareye kadar yumruk ve diz denemeleri",
+    "strike_attempts": "Bu kareye kadar yumruk, diz, dirsek ve yerde vuruş denemeleri",
     "kick_attempts": "Bu kareye kadar tekme denemeleri",
     "possible_contacts": "Bu kareye kadar olası temaslı denemeler (2B örtüşme, temas kesin değil)",
     "knockdowns": "Bu kareye kadar olası knockdown",

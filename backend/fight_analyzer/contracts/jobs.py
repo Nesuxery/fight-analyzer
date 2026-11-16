@@ -52,6 +52,7 @@ class OutdatedReason(StrEnum):
     broadcast_missing = "broadcast_missing"  # analysed before rounds were read from the scorebug
     broadcast_outdated = "broadcast_outdated"  # analysed before replays and non-fight parts were found
     identity_outdated = "identity_outdated"  # identities from before the appearance model and data quality
+    events_outdated = "events_outdated"  # events from before strike outcomes and damage signals
 
 
 class JobError(Contract):

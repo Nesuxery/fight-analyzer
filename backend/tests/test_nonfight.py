@@ -156,7 +156,7 @@ def test_parts_in_effect_are_the_users_and_the_automatic_ones_merged():
 # ---- on the job ---------------------------------------------------------------------------------------------
 
 def analysis(store: JobStore, *, version: int = 2, segments: list[ExcludedSegment] | None = None,
-             tracking=None) -> str:
+             tracking=None, events=None) -> str:
     job = store.create_job(params={
         "selection": {"anchors": [{"frame_index": 0, "red_detection_id": 0, "blue_detection_id": 1}]}})
     store.claim_next("w")
@@ -174,6 +174,8 @@ def analysis(store: JobStore, *, version: int = 2, segments: list[ExcludedSegmen
                                    processing_s=1.0))
     if tracking is not None:
         store.merge_outputs(job.job_id, "w", tracking=tracking)
+    if events is not None:
+        store.merge_outputs(job.job_id, "w", events=events)
     store.finish(job.job_id, "w", JobStatus.completed)
     return job.job_id
 
@@ -226,6 +228,19 @@ def test_identities_from_before_the_appearance_model_ask_for_reprocessing(client
     assert with_tracking(6)["outdated"] == []
     old = with_tracking(5)
     assert client.get(f"/api/v1/jobs/{old['job_id']}/tracking/quality").status_code in (409, 410)
+
+
+def test_events_from_before_strike_outcomes_ask_for_reprocessing(client: TestClient, store: JobStore):
+    from fight_analyzer.contracts import EventsSummary
+
+    def with_events(**version) -> dict:
+        summary = EventsSummary(cache_key="e", cache_hit=False, method="m", events=0, camera_known_share=1.0,
+                                fighters=[], **version)
+        return client.get(f"/api/v1/jobs/{analysis(store, events=summary)}").json()
+
+    assert with_events()["outdated"] == ["events_outdated"]  # stored before the version was kept: opens, with the banner
+    assert with_events(version=3)["outdated"] == ["events_outdated"]
+    assert with_events(version=4)["outdated"] == []
 
 
 def test_the_users_own_parts_are_always_stored_as_manual(client: TestClient, store: JobStore):

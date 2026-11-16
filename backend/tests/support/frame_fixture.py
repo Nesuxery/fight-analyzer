@@ -66,7 +66,8 @@ def build_inputs() -> tuple[list[FightEvent], MotionTimeline, MomentumTimeline]:
                             distance=[round(rng.uniform(0.8, 4), 3) for _ in range(n)], fighters=fighters)
     events: list[FightEvent] = []
     contribs: list[MomentumContribution] = []
-    kinds = ["punch"] * 6 + ["kick"] * 2 + ["knee", "knockdown", "takedown", "ground_control", "stance_change"]
+    kinds = (["punch"] * 6 + ["kick"] * 2
+             + ["knee", "elbow", "ground_strike", "knockdown", "takedown", "ground_control", "stance_change"])
     for k in range(40):
         kind = rng.choice(kinds)
         actor = rng.choice(["fighter_a", "fighter_b"])
@@ -78,7 +79,8 @@ def build_inputs() -> tuple[list[FightEvent], MotionTimeline, MomentumTimeline]:
         e = FightEvent(event_id=f"e{k}", type=kind, actor=actor, target="fighter_b" if actor == "fighter_a" else "fighter_a",
                        start_frame=start, end_frame=end, start_ms=ms(start), end_ms=ms(end),
                        peak_frame=peak, peak_ms=ms(peak) if peak is not None else None,
-                       possible_contact=kind in ("punch", "kick", "knee") and rng.random() < 0.4,
+                       possible_contact=kind in ("punch", "kick", "knee", "elbow", "ground_strike")
+                       and rng.random() < 0.4,
                        confidence=round(rng.uniform(0.4, 0.95), 3), data_origin=DataOrigin.measured)
         events.append(e)
         if kind == "stance_change":

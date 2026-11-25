@@ -9,6 +9,8 @@ that reaches nothing is "missed"), not that the estimate is right on real footag
 
 from __future__ import annotations
 
+import numpy as np
+
 from fight_analyzer.config import MomentumSettings, MotionSettings
 from fight_analyzer.contracts import (
     EventType,
@@ -160,3 +162,26 @@ def test_events_of_older_analyses_still_open():
            "data_origin": "measured", "note": None}
     e = FightEvent.model_validate(old)
     assert (e.outcome, e.target_zone, e.significant, e.phase, e.evidence) == (None, None, None, None, [])
+
+
+def test_an_elbow_seen_from_behind_is_kept_as_a_punch():
+    # from behind, a tight hook and an elbow look the same: the attempt stays, as a punch
+    scene = MotionScene((Fighter(x=0.0, facing=1, actions=[elbow(1.0, "r")], head_conf=lambda t: 0.1),
+                         Fighter(x=0.8, facing=-1)), 2.5)
+    arrays, state, det, track, camera = scene.render()
+    kin = tuple(km.compute(arrays, state, det, track, camera, f, S) for f in (0, 1))
+    e = one(ev.analyze(arrays, camera, kin, S))
+    assert e.type == EventType.punch and e.measures["from_behind"] == 1.0
+
+
+def test_one_leg_does_not_kick_twice_in_a_moment():
+    from fight_analyzer.contracts import Limb
+    ts = np.arange(90) / 30.0
+    a = ev._Candidate(EventType.kick, Limb.left_foot, 30, 33, 34, 2.0, 0.8, {}, 15)
+    b = ev._Candidate(EventType.kick, Limb.left_foot, 40, 41, 43, 1.5, 0.8, {}, 15)  # 0.2 s after the first
+    assert [c.peak for c in ev._deduplicate([a, b], ts, S)] == [33]
+    later = ev._Candidate(EventType.kick, Limb.left_foot, 60, 62, 64, 1.5, 0.8, {}, 15)  # a second kick
+    assert [c.peak for c in ev._deduplicate([a, later], ts, S)] == [33, 62]
+    jab = ev._Candidate(EventType.punch, Limb.left_hand, 30, 32, 34, 1.5, 0.8, {}, 9)
+    jab2 = ev._Candidate(EventType.punch, Limb.left_hand, 40, 42, 44, 1.5, 0.8, {}, 9)  # a double jab stays two
+    assert [c.peak for c in ev._deduplicate([jab, jab2], ts, S)] == [32, 42]

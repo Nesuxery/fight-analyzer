@@ -200,6 +200,8 @@ class MotionSettings:
     # hand going below the opponent's hips (catching or blocking a kick) while he stands.
     kick_motion: float = 0.8  # share of kick_peak that marks a kicking leg
     punch_below_hips: float = 0.15  # torso lengths below his hip centre
+    block_reach: float = 0.6  # a hand this close to the kicking leg (his torso lengths) blocks the kick
+    kick_merge_s: float = 0.3  # two stretches of one leg closer than this are one kick
     # Falls: the hips come down to this share of their height above the feet while standing.
     fall_upright: float = 1.3  # hips this far above the lower foot: a reference for standing
     fall_reference_s: float = 1.0  # standing time the reference is taken from

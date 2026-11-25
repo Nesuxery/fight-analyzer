@@ -561,8 +561,10 @@ def _deduplicate(cands: list[_Candidate], ts: np.ndarray, s: MotionSettings) -> 
         clash = False
         for other in kept:
             same_kind = (c.type in ARM_TYPES) == (other.type in ARM_TYPES)
+            # one leg cannot kick twice this fast: two stretches of it are one kick (seen on the sample)
+            pad = s.kick_merge_s if c.type == other.type == EventType.kick else s.same_motion_s
             if same_kind and (abs(ts[c.peak] - ts[other.peak]) <= s.same_motion_s
-                              or (c.limb == other.limb and _overlap(c, other, ts, s.same_motion_s))):
+                              or (c.limb == other.limb and _overlap(c, other, ts, pad))):
                 clash = True
                 break
         if not clash:
@@ -610,23 +612,29 @@ def _head_jolt(opp: FighterKinematics, peak: int, ts: np.ndarray, s: MotionSetti
     return max(0.0, jolt - base)
 
 
-def _kicking(f: _Fighter, s: MotionSettings) -> np.ndarray:
+def _kicking(k: FighterKinematics, s: MotionSettings) -> np.ndarray:
     """Frames on which a leg moves like a kick (fast and raised), whether it was found as a kick or not."""
-    k = f.k
     out = np.zeros(k.present.size, bool)
+    ref = k.ref_vel()
     for _, ank, _, other in FEET:
-        speed, _ = f.speed(ank)
-        support = np.where(np.isfinite(k.pos[:, other, 1]), k.pos[:, other, 1], k.center[:, 1] + 1.5 * f.scale)
         with np.errstate(invalid="ignore"):
-            raised = (support - k.pos[:, ank, 1]) / f.scale >= s.kick_raise
+            speed = _norm(k.vel[:, ank] - ref) / k.scale
+            support = np.where(np.isfinite(k.pos[:, other, 1]), k.pos[:, other, 1], k.center[:, 1] + 1.5 * k.scale)
+            raised = (support - k.pos[:, ank, 1]) / k.scale >= s.kick_raise
             out |= (speed >= s.kick_motion * s.kick_peak) & raised
     return out
 
 
+def _back_to_camera(k: FighterKinematics, t: int) -> bool:
+    """Nose and eyes not measured while both shoulders are: he faces away from the camera."""
+    return not k.ok[t, [0, 1, 2]].any() and bool(k.ok[t, [LS, RS]].all())
+
+
 def _arm_motion_is_a_strike(f: _Fighter, c: _Candidate, ts: np.ndarray, kicking: np.ndarray,
-                            s: MotionSettings) -> bool:
+                            opp_kicking: np.ndarray, s: MotionSettings) -> bool:
     """Arm motion of a punch or elbow that is not one: the arms swing during the fighter's own
-    kick, and a hand below the opponent's hips catches or blocks a kick (standing opponent)."""
+    kick, a hand below the opponent's hips catches or blocks a kick (standing opponent), and a
+    hand that goes to the opponent's kicking leg while he kicks blocks it."""
     if c.type not in (EventType.punch, EventType.elbow):
         return True
     lo = int(np.searchsorted(ts, ts[c.peak] - s.leg_over_punch_s))
@@ -634,14 +642,33 @@ def _arm_motion_is_a_strike(f: _Fighter, c: _Candidate, ts: np.ndarray, kicking:
     if kicking[lo:hi].any():
         return False
     y, hip, scale = f.k.pos[c.peak, c.end_joint, 1], f.opp.center[c.peak, 1], f.opp.scale[c.peak]
-    return not (np.isfinite(y) and np.isfinite(hip) and np.isfinite(scale) and y > hip + s.punch_below_hips * scale)
+    if np.isfinite(y) and np.isfinite(hip) and np.isfinite(scale) and y > hip + s.punch_below_hips * scale:
+        return False
+    if opp_kicking[lo:hi].any() and np.isfinite(scale):
+        hand = f.k.pos[c.peak, c.end_joint]
+        legs = f.opp.pos[c.peak, [LK, RK, LA, RA]]
+        near = legs[np.isfinite(legs).all(axis=1)]
+        if np.isfinite(hand).all() and near.size and float(_norm(near - hand).min()) <= s.block_reach * scale:
+            return False
+    return True
+
+
+def _elbow_seen_from_behind(f: _Fighter, c: _Candidate, s: MotionSettings) -> _Candidate:
+    """From behind, a tight hook and an elbow look the same in 2D (the forearm is foreshortened):
+    such an "elbow" is kept as a punch of that arm."""
+    if c.type != EventType.elbow or not _back_to_camera(f.k, c.peak):
+        return c
+    wrist = LW if c.limb == Limb.left_hand else RW
+    return _Candidate(EventType.punch, c.limb, c.start, c.peak, c.end, c.strength, c.confidence,
+                      c.measures | {"from_behind": 1.0}, wrist)
 
 
 def _strikes(f: _Fighter, ts: np.ndarray, s: MotionSettings, own_down: np.ndarray, opp_down: np.ndarray,
              underneath: np.ndarray, arrays: PoseArrays, camera: CameraTrack) -> list[_Strike]:
-    kicking = _kicking(f, s)
-    found = _arm_candidates(f, ts, s, own_down, opp_down) + _leg_candidates(f, ts, s, own_down)
-    cands = _deduplicate([c for c in found if _arm_motion_is_a_strike(f, c, ts, kicking, s)], ts, s)
+    kicking, opp_kicking = _kicking(f.k, s), _kicking(f.opp, s)
+    found = [_elbow_seen_from_behind(f, c, s)
+             for c in _arm_candidates(f, ts, s, own_down, opp_down) + _leg_candidates(f, ts, s, own_down)]
+    cands = _deduplicate([c for c in found if _arm_motion_is_a_strike(f, c, ts, kicking, opp_kicking, s)], ts, s)
     out = []
     for c in cands:
         if underneath[c.peak]:
@@ -832,11 +859,13 @@ def inferred_kinematics(arrays: PoseArrays, state: np.ndarray, det: np.ndarray, 
 def _inferred_knockdowns(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematics, FighterKinematics],
                          kin_x: tuple[FighterKinematics, FighterKinematics], inferred: np.ndarray,
                          identity_conf: np.ndarray, down: np.ndarray, ts: np.ndarray, frame_s: np.ndarray,
-                         s: MotionSettings) -> list[_Fall]:
+                         s: MotionSettings) -> tuple[list[_Fall], list[tuple[int, _Fighter, _Strike]]]:
     """Knockdowns of a fighter whose identity is inferred around the fall (`infer_presence`),
-    while the other fighter is followed with high confidence and stays on his feet."""
+    while the other fighter is followed with high confidence and stays on his feet; and the
+    other fighter's strikes at moments when only the inference says who his opponent is."""
     n = ts.size
     out: list[_Fall] = []
+    seen_strikes: list[tuple[int, _Fighter, _Strike]] = []
     for i in (0, 1):
         if not inferred[:, i].any():
             continue
@@ -852,6 +881,7 @@ def _inferred_knockdowns(arrays: PoseArrays, camera: CameraTrack, kin: tuple[Fig
         pool: list[list[_Strike]] = [[], []]
         attacker = _fighter(pair[g], pair[i], arrays, camera)
         pool[g] = _strikes(attacker, ts, s, dn[g], dn[i], _underneath(pair[g], pair[i], dn[g], s), arrays, camera)
+        seen_strikes += [(g, attacker, x) for x in pool[g] if inferred[x.cand.peak, i]]
         for fl in _falls(i, pair, dn, up, share, ts, frame_s, pool, clinches, dist, np.zeros((2, n), bool), s):
             if fl.kind != EventType.knockdown:
                 continue
@@ -866,7 +896,7 @@ def _inferred_knockdowns(arrays: PoseArrays, camera: CameraTrack, kin: tuple[Fig
             fl.evidence.append(EvidenceSignal.identity_inferred)
             fl.note = f"Olası; düşen kişi diğer dövüşçü sayıldı (rakibi yüksek güvenle ayaktaydı). {fl.note}"
             out.append(fl)
-    return out
+    return out, seen_strikes
 
 
 # ---- events -----------------------------------------------------------------------
@@ -890,6 +920,34 @@ def _event(type_: EventType, actor: int | None, target: int | None, a: int, b: i
                       data_origin=DataOrigin.measured, note=note)
 
 
+def _strike_event(i: int, f: _Fighter, x: _Strike, ts: np.ndarray, ts_ms: np.ndarray, down: np.ndarray,
+                  in_clinch: np.ndarray, s: MotionSettings, inferred: bool = False) -> FightEvent:
+    c, r = x.cand, x.result
+    loc = f.k.image[c.peak, c.end_joint]
+    measures = dict(c.measures)
+    if x.contact:  # possible impact: the opponent's head snapped right after the contact
+        jolt = _head_jolt(f.opp, c.peak, ts, s)
+        if jolt is not None:
+            measures["head_jolt"] = round(jolt, 3)
+            measures["impact"] = 1.0 if jolt >= s.impact_head_jolt else 0.0
+    measures.update(r.measures)
+    phase = _phase(c.peak, down, in_clinch)
+    return _event(c.type, i, 1 - i, c.start, c.end, c.peak, ts_ms, c.confidence, limb=c.limb, contact=x.contact,
+                  measures=measures,
+                  location=ImagePoint(x=round(float(loc[0]), 1), y=round(float(loc[1]), 1))
+                  if np.isfinite(loc).all() else None,
+                  zone=r.zone, outcome=r.outcome, outcome_confidence=r.confidence,
+                  significant=phase == FightPhase.distance or c.strength >= s.power_strength, phase=phase,
+                  evidence=[*r.evidence, EvidenceSignal.identity_inferred] if inferred else r.evidence,
+                  note="Kimlik çıkarımı: rakibin kimliği bu anda doğrulanmadı" if inferred else None)
+
+
+def counted(e: FightEvent) -> bool:
+    """Whether an event enters the counts: one seen only by inferring the opponent's identity
+    stays out while its attribution is below the threshold (listed, no counts, no momentum)."""
+    return not (e.attribution_uncertain and EvidenceSignal.identity_inferred in e.evidence)
+
+
 def attribute(events: list[FightEvent], kin: tuple[FighterKinematics, FighterKinematics],
               identity_conf: np.ndarray, s: MotionSettings) -> None:
     """Set the attribution confidence of every event from the identity confidence [F, 2]."""
@@ -899,6 +957,8 @@ def attribute(events: list[FightEvent], kin: tuple[FighterKinematics, FighterKin
         for f in ([FIGHTERS.index(e.actor)] if e.actor is not None else [0, 1]):
             conf = identity_conf[frames, f][kin[f].present[frames]]
             values.append(float(conf.mean()) if conf.size else 0.0)
+        if e.type in STRIKE_TYPES and EvidenceSignal.identity_inferred in e.evidence:
+            values.append(s.inferred_confidence_cap)  # the opponent was only inferred
         e.attribution_confidence = round(min(1.0, max(0.0, min(values))), 3)
         e.attribution_uncertain = e.actor is not None and e.attribution_confidence < s.attribution_min
 
@@ -940,23 +1000,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
         under = _underneath(kin[i], kin[1 - i], down[i], s)
         strikes[i] = _strikes(f, ts, s, down[i], down[1 - i], under, arrays, camera)
         for x in strikes[i]:
-            c, r = x.cand, x.result
-            loc = f.k.image[c.peak, c.end_joint]
-            measures = dict(c.measures)
-            if x.contact:  # possible impact: the opponent's head snapped right after the contact
-                jolt = _head_jolt(f.opp, c.peak, ts, s)
-                if jolt is not None:
-                    measures["head_jolt"] = round(jolt, 3)
-                    measures["impact"] = 1.0 if jolt >= s.impact_head_jolt else 0.0
-            measures.update(r.measures)
-            phase = _phase(c.peak, down, in_clinch)
-            x.event = _event(c.type, i, 1 - i, c.start, c.end, c.peak, ts_ms, c.confidence, limb=c.limb,
-                             contact=x.contact, measures=measures,
-                             location=ImagePoint(x=round(float(loc[0]), 1), y=round(float(loc[1]), 1))
-                             if np.isfinite(loc).all() else None,
-                             zone=r.zone, outcome=r.outcome, outcome_confidence=r.confidence,
-                             significant=phase == FightPhase.distance or c.strength >= s.power_strength,
-                             phase=phase, evidence=r.evidence)
+            x.event = _strike_event(i, f, x, ts, ts_ms, down, in_clinch, s)
             events.append(x.event)
 
     # Per-frame signals
@@ -1019,7 +1063,14 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
     fall_events = [_fall_event(fl, ts_ms) for fl in falls]
     if inferred is not None and identity_conf is not None:
         kin_x, mask = inferred
-        for fl in _inferred_knockdowns(arrays, camera, kin, kin_x, mask, identity_conf, down, ts, frame_s, s):
+        inferred_falls, inferred_strikes = _inferred_knockdowns(arrays, camera, kin, kin_x, mask, identity_conf, down,
+                                                                ts, frame_s, s)
+        # strikes seen only with the inferred opponent: listed with "identity_inferred", not counted
+        for g, attacker, x in inferred_strikes:
+            if any(abs(ts[y.cand.peak] - ts[x.cand.peak]) <= s.same_motion_s for y in strikes[g]):
+                continue  # found without the inference
+            events.append(_strike_event(g, attacker, x, ts, ts_ms, down, in_clinch, s, inferred=True))
+        for fl in inferred_falls:
             same = [e for e in fall_events if _same_fall(e, fl, ts_ms)]
             if any(e.type in (EventType.knockdown, EventType.takedown) for e in same):
                 continue  # found without the inference
@@ -1042,7 +1093,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
     valid = np.stack([k.valid for k in kin])
     stats = []
     for i in range(2):
-        mine = [e for e in events if e.actor == FIGHTERS[i]]
+        mine = [e for e in events if e.actor == FIGHTERS[i] and counted(e)]
         hits = [e for e in mine if e.type in STRIKE_TYPES]
         stats.append({
             "strike_attempts": sum(e.type in HAND_STRIKES for e in mine),

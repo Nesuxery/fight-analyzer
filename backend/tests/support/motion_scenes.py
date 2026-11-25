@@ -51,6 +51,7 @@ class Fighter:
     actions: list[Action] = field(default_factory=list)
     present: Callable[[float], bool] = lambda t: True
     wrist_conf: Callable[[float], float] = lambda t: 0.9
+    head_conf: Callable[[float], float] = lambda t: 0.9  # nose, eyes, ears (low: facing away from the camera)
     hands: str = "up"  # "up": guard at the chin; "low": arms hanging (nothing in front of the face)
 
     def pose(self, t: float) -> np.ndarray:
@@ -261,6 +262,7 @@ class MotionScene:
                 joints += rng.normal(0, self.jitter_px, joints.shape)
                 conf = np.full(17, 0.9)
                 conf[[9, 10]] = f.wrist_conf(t)
+                conf[[0, 1, 2, 3, 4]] = f.head_conf(t)
                 kps.append(np.concatenate([joints, conf[:, None]], axis=1))
                 pad = 0.15 * self.torso_px
                 boxes.append([joints[:, 0].min() - pad, joints[:, 1].min() - pad,

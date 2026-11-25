@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 17 Kasım 2026 (v2 Bölüm 3a: vuruş olayları ve hasar sinyalleri). Ayrıntılı
+Son güncelleme: 25 Kasım 2026 (v2 Bölüm 3a onaylandı; Bölüm 4 ve (b) için notlar). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -530,6 +530,75 @@ momentumu hesaplar (örnek yayında 18 sn).
   isabetlerin çoğu "blok" ya da "belirsiz" kalıyor); 2B'de eldivenle yüz ayrılamıyor;
   tekme kontrolü (check) ayrı bir sonuç değil; örnek yayında grappling yok (b için
   kullanıcının Khabib–Poirier kaydı, yalnızca yerelde).
+- **(a) onayı ve ek işler (kullanıcı kararları, 25 Kasım 2026):**
+  - *Kimlik çıkarımıyla görülen vuruşlar* listeye "Kimlik çıkarımı" etiketiyle
+    girer (kanıtta `identity_inferred`); sahiplik güvenleri 0,40'la sınırlı olduğu
+    için eşiğin altındadır ve **sayımlara, momentuma ve hakem kanıtına girmez**
+    (`events.counted`, `export/frames.py`, `model/measured.ts` → `inferredOnly`,
+    `judging/evidence.py`). "Kime ait belirsiz" etiketi bunlarda gösterilmez (kendi
+    etiketleri var). Hasar sinyali üretmezler. Örnek yayında 3 vuruş (Topuria;
+    nakavt kroşesi dahil, 527,43 sn).
+  - *Temkinli isabet ayarı kalır* (yukarıdaki eşikler).
+  - *Çift sayılan tekme düzeltildi:* aynı bacağın 0,3 sn'den yakın iki hız
+    bölümü tek tekmedir (`kick_merge_s`; çift yumruk iki kalır). Örnek yayında
+    519,4 / 519,6 sn: Volkanovski'nin tekmesi 16 → 15.
+  - *Dirsekler gözle denetlendi:* üçü de (Topuria, 380,4 / 394,6 / 394,8 sn)
+    sırtı kameraya dönükken yakın değişimde atılan bükük kollu kısa sol kroşeye
+    benziyor; arkadan dirsekle kroşe 2B'de ayrılamıyor. Kural: dövüşçünün burnu ve
+    gözleri ölçülemiyor, iki omzu ölçülüyorsa "dirsek" adayı **yumruk** olarak
+    kalır (`from_behind` ölçüsü). Örnek yayında artık dirsek yok; 394,6 ile 394,8
+    büyük olasılıkla aynı hareket (iki yumruk sayılıyor; bilinen sınır).
+  - *Tekmeyi karşılayan kol:* rakip tekme atarken (hızlı ve yükselen bacak) eli
+    tekme atan bacağın diz ya da bileğine 0,6 gövde boyu içinde olan "yumruk"
+    blok sayılır (`block_reach`). Vuruş olmayan 8 tespitten artık 4'ü eleniyor
+    (önce 2): kalanlar Volkanovski'nin kendi tekmesindeki kol savruluşu (2;
+    tekme hızı/yüksekliği ölçülemediğinde) ve Topuria'nın yüksek tekmeyi
+    karşılayan kolu (2; el bacağa yeterince yakın ölçülmüyor).
+  - Örnek yayında (yeniden işlendi): vuruş denemeleri Volkanovski 64 yumruk/diz +
+    15 tekme, Topuria 40 + 4 (+3 yalnızca çıkarımla görülen, sayılmayan); isabet
+    3 / 3. Olay önbellek anahtarı yeni ayarlarla değişti; `EVENTS_VERSION` 4'te
+    kaldı (dal henüz birleştirilmedi; 3a'nın ilk hâliyle işlenmiş bir analiz
+    bantsız ama eski olaylarla açılır, karalama kopyası yeniden işlendi).
+- **Kaçan vuruşlar dövüşçüye göre (aynı 3 × 8 sn pencere, kabaca):** Volkanovski
+  gözle ≈ 20 deneme, ≈ 10 doğru tespit (≈ %50); Topuria ≈ 14, ≈ 3 (≈ %20).
+  Vuruş olmayan 8 tespitin 5'i Topuria'da (hepsi Volkanovski'nin tekmesini
+  karşılayan kol), 3'ü Volkanovski'de (kendi tekmesindeki kol savruluşu).
+  **Topuria sistematik olarak daha çok kaçıyor. Nedeni kamera açısı:** ana kamera
+  çoğunlukla Topuria'yı arkadan görüyor. Ölçülebildiği karelerin %35'inde sırtı
+  kameraya dönük (Volkanovski %17; R2 penceresinde %62), bilekleri daha az
+  ölçülüyor (%81 / %63; Volkanovski %89 / %83). Sırtı dönük dövüşçünün vuruşu
+  görüş doğrultusunda gider: 2B'de uzanma ve hız kısalır, bilek kendi gövdesinin
+  arkasında kalır. Topuria'nın kısa kroşeleri bu açıda deneme eşiklerine
+  ulaşmıyor; Volkanovski'nin uzun jab'ları ulaşıyor.
+
+### Bölüm 4 için notlar (kullanıcı kararları, 25 Kasım 2026)
+- **"Belirsiz" vuruşlar sıfır değildir:** sonucu "belirsiz" olan vuruş
+  `outcome_confidence` ile olasılıklı sayılsın (isabet "kesin" değil, "olasılıklı"
+  katkı). Temkinli isabet ayarı (3a) bu yüzden kalıyor.
+- **Hasar sinyalleri seyrek:** örnek yayında yalnızca knockdown (çıkarımla, güven
+  0,40) var; sarsılma ve zorunlu geri çekilme 2B'de güvenilir değil. Hakem güveni
+  buna göre düşük gösterilsin (D_imm'in çoğu raundda boş kalması "hasar yok"
+  anlamına gelmez).
+- **Deneme sayısı dövüşçüler arasında eşit ölçülmüyor:** bu yayında Topuria'nın
+  denemelerinin ≈ %20'si, Volkanovski'ninkilerin ≈ %50'si yakalanıyor (kamera
+  açısı, yukarıda). Ham hacim karşılaştırması (offensive_pace, isabet sayısı)
+  kameraya dönük dövüşçüyü kayırır. Motor dövüşçü bazında görünürlüğü (sırtı
+  dönük pay, bilek ölçülebilirliği; (b)/(c)'de raunt özelliklerine eklenebilir)
+  hesaba katmalı ya da bu durumda güveni düşürmeli. Eski kartlar iki raundu da
+  Volkanovski'ye veriyordu; bu yanlılık bunun bir nedeni olabilir.
+
+### (b) için başlangıç notu (25 Kasım 2026)
+(a) onaylandı; (b) yeni oturumda başlar. Plan Bölüm 3.3–3.4 ve bu notlardaki
+kullanıcı yanıtları (klinç kontrolü ayrı alan, düşük güvenli; merkez tutma
+"ölçülmedi"). Grappling malzemesi: kullanıcının Masaüstündeki
+`full-fights/khabib_vs_dustin` kaydı (≈ 490 MB, tam maç), yalnızca yerelde;
+karalama veri dizinine (`local/fa-data`, "fa-scratch" yapılandırması) yüklenip
+işlenmesi gerekir: 9 dakikalık örnek yayında poz 3091 sn sürdü, tam maç için
+saatler sürebilir; önce bir kesitle (ör. FFmpeg ile birkaç dakikalık grappling
+bölümü) başlamak düşünülebilir. Karelerle denetim için yardımcılar
+`local/bolum3a/tools/` altında (`lab.py`: iş yükleme, kare çizimi, ızgara;
+`rerun.py`: önbelleğe yazmadan olayları yeniden hesaplama).
+
 - (a) `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
 
 ### AI hakemlik (Aşama 9)

@@ -182,6 +182,11 @@ const MAJOR = new Set(["knockdown", "takedown"]);
 /** Counted as "Vuruş denemeleri" (kicks are counted apart); the export counts the same (frames.py). */
 export const HAND_STRIKES: ReadonlySet<string> = new Set(["punch", "knee", "elbow", "ground_strike"]);
 
+/** Seen only by inferring the opponent's identity and below the attribution threshold: listed with
+ * its tag, kept out of the counts (the export does the same, frames.py). */
+export const inferredOnly = (e: FightEvent): boolean =>
+  e.attribution_uncertain && (e.evidence ?? []).includes("identity_inferred");
+
 /** When an event happens (its peak; the end for time-based ones such as control). */
 export function eventMoment(e: FightEvent): number {
   return e.type === "ground_control" || e.type === "clinch" ? e.end_ms : (e.peak_ms ?? e.start_ms);
@@ -228,7 +233,8 @@ export function eventTags(e: FightEvent, scored: Set<string> | null, timeline: T
                 title: `Dedektör güveni %${Math.round(e.confidence * 100)}; yanlış tespit olabilir.` });
   }
   // "Kime ait belirsiz": the text comes from the caller (labels.ts)
-  if (e.attribution_uncertain && unattributed) {
+  // an inferred-only event carries its own tag ("Kimlik çıkarımı", EventList) instead
+  if (e.attribution_uncertain && unattributed && !inferredOnly(e)) {
     tags.push(unattributed(Math.round((e.attribution_confidence ?? 0) * 100)));
   }
   if (e.actor && identityAt(timeline, e.actor, eventFrame(e)) === "occluded") {
@@ -262,6 +268,7 @@ export function toTimelineEvents(events: FightEvent[], contributions: MomentumCo
     outcome: e.outcome ?? null,
     zone: e.target_zone ?? null,
     significantStrike: e.significant ?? null,
+    inferred: inferredOnly(e),
   }));
 }
 
@@ -341,7 +348,7 @@ export function measuredStats(side: Side, frame: number, tMs: number, events: Fi
   const upto = samplesUpTo(tMs, sums);
   const from = fromFrame > 0 ? Math.min(upto, samplesBefore(fromMs, sums)) : 0;
   const mine = events.filter((e) => e.actor === fighter && eventFrame(e) <= frame && eventFrame(e) >= fromFrame &&
-    !isFrameExcluded(eventFrame(e), segments));
+    !isFrameExcluded(eventFrame(e), segments) && !inferredOnly(e));
   const enough = (samples: number) => samples / sums.hz >= MIN_SHARE_SAMPLES_S;
   const actN = sums.actN[side][upto]! - sums.actN[side][from]!;
   const moveN = sums.moveN[side][upto]! - sums.moveN[side][from]!;

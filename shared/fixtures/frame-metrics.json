@@ -1082,6 +1082,36 @@
    "attribution_uncertain": false,
    "data_origin": "measured",
    "note": null
+  },
+  {
+   "event_id": "inferred",
+   "type": "punch",
+   "actor": "fighter_a",
+   "target": "fighter_b",
+   "start_frame": 450,
+   "end_frame": 455,
+   "start_ms": 15015.0,
+   "end_ms": 15181.833,
+   "peak_frame": 452,
+   "peak_ms": 15081.733,
+   "limb": null,
+   "possible_contact": true,
+   "location": null,
+   "measures": {},
+   "confidence": 0.8,
+   "target_zone": null,
+   "outcome": null,
+   "outcome_confidence": null,
+   "significant": null,
+   "phase": null,
+   "evidence": [
+    "zone_contact",
+    "identity_inferred"
+   ],
+   "attribution_confidence": 0.4,
+   "attribution_uncertain": true,
+   "data_origin": "measured",
+   "note": null
   }
  ],
  "motion": {
@@ -15001,6 +15031,191 @@
    }
   },
   {
+   "frame": 449,
+   "red_share": 45.58329017668936,
+   "red_shown": 46,
+   "insufficient": false,
+   "excluded": false,
+   "red": {
+    "strikeAttempts": 7,
+    "kicks": 0,
+    "activity": 46,
+    "pressure": 18,
+    "advance": 36,
+    "retreat": 64,
+    "controlS": 0,
+    "significant": 1,
+    "measuredS": 9.5
+   },
+   "blue": {
+    "strikeAttempts": 7,
+    "kicks": 1,
+    "activity": 50,
+    "pressure": 21,
+    "advance": 48,
+    "retreat": 52,
+    "controlS": 3,
+    "significant": 1,
+    "measuredS": 10.2
+   },
+   "effects": {
+    "flashes": [],
+    "rings": [],
+    "warnings": []
+   }
+  },
+  {
+   "frame": 450,
+   "red_share": 45.57569985406526,
+   "red_shown": 46,
+   "insufficient": false,
+   "excluded": false,
+   "red": {
+    "strikeAttempts": 7,
+    "kicks": 0,
+    "activity": 46,
+    "pressure": 18,
+    "advance": 36,
+    "retreat": 64,
+    "controlS": 0,
+    "significant": 1,
+    "measuredS": 9.6
+   },
+   "blue": {
+    "strikeAttempts": 7,
+    "kicks": 1,
+    "activity": 50,
+    "pressure": 21,
+    "advance": 49,
+    "retreat": 51,
+    "controlS": 3,
+    "significant": 1,
+    "measuredS": 10.3
+   },
+   "effects": {
+    "flashes": [],
+    "rings": [],
+    "warnings": []
+   }
+  },
+  {
+   "frame": 451,
+   "red_share": 45.56810772587571,
+   "red_shown": 46,
+   "insufficient": false,
+   "excluded": false,
+   "red": {
+    "strikeAttempts": 7,
+    "kicks": 0,
+    "activity": 46,
+    "pressure": 18,
+    "advance": 36,
+    "retreat": 64,
+    "controlS": 0,
+    "significant": 1,
+    "measuredS": 9.6
+   },
+   "blue": {
+    "strikeAttempts": 7,
+    "kicks": 1,
+    "activity": 50,
+    "pressure": 21,
+    "advance": 49,
+    "retreat": 51,
+    "controlS": 3,
+    "significant": 1,
+    "measuredS": 10.3
+   },
+   "effects": {
+    "flashes": [
+     [
+      "inferred",
+      1.0
+     ]
+    ],
+    "rings": [],
+    "warnings": []
+   }
+  },
+  {
+   "frame": 452,
+   "red_share": 45.56051379655452,
+   "red_shown": 46,
+   "insufficient": false,
+   "excluded": false,
+   "red": {
+    "strikeAttempts": 7,
+    "kicks": 0,
+    "activity": 46,
+    "pressure": 18,
+    "advance": 36,
+    "retreat": 64,
+    "controlS": 0,
+    "significant": 1,
+    "measuredS": 9.6
+   },
+   "blue": {
+    "strikeAttempts": 7,
+    "kicks": 1,
+    "activity": 50,
+    "pressure": 21,
+    "advance": 49,
+    "retreat": 51,
+    "controlS": 3,
+    "significant": 1,
+    "measuredS": 10.3
+   },
+   "effects": {
+    "flashes": [
+     [
+      "inferred",
+      0.9999988888888858
+     ]
+    ],
+    "rings": [],
+    "warnings": []
+   }
+  },
+  {
+   "frame": 453,
+   "red_share": 45.55291807054001,
+   "red_shown": 46,
+   "insufficient": false,
+   "excluded": false,
+   "red": {
+    "strikeAttempts": 7,
+    "kicks": 0,
+    "activity": 46,
+    "pressure": 18,
+    "advance": 35,
+    "retreat": 65,
+    "controlS": 0,
+    "significant": 1,
+    "measuredS": 9.7
+   },
+   "blue": {
+    "strikeAttempts": 7,
+    "kicks": 1,
+    "activity": 50,
+    "pressure": 21,
+    "advance": 49,
+    "retreat": 51,
+    "controlS": 3,
+    "significant": 1,
+    "measuredS": 10.4
+   },
+   "effects": {
+    "flashes": [
+     [
+      "inferred",
+      0.8887766666666662
+     ]
+    ],
+    "rings": [],
+    "warnings": []
+   }
+  },
+  {
    "frame": 454,
    "red_share": 45.55021080394362,
    "red_shown": 46,
@@ -15029,7 +15244,12 @@
     "measuredS": 10.4
    },
    "effects": {
-    "flashes": [],
+    "flashes": [
+     [
+      "inferred",
+      0.7775544444444407
+     ]
+    ],
     "rings": [],
     "warnings": []
    }
@@ -15067,6 +15287,10 @@
      [
       "e0",
       1.0
+     ],
+     [
+      "inferred",
+      0.666332222222221
      ]
     ],
     "rings": [],
@@ -15106,6 +15330,10 @@
      [
       "e0",
       1.0
+     ],
+     [
+      "inferred",
+      0.5551099999999956
      ]
     ],
     "rings": [],
@@ -15145,6 +15373,10 @@
      [
       "e0",
       0.8887777777777804
+     ],
+     [
+      "inferred",
+      0.4438877777777759
      ]
     ],
     "rings": [],
@@ -15184,6 +15416,10 @@
      [
       "e0",
       0.7775555555555549
+     ],
+     [
+      "inferred",
+      0.33266555555555044
      ]
     ],
     "rings": [],

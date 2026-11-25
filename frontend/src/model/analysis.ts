@@ -69,6 +69,8 @@ export interface TimelineEvent {
   outcome?: StrikeOutcome | null;
   zone?: TargetZone | null;
   significantStrike?: boolean | null;
+  /** Seen only by inferring the opponent's identity: listed, not counted, no momentum. */
+  inferred?: boolean;
 }
 
 /** A damage signal in the event list (an estimate; v2 Bölüm 3a). */

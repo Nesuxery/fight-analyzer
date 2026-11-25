@@ -105,6 +105,13 @@ def build_inputs() -> tuple[list[FightEvent], MotionTimeline, MomentumTimeline]:
         contribs.append(MomentumContribution(contribution_id=f"adv{k}", fighter_id=rng.choice(["fighter_a", "fighter_b"]),
                                              source="advance", start_ms=a, end_ms=b, quantity=round((b - a) / 1000, 3),
                                              points=round(0.2 * (b - a) / 1000, 4)))
+    # seen only by inferring the opponent's identity: listed, never counted (no momentum entry)
+    events.append(FightEvent(event_id="inferred", type="punch", actor="fighter_a", target="fighter_b",
+                             start_frame=450, end_frame=455, start_ms=round(450 * 1000 / FPS, 3),
+                             end_ms=round(455 * 1000 / FPS, 3), peak_frame=452, peak_ms=round(452 * 1000 / FPS, 3),
+                             possible_contact=True, confidence=0.8, attribution_confidence=0.4,
+                             attribution_uncertain=True, evidence=["zone_contact", "identity_inferred"],
+                             data_origin=DataOrigin.measured))
     params = MomentumParameters(half_life_s=20, prior=4, strike_attempt=1, kick_attempt=1.3, contact_bonus=0.3,
                                 advance_per_s=0.2, control_per_s=0.5, knockdown=4, takedown=2.5,
                                 min_major_confidence=0.5)

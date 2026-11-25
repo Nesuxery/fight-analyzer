@@ -15,6 +15,7 @@ from fight_analyzer.contracts import (
     ConfidenceLevel,
     EdgeSummary,
     EventType,
+    EvidenceSignal,
     ExcludedSegment,
     FighterId,
     FighterRoundEvidence,
@@ -148,8 +149,8 @@ def round_evidence(inp: AnalysisInputs, number: int, start: int, end: int, marke
         if not (start <= f <= end) or excl.frame_excluded(f, inp.exclusions):
             continue
         in_round.append(e)
-        if e.actor is None:
-            continue
+        if e.actor is None or (e.attribution_uncertain and EvidenceSignal.identity_inferred in e.evidence):
+            continue  # seen only by inferring the opponent: listed, not counted
         t = tally[e.actor]
         impact = e.possible_contact and e.measures.get("impact", 0) >= 1
         if e.type in (EventType.punch, EventType.knee):

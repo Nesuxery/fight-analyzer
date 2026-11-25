@@ -25,6 +25,7 @@ import numpy as np
 
 from fight_analyzer.contracts import (
     EventType,
+    EvidenceSignal,
     ExcludedSegment,
     FightEvent,
     FighterId,
@@ -149,7 +150,9 @@ def side_stats(side: str, frames: np.ndarray, t_ms: np.ndarray, events: Sequence
                iv: excl.Intervals = ()) -> dict[str, np.ndarray]:
     """measuredStats/measuredSeconds of measured.ts for every frame; NaN = not enough data ("—")."""
     fighter = FIGHTER[side]
-    mine = [e for e in events if e.actor == fighter and not excl.frame_excluded(event_frame(e), segments)]
+    # events seen only by inferring the opponent's identity are listed, not counted (as in measured.ts)
+    mine = [e for e in events if e.actor == fighter and not excl.frame_excluded(event_frame(e), segments)
+            and not (e.attribution_uncertain and EvidenceSignal.identity_inferred in e.evidence)]
 
     def count(pred) -> np.ndarray:
         at = np.sort(np.array([event_frame(e) for e in mine if pred(e)], dtype=np.int64))

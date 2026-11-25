@@ -799,6 +799,8 @@ export const OUTDATED_LABELS = {
 
 /** Uncertainty labels of events added in v2 Bölüm 2c (the older ones are still in model/measured.ts). */
 export const EVENT_TAG_LABELS = {
+  inferred: "Kimlik çıkarımı",
+  inferredHelp: "Vuruş anında rakibin kimliği doğrulanmadı; vuran dövüşçü yüksek güvenle izlendiği için karşısındaki kişi diğer dövüşçü sayıldı. Listede görünür, ama sayımlara ve momentuma girmez.",
   unattributed: "Kime ait belirsiz",
   unattributedHelp: (pct: number) =>
     `Olay anında dövüşçülerin kimlik güveni düşüktü (%${pct}): olay doğru dövüşçüye yazılmamış olabilir. Sayılır ama momentuma puan eklemez.`,

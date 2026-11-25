@@ -110,8 +110,12 @@ def test_a_knockdown_found_by_inferring_who_fell_stays_possible_with_low_confide
     assert signal.confidence <= S.inferred_confidence_cap and EvidenceSignal.identity_inferred in signal.evidence
     # too weak for momentum points (shown, not scored)
     assert not [c for c in mm.ledger(r.events, r.runs, M) if c.source == MomentumSource.knockdown]
-    # the strike before it is not listed: blue was not identified when it landed
-    assert [e for e in r.events if e.type == EventType.punch] == []
+    # the strike before it is listed with its tag, but neither counted nor in the momentum
+    (hit,) = [e for e in r.events if e.type == EventType.punch]
+    assert hit.actor == RED and EvidenceSignal.identity_inferred in hit.evidence
+    assert hit.attribution_uncertain and hit.attribution_confidence <= S.inferred_confidence_cap
+    assert not ev.counted(hit) and r.stats[0]["strike_attempts"] == 0
+    assert hit.event_id not in {c.event_id for c in mm.ledger(r.events, r.runs, M)}
     # without a confident other fighter, or without the inference, nothing is claimed
     r, _ = run(HIT, [SNAP, sit(1.25)], conf=lambda t: (0.6, 0.45), blue_unknown=blue_unknown)
     assert of(r, EventType.knockdown) == []

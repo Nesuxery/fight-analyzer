@@ -209,4 +209,4 @@ def test_damage_signals_survive_the_cache_and_older_entries_read_without_them(tm
     del stored["damage"]  # as written by events version 3
     manifest.write_text(json.dumps(stored), encoding="utf-8")
     assert store.read_events(tmp_path, "e").damage == []
-    assert store.events_key("i", "c", S)[1]["version"] == store.EVENTS_VERSION == 4
+    assert store.events_key("i", "c", S)[1]["version"] == store.EVENTS_VERSION == 5

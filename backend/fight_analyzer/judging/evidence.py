@@ -40,7 +40,8 @@ NOT_MEASURED = [
     "Gerçek hasar (sersemleme, kesik, kanama) doğrudan ölçülmüyor; yalnızca dolaylı göstergeler var.",
     "Vuruşların gerçekten isabet edip etmediği bilinmiyor; 2B görüntüde yalnızca olası temas ve olası etki "
     "(temastan hemen sonra rakibin başının savrulması; eşiği doğrulanmadı) var.",
-    "Submission girişimleri ve submission tehlikesi tespit edilmiyor.",
+    "Submission girişimleri yalnızca olası olarak (boyun çevresinde tutulan kol) tespit ediliyor; bu kartlar "
+    "onları ve submission tehlikesini henüz hesaba katmıyor.",
     "Yerde pozisyon geliştirme (guard geçişi, mount, sırt alma) tespit edilmiyor.",
     "Kafes/alan konumu ölçülmüyor; alan kontrolü ileri-geri hareketten tahmin ediliyor.",
 ]

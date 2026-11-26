@@ -1,6 +1,6 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 25 Kasım 2026 (v2 Bölüm 3a onaylandı; Bölüm 4 ve (b) için notlar). Ayrıntılı
+Son güncelleme: 26 Kasım 2026 (v2 Bölüm 3b: grappling durumları, kontrol ve baskınlık). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -24,14 +24,14 @@ CLAUDE.md geçerlidir.
   fight_analyzer.jobs`), Vite/React arayüzü. Hepsi `127.0.0.1`; `start.cmd` tek komut.
 - İş kaydı SQLite (WAL); işçi kalp atışı, 30 sn sonra yarım iş yeniden kuyruğa,
   2 denemeden sonra `worker_lost`.
-- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.11.0**);
+- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.12.0**);
   JSON Schema ve TS tipleri bundan üretilir, `check.cmd` güncelliğini denetler.
   Üretilen dosyalar (şema, TS tipleri, overlay dosyaları) `.gitattributes` ile her
   checkout'ta LF; denetim bayt bayt karşılaştırır ve gevşetilmedi.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
   (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 7`, `CAMERA_VERSION 2`,
-  `EVENTS_VERSION 4`, `MOMENTUM_VERSION 4`, `BROADCAST_VERSION 3`); mantık değişince
+  `EVENTS_VERSION 5`, `MOMENTUM_VERSION 4`, `BROADCAST_VERSION 3`); mantık değişince
   ilgili sürüm artırılır, şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
 
 ### Video ve poz
@@ -58,7 +58,9 @@ CLAUDE.md geçerlidir.
   Aşama 9'da **olası etki** eklendi: temasın hemen ardından rakibin başının
   omuzlarına göre ≥0,3 gövde boyu savrulması (eşik doğrulanmadı). v2 Bölüm 3a'dan
   beri her vuruş ayrıca hedef bölge, tahmini sonuç (isabet/blok/ıska/belirsiz) ve
-  önemli vuruş bilgisi taşır; hasar sinyalleri ayrı bir listedir (aşağıda).
+  önemli vuruş bilgisi taşır; hasar sinyalleri ayrı bir listedir (aşağıda). v2 Bölüm
+  3b'den beri kare bazlı grappling durumu (mesafe, klinç, yerde kırmızı/mavi üstte,
+  karmaşa) ve geçişlerinden takedown, deneme, ters çevirme, kalkma, olası submission.
 - Momentum: açıklanabilir puan defteri, 20 sn yarı ömür,
   kırmızı % = 100·(m₁+4)/(m₁+m₂+8). Deneysel; "kazanma olasılığı değildir".
 
@@ -587,19 +589,136 @@ momentumu hesaplar (örnek yayında 18 sn).
   hesaba katmalı ya da bu durumda güveni düşürmeli. Eski kartlar iki raundu da
   Volkanovski'ye veriyordu; bu yanlılık bunun bir nedeni olabilir.
 
-### (b) için başlangıç notu (25 Kasım 2026)
-(a) onaylandı; (b) yeni oturumda başlar. Plan Bölüm 3.3–3.4 ve bu notlardaki
-kullanıcı yanıtları (klinç kontrolü ayrı alan, düşük güvenli; merkez tutma
-"ölçülmedi"). Grappling malzemesi: kullanıcının Masaüstündeki
-`full-fights/khabib_vs_dustin` kaydı (≈ 490 MB, tam maç), yalnızca yerelde;
-karalama veri dizinine (`local/fa-data`, "fa-scratch" yapılandırması) yüklenip
-işlenmesi gerekir: 9 dakikalık örnek yayında poz 3091 sn sürdü, tam maç için
-saatler sürebilir; önce bir kesitle (ör. FFmpeg ile birkaç dakikalık grappling
-bölümü) başlamak düşünülebilir. Karelerle denetim için yardımcılar
-`local/bolum3a/tools/` altında (`lab.py`: iş yükleme, kare çizimi, ızgara;
-`rerun.py`: önbelleğe yazmadan olayları yeniden hesaplama).
+### Grappling durumları, kontrol ve baskınlık (v2 Bölüm 3b, 26 Kasım 2026)
+Bölüm 3'ün (b) aşaması. Kod: `motion/grappling.py` (kare bazlı durum makinesi, geçiş
+olayları, klinç ve aktif kontrol, submission girişimi), `motion/dominance.py` (3.4
+ölçümleri, istek anında), `motion/damage.py` (submission tehlikesi), `motion/events.py`
+(bağlantı), `motion/series.py` (ortak dizi yardımcıları). Ayarlar `MotionSettings`'te (olay
+önbellek anahtarına girer) ve `FeatureSettings`'te (istek anında; hiçbir anahtara girmez).
+Şema 1.12.0, `EVENTS_VERSION` 5; `MOMENTUM_VERSION` 4'te kaldı (formül ve ağırlıklar aynı;
+olay anahtarı değiştiği için momentum da yeniden hesaplanır). Poz, takip hazırlığı, kimlik,
+kamera ve yayın önbellekleri değişmedi: sürüm 4 analizleri `events_outdated` bandıyla
+açılır, "Yeniden işle" yalnızca olayları ve momentumu hesaplar.
+- **Durumlar:** her karede DISTANCE, CLINCH, GROUND_RED_TOP, GROUND_BLUE_TOP, SCRAMBLE; bir
+  dövüşçü ölçülemiyorsa ya da iki dövüşçünün görünür boy oranı olağan oranının 2 katından
+  fazla sapıyorsa (kimliklerden biri başka birinde, ör. seyircide) "bilinmiyor": tahmin
+  edilmez. Yerde: biri ya da ikisi "yerde" (3a tanımı) ve yakınlar; gövde merkezi diğerininkinden
+  0,25 gövde boyu yukarıda olan üsttedir, ayrılamıyorsa SCRAMBLE. Biri yerde, diğeri uzaktaysa
+  kimse grappling yapmıyor: DISTANCE. Dik duran rakibinin bacaklarına eğilmiş (kalçası yerde
+  değil) dövüşçü ayakta grappling'dir: CLINCH. Pozisyon yalnızca üst / alt; guard, mount, sırt
+  ayrılmıyor.
+- **Klinç ancak tutuşmayla:** yalnızca mesafe kuralı (≤ 1,3 gövde boyu) örnek yayında 18
+  "klinç" (≈ 40 sn) buldu; karelerle bakınca biri hariç hepsi cep mesafesinde vuruş değişimi
+  ya da 2B'de üst üste görünen (derinlikte ayrı) dövüşçülerdi. Artık ayrıca (1) ölçülebilen
+  karelerin en az yarısında bir dövüşçünün bileği rakibin gövde çizgisinin 0,35 gövde boyu
+  içinde (bilek ölçülemiyorsa kalçalar ≤ 0,9) ve (2) iki dövüşçünün görünür boy oranı videodaki
+  olağan oranının %20 yakınında (aynı derinlik) olmalı. Dirsek, kafa ve uyluk hedefleri
+  denendi: 2B'de korumadaki ve bel hizasındaki eller rakibe hep o kadar yakın görünüyor,
+  ayırmıyor. Örnek yayında 2 klinç kaldı (4:38,8 ve 6:24,6; ilki karelerde açıkça boyun tutuşu).
+- **Titreşime karşı:** klinç ancak 1,3 + 0,15 gövde boyunun ötesinde biter; aynı iki durum
+  arasındaki ölçülemeyen bölüm o durum sayılır (ayakta 1 sn'ye, yerde 2,5 sn'ye kadar; güveni
+  yarıya iner); 0,6 sn'den kısa bir durum komşularına katılır ya da iki yer durumu arasında
+  SCRAMBLE olur; 1,5 sn'den kısa ve iki yanı mesafe olan klinç mesafedir.
+- **Geçişler:**
+  - *takedown:* ayakta durumdan 4 sn içinde yere, düşen alttayken, öncesinde yakın temas
+    (klinç ya da ≤ 1,2 × klinç mesafesi, en az 0,5 sn) ve knockdown değilse. Saldıran ≥ 3 sn
+    üstte kalırsa isabetli; rakip daha önce kalkar ya da üste çıkarsa `brief` (güven ≤ 0,45,
+    momentum eşiğinin altında); kayıt/ölçüm 3 sn dolmadan biterse `brief` boştur. Kendi seviye
+    değişimi altında biten dövüşçünün üstündeki rakip (sprawl) takedown yapmış sayılmaz. 3a'nın
+    "yakın temastan sonra düşüş" kuralı yalnızca üst pozisyon ölçülemediğinde ve düşen
+    gerçekten zemine (kalça) indiyse, düşük güvenle yedek olarak kalır.
+  - *takedown_attempt:* rakibe yakınken omuzları rakibinkinin 0,3 gövde boyu altına iner,
+    kalçası ayaktaki yüksekliğinin %85'ine iner ya da gövdesi 35° öne eğilir; en az 0,5 sn,
+    ayaktan başlar, en az 0,2 sn klinç mesafesine ulaşır (mesafedeki eğilme/kaçış deneme
+    değildir); rakip düşmezse "olası" deneme (güven ≤ 0,5). 1,5 sn'den yakın iki deneme
+    birdir; yumrukla birlikte 0,6 sn'den kısa eğilme deneme değildir.
+  - *reversal:* iki üst pozisyon da ≥ 1,5 sn, aradaki karmaşa ≤ 3 sn.
+  - *get_up:* alttaki ayağa kalkar (`from_bottom`). 3a'nın "Ayağa kalktı" duruş değişimi artık
+    yalnızca dövüşçü gerçekten zemine inmişse (kalça yerde, en az 0,3 sn) ve rakibi o sırada
+    ölçülüyorsa `get_up` olur. Üstteki dövüşçünün doğrulması, klinçte derin eğilip doğrulma
+    ve rakibi gizliyken kalkma kalkma değildir. Aynı nedenle sayılmayan "Yere indi" duruş
+    değişimi de kalça zemine inmeden çıkmaz (knockdown kuralı değişmedi).
+  - *submission_attempt:* bir kolun ön kolu (eldiven dahil) rakibin boynunun 0,25 gövde boyu
+    içinde ve rakibin başı saldıranın omuz merkezinin 0,75 içinde, ayakta değilken (klinç ya
+    da yer), en az 3 sn. "Olası", güven ≤ 0,4. Klinçteki boyun tutuşu aynı görünür (örnek
+    yayında 4:40'ta 2 sn: 2 sn eşiğinde orada bir "submission" çıkıyordu, 3 sn'ye çıkarıldı).
+    Üçgen ve eklem kilitleri üretilmiyor (2B'de ayrılamıyor).
+- **Kontrol:** yer kontrolü = üstte geçen süre (`ground_control` olayları, en az 1 sn); klinç
+  kontrolü ayrı alanda, düşük güvenli (≤ 0,35): klinçte ikiliyi rakibin sırtına doğru süren
+  (≥ 0,3 gövde boyu/sn, ≥ 0,3 sn) son dövüşçü, diğeri geri sürene kadar (kafes ölçülmüyor;
+  "rakibi kafese yaslama" böyle tahmin ediliyor); aktif kontrol = kontrol sırasında kontrol
+  edenin vuruş denemesinin 1 sn öncesinden 2 sn sonrasına kadar ya da submission girişimi
+  boyunca geçen süre (`ground_control.measures.active_s`, `FighterEventCounts.active_control_s`
+  / `clinch_control_s`). Kalkarken kol hareketi (kendisi az önce yerdeyken ve üstte değilken)
+  yerde vuruş sayılmaz.
+- **3.4 ölçümleri** (`dominance.measure`, herhangi bir kare aralığı; dışlanan bölümler dövüş
+  süresi değil; "Kime ait belirsiz" olaylar kimsenin değil; her biri değer + güven): tek taraflı
+  süre (ofansta — deneme, takedown/submission girişimi ya da aktif kontrol — ve ölçülen rakip
+  hiçbir şey denemiyor), ofansif tempo (önemli deneme + takedown/submission denemesi +
+  kombinasyon, ölçülen dakikada), etkili süre payı (aktif kontrol, tek taraflı süre, isabetli
+  vuruş çevresi / dövüş süresi), saldırganlık (dakikada deneme, kombinasyon, mesafe kapatıp
+  saldırma; referans hızlara göre 0–1), alan kontrolü (Baskı, İlerleme / geri çekilme, klinç
+  sürme, yerde üstte kalma, değişimleri başlatma; ölçülebilen bileşenler üzerinden ağırlıklı
+  0–1; oktagon merkezi "ölçülmedi"). Ağırlıklar ve referans hızlar `FeatureSettings`'te,
+  Bölüm 6'da kalibre edilecek. Güvenler ölçülen süre payıyla ve dedektörün kaçırdığı denemeler
+  yüzünden ≤ 0,6 (alan kontrolü ≤ 0,5). Bir raunt birkaç milisaniyede hesaplanıyor. API ve
+  arayüz (c)'de `RoundFeatures` ile.
+- **Görünürlük sinyalleri (Bölüm 4 notu için):** 10 Hz'te dövüşçü başına sırtı kameraya dönük
+  mü (`facing_away`) ve bileklerinin ölçülme payı (`wrists_measured`); (c)'de raunt
+  özelliklerine girecek.
+- **Sözleşme:** `EventType` + `takedown_attempt`, `reversal`, `get_up`, `submission_attempt`;
+  `FightEvent.brief`; yeni kanıtlar (`close_contact`, `level_change`, `top_position`,
+  `position_change`, `neck_wrap`, `escape_fade`); `GrapplingState` ve `MotionTimeline.phase`;
+  `FighterSignals.facing_away` / `wrists_measured`; `FighterEventCounts` + takedown denemesi,
+  kısa takedown, ters çevirme, kalkma, submission girişimi, klinç ve aktif kontrol;
+  `EventsSummary.phases`. Kare dizileri (`grappling`, `grappling_conf`, `clinch_by`) olay
+  önbelleğinde; eski girdiler onlarsız okunur (boş). Ortak `frame-metrics.json` yalnızca şema
+  sürümü ve yeni boş alanlar için yeniden üretildi (sayılar aynı).
+- **Arayüz (asgari; Bölüm 5 yeniden kuracak):** yeni olay adları ve filtre çipleri, zaman
+  çizelgesinde küçük içi boş işaretler ve açıklaması, kısa takedown için "Kısa" etiketi. Durum
+  bandı henüz gösterilmiyor (`MotionTimeline.phase`'de hazır).
+- **Örnek yayında (Topuria–Volkanovski, karalama kopyası):** vuruş sayıları, isabetler, önemli
+  vuruşlar, knockdown ve vuruş fazları sürüm 4 ile birebir aynı; yeni: 2 klinç (≈ 6 sn).
+  Topuria'nın nakavttan sonra rakibinin üstüne diz çöküp kalkmasının iki bilgi olayı ("Yere
+  indi (rakip zaten yerdeydi)", "Ayağa kalktı") artık çıkmıyor. Takedown, deneme, ters
+  çevirme ve submission yok (ilk eşiklerle çıkan 3 deneme ve 1 submission karelerde vuruş
+  değişimi ve klinç tutuşuydu).
+- **Khabib–Poirier (kullanıcının kaydı, yalnızca yerelde; karalama işi 931d7565):** 15:46,
+  1080p30, 28 359 kare; poz 5419 sn (≈ 90 dk). Raunt tespiti R1 ve R2'yi doğru buldu; R3'ün başı 11 sn
+  geç (ilk 11 sn saati sponsor grafiği kapatıyor; tespit ilk okumayı (4:49) başlangıç sayıyor),
+  karalama işinde elle düzeltildi (R3 başı kare 19720). **Bulgu: gerçek grappling ölçülemiyor.**
+  Klinç ve yerde poz modeli iç içe geçmiş iki dövüşçüden yalnızca birini (çoğunlukla üstteki
+  Khabib'i) buluyor; NMS 0,7 → 0,95 denendi (`local/bolum3b/tools/nms_probe.py`): ek kutular
+  yalnızca aynı kişinin kopyası, alttaki dövüşçü hiç çıkmıyor (eşik değil, model sınırı).
+  Kimlik katmanı bu yüzden Poirier'i raundlarda %43 / %69 / %73 "belirsiz" bırakıyor (R2'de
+  115 sn kesintisiz); iki dövüşçünün birlikte ölçüldüğü kare payı %24–39. Sonuç: videonun
+  %77'si "bilinmiyor"; ölçülen grappling ≈ 4,5 sn Khabib üstte (karelerde doğru) ve 2,6 sn
+  klinç. 12 kontrol karesi (sistemin etiketini görmeden): 5 mesafe karesinin 4'ü doğru, 1'i
+  "bilinmiyor"; grappling olan 7 karenin 6'sı "bilinmiyor", 1'i yanlış "mesafe" (kırmızı kimlik seyircideydi; boy
+  oranı koruması bundan sonra eklendi, artık "bilinmiyor"). İlk kurallarla çıkan yanlış
+  olaylar (Poirier'e takedown, Khabib'e 3 "kalkma" ve 2 "Yere indi") klinçte derin eğilen
+  Khabib'in birleşik iskeletinden geliyordu; zemine inme ve rakibi ölçülme şartlarıyla
+  kalktı. Kalan olaylar: 2 yer kontrolü (doğru), 1 olası takedown denemesi (Poirier'in alçak
+  dalışı, makul), 1 klinç ve 12:48'de sırt alırken Khabib'in yere inmesi (doğru).
+- **Süre (aynı makinede, eski ve yeni kodla; ölçümler bu oturumda gürültülü):** olay + örnekleme
+  2,4 → 6,8 sn (örnek yayın), 4,9 → 6,6 sn (Khabib–Poirier); kinematik değişmedi. Poz süresine
+  göre < %0,2.
+- **Bilinen sınırlar:** grappling'de alttaki/arkadaki dövüşçü poz modelince görülmüyor (yukarıda);
+  yerde pozisyon yalnızca üst / alt; kafes ve oktagon merkezi ölçülmüyor; submission yalnızca
+  "olası" boyun sarma; 2B'de derinlik ayrımı boy oranıyla kaba; eşikler bir yayın ve sentetik
+  sahnelerle ayarlandı.
 
-- (a) `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
+### (c) için başlangıç notu (26 Kasım 2026)
+(b) bitti, onay bekliyor; (c) yeni oturumda başlar (Bölüm 3.5–3.6: `RoundFeatures`, düzeltme
+katmanı, `python -m fight_analyzer.features` raunt tablosu). Hazır olanlar: `dominance.measure`
+(3.4, herhangi bir aralık), olay önbelleğindeki kare dizileri (`grappling`, `clinch_by`),
+`grappling.active_control` (düzeltilmiş olay listesiyle yeniden hesaplanabilir), 10 Hz
+`facing_away` / `wrists_measured`. Kullanıcı kararı bekleyen açık sorular (b) raporunda:
+gizli rakip çıkarımı, daha büyük poz modeli denemesi, R3 başlangıcının saatten geriye
+hesaplanması. Karelerle denetim yardımcıları `local/bolum3b/tools/` altında (`run3b.py`,
+`grids3b.py`, `coverage.py`, `dets_at.py`, `nms_probe.py`, `compare_sample.py`, `timing.py`).
+
+- (a) ve (b) `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →
@@ -759,6 +878,8 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
   0; vuruş denemesi 10 etiketten 4 eşleşti, 6 kaçtı, 1 yanlış
   (`validation/labels`, `validation/reports`).
 - Bağımsız maç görüntüleriyle doğrulama **yapılmadı**.
+- v2 3b: kullanıcının Khabib–Poirier kaydı yalnızca işlev denemesi için kullanıldı
+  (yerelde): grappling'in çoğu ölçülemedi (yukarıda, "Grappling durumları...").
 - Kullanıcının 9 dk Topuria–Volkanovski analizinde (yalnızca kopyada denendi) kartlar
   iki raundu Volkanovski'ye verdi (yalnızca olası temas farkıyla); 2. rauntaki
   nakavt knockdown olarak tespit edilmedi.
@@ -781,6 +902,11 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
   çekilme gerçek bir sarsılma görüntüsüyle doğrulanmadı.
 - [ ] "Olası temas" yakın mesafede çok sık çıkıyor; "olası etki" eşiği (0,3) ve
   ölçüsü gerçek etiketli verilerle ayarlanmalı.
+- [ ] Grappling'de alttaki/arkadaki dövüşçü poz modelince bulunmuyor (iki dövüşçüye tek
+  iskelet); Khabib–Poirier kaydında videonun %77'si "bilinmiyor" (v2 3b). Seçenekler:
+  gizli rakip çıkarımı, daha büyük poz modeli, kullanıcı düzeltmesi ((c)).
+- [ ] Raunt başı saatin ilk okumasından geriye hesaplanmıyor: Khabib–Poirier R3'te sponsor
+  grafiği saati 11 sn kapatınca başlangıç 11 sn geç (v2 2a kuralı).
 - [ ] Hakem profili ağırlıkları ve 10-8 eşikleri gerçek resmi skor kartlarıyla
   karşılaştırılarak ayarlanmalı (şu an tasarım değerleri).
 
@@ -793,7 +919,8 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
   onda bir saniye gösterimi) denemek; yalnızca UFC yayınıyla denendi.
 - [ ] Tek seçimle kamera yakın çekime geçince kimlik uzun süre belirsiz kalıyor;
   uygulama bu durumda düzeltme noktası önermiyor.
-- [ ] Submission girişimi, pozisyon geçişleri ve kafes konumu ölçülmüyor.
+- [ ] Submission girişimi yalnızca "olası" boyun sarma; yerde pozisyon yalnızca üst / alt
+  (guard, mount, sırt yok); kafes konumu ölçülmüyor (v2 3b).
 - [ ] Eski analizlerde "olası etki" ölçümü yok; yeniden seçim gerektiriyor — tek
   tıkla "hareket analizini yenile" düğmesi eklenebilir.
 - [ ] Dışa aktarılan MP4'e raund skorları/hakem kartı katmanı (şu an yalnız JSON'da).

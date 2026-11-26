@@ -9,7 +9,7 @@ cached per identity result. Detections are experimental, not ground truth.
 
 from __future__ import annotations
 
-from fight_analyzer.contracts import EventsSummary, FighterEventCounts, PipelineStage, ProgressUnit
+from fight_analyzer.contracts import EventsSummary, FighterEventCounts, PhaseTimes, PipelineStage, ProgressUnit
 from fight_analyzer.jobs.worker import JobContext, JobFailed
 from fight_analyzer.media.analysis_video import video_path
 from fight_analyzer.motion import camera, kinematics
@@ -26,7 +26,10 @@ METHOD = ("Kamera hareketi arka plandan (optik akış + RANSAC); eklemler gövde
           "One-Euro ile yumuşatılmış, hızlar zaman farkından; vuruş denemesi = tek hız tepesi + uzanma + "
           "rakibe yönelim; hedef bölge ve sonuç (isabet/blok/ıska/belirsiz) 2B temas ve rakibin hemen sonraki "
           "tepkisinden tahmin edilir; hasar sinyalleri (knockdown, ağır kafa vuruşu, sarsılma, zorunlu geri "
-          "çekilme) tahmindir. Her olay kimlik güveninden bir sahiplik güveni taşır.")
+          "çekilme, submission tehlikesi) tahmindir. Kare bazlı grappling durumu (mesafe, klinç, yerde üstte "
+          "kırmızı/mavi, karmaşa) duruş, yakınlık ve gövde yüksekliğinden; takedown, deneme, ters çevirme, "
+          "kalkma ve olası submission girişimi bu durumların geçişlerinden tahmin edilir. Her olay kimlik "
+          "güveninden bir sahiplik güveni taşır.")
 
 
 def run(ctx: JobContext) -> None:
@@ -82,6 +85,7 @@ def run(ctx: JobContext) -> None:
     summary = EventsSummary(
         cache_key=ekey, cache_hit=hit, version=motion_store.EVENTS_VERSION, method=METHOD, events=len(data.events),
         damage_signals=len(data.damage), camera_known_share=min(1.0, max(0.0, data.camera_known_share)),
+        phases=PhaseTimes(**data.phases) if data.phases else None,
         fighters=[FighterEventCounts(fighter_id=fid, **stats)
                   for fid, stats in zip(events_mod.FIGHTERS, data.stats)])
     ctx.store.merge_outputs(ctx.job.job_id, ctx.worker_id, events=summary)

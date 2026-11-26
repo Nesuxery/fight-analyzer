@@ -241,6 +241,39 @@ class MotionSettings:
     fall_max_s: float = 1.5  # standing -> down within this time is one fall
     knockdown_window_s: float = 1.2  # strike before a fall
     takedown_window_s: float = 2.0  # close contact before a fall
+    # Grappling states (grappling.py), frame by frame. Starting values; checked against synthetic
+    # scenes and frame grids of one recording, not validated.
+    clinch_exit: float = 0.15  # a clinch ends only beyond clinch_distance + this (no flicker at the edge)
+    clinch_contact: float = 0.35  # a wrist this close to the opponent's torso line: a grip
+    clinch_tied_share: float = 0.5  # of the clinch frames on which grips can be measured
+    clinch_pressed: float = 0.9  # grips not measurable: hip centres this close (bodies pressed together)
+    clinch_size_ratio: float = 1.2  # apparent size ratio within this factor of its usual value: same depth
+    identity_size_guard: float = 2.0  # beyond this factor one identity is on someone else (a spectator): unknown
+    ground_top_margin: float = 0.25  # torso centre this much higher than the other one's: on top
+    mat_hip: float = 0.6  # hips this close above his lowest joint: on the mat (sitting, lying)
+    state_min_s: float = 0.6  # a state shorter than this between two others is a flicker
+    state_fill_s: float = 1.0  # unmeasured stretch between two equal states taken to be that state
+    ground_fill_s: float = 2.5  # ... between two equal ground states (bodies overlap a lot down there)
+    takedown_max_s: float = 4.0  # standing -> on top within this time (scrambles, unmeasured frames)
+    takedown_hold_s: float = 3.0  # on top at least this long: landed; got up / reversed earlier: brief
+    shot_drop: float = 0.3  # shoulders this far below the opponent's (his torso lengths) ...
+    shot_hip_share: float = 0.85  # ... and the hips at most this share of his standing height
+    shot_lean_deg: float = 35.0  # ... or the torso leaning forward this much
+    shot_distance: float = 1.6  # fighters' distance during a level change
+    shot_min_s: float = 0.5  # ducking under a punch or leaning into one is shorter
+    attempt_gap_s: float = 1.5  # level changes of one fighter closer than this are one attempt
+    reversal_min_s: float = 1.5  # both top positions held at least this long
+    reversal_max_s: float = 3.0  # the scramble between them is at most this long
+    sub_neck_reach: float = 0.25  # forearm this close to the opponent's neck (his torso lengths)
+    sub_head_close: float = 0.75  # his head this close to the attacker's shoulder centre
+    sub_min_s: float = 3.0  # held at least this long (collar ties in a clinch last 1-3 s)
+    sub_close_s: float = 0.5  # shorter holes in the hold are closed
+    sub_max_confidence: float = 0.4  # neck wraps also happen in collar ties and head control
+    clinch_drive_speed: float = 0.3  # the pair moves toward one fighter's back this fast (body units/s)
+    clinch_drive_min_s: float = 0.3
+    clinch_control_max_confidence: float = 0.35  # the cage is not measured
+    active_before_s: float = 1.0  # control is active this long before ...
+    active_after_s: float = 2.0  # ... and after each strike attempt of the controlling fighter
     sample_hz: float = 10.0  # resolution of the signal timelines sent to the UI
     # Camera motion from the background
     camera_width: int = 640
@@ -262,6 +295,26 @@ class FeatureSettings:
     output_drop_pace: float = 0.35  # drop of attempts per measured minute
     output_drop_mobility: float = 0.2  # drop of the mean hand/foot activity
     output_drop_max_confidence: float = 0.4  # fatigue and tactics lower the output too
+    # Dominance, duration and the last-resort criteria (dominance.py), for any stretch of the
+    # bout. Each measure is a value with its confidence; the component weights are starting
+    # design values, to be calibrated in Bölüm 6.
+    offense_before_s: float = 0.5  # an offensive action marks the time from this before its moment ...
+    offense_after_s: float = 2.5  # ... to this after it (one-sided time, effective time)
+    combo_gap_s: float = 0.6  # strike attempts closer than this belong to one combination
+    pace_combo_weight: float = 1.0  # offensive pace = significant attempts + this x combinations, per minute
+    pace_grappling_weight: float = 1.0  # takedown and submission attempts count like significant attempts
+    landed_before_s: float = 0.5  # a landed strike or a damage signal imposes the time around it
+    landed_after_s: float = 1.5
+    exchange_gap_s: float = 2.0  # an attempt with none of either fighter this long before opens an exchange
+    close_attempt_s: float = 1.0  # an attempt this soon after moving in: closing the distance to attack
+    aggressiveness_attempt_ref: float = 15.0  # attempts per minute counted as full effort
+    aggressiveness_combo_ref: float = 3.0  # combinations started per minute
+    aggressiveness_close_ref: float = 3.0  # attacks after closing the distance per minute
+    aggressiveness_weights: tuple[float, float, float] = (0.5, 0.25, 0.25)  # attempts, combinations, closing
+    # area control: pressure, advance balance, clinch drive, top position, exchanges started
+    area_weights: tuple[float, float, float, float, float] = (0.3, 0.2, 0.15, 0.15, 0.2)
+    area_max_confidence: float = 0.5  # the octagon centre and the cage are not measured
+    detection_confidence: float = 0.6  # attempt detection misses many strikes (≈35–50 % caught, NOTES.md)
 
 
 @dataclass(frozen=True)

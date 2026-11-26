@@ -30,14 +30,19 @@ Down
 Advance / retreat
     Hip-centre velocity (camera motion removed) along the line to the
     opponent, smoothed over `advance_smooth_s`, while both fighters stand.
-Clinch, ground control (limited estimate)
-    Clinch: both standing and very close for `clinch_min_s`. Ground control:
-    one fighter down, the other close and above him for `control_min_s`.
+Grappling (grappling.py, v2 Bölüm 3b)
+    A per-frame state machine: distance, clinch, ground with red or blue on
+    top, scramble. Strike phases (distance / clinch / ground) come from it.
+    Clinches, ground control (on top), takedowns (landed or brief), takedown
+    attempts, reversals, getting up and possible submission attempts are found
+    from the states and their transitions; clinch control and active control
+    are estimated there too.
 Falls
     A stable standing stretch followed by a stable down one. A possible
     knockdown when a strike of the opponent peaked just before (not in a
-    clinch) and the strikes did not all clearly miss; a possible takedown after
-    close contact; otherwise a slip (stance change).
+    clinch) and the strikes did not all clearly miss; after close contact the
+    grappling states decide whether it was a takedown; otherwise a slip
+    (stance change). Getting up again is a `get_up`.
     When the falling fighter's identity is not verified around the fall but the
     other fighter is followed with high confidence and stays on his feet, the
     person on the same tracker id is taken to be the falling fighter
@@ -80,6 +85,7 @@ from fight_analyzer.contracts import (
 from fight_analyzer.pose.cache import PoseArrays
 
 from . import damage as damage_mod
+from . import grappling as grappling_mod
 from . import strikes as strikes_mod
 from .camera import CameraTrack
 from .kinematics import (
@@ -105,6 +111,10 @@ from .kinematics import (
     compute,
     hip_height,
 )
+from .series import close_holes as _close_holes
+from .series import frame_seconds
+from .series import runs as _runs
+from .series import value_runs
 
 FIGHTERS = (FighterId.fighter_a, FighterId.fighter_b)
 SHORT = ("a", "b")
@@ -118,6 +128,7 @@ HAND_STRIKES = frozenset({EventType.punch, EventType.knee, EventType.elbow, Even
 REACTIONS = (EvidenceSignal.head_snap, EvidenceSignal.body_push, EvidenceSignal.leg_buckle)
 UPPER_ARM = 0.62  # shoulder to elbow, torso lengths (kinematics.SEGMENTS)
 ADVANCING, RETREATING, NEUTRAL, NO_MOVEMENT = 0, 1, 2, -1
+RISE_NOTE = "Ayağa kalktı"  # a fall record of getting up again (it becomes a get_up event)
 
 
 @dataclass
@@ -146,6 +157,11 @@ class Analysis:
     frame_s: np.ndarray  # [F] seconds each frame stands for
     stats: list[dict[str, float]] = field(default_factory=list)
     damage: list[DamageSignal] = field(default_factory=list)
+    grappling: grappling_mod.Grappling | None = None  # per-frame states (events version 5 on)
+    active: np.ndarray | None = None  # [2, F] active control
+    facing_away: np.ndarray | None = None  # [2, F] 1 back to the camera, 0 not, NaN not present
+    wrists: np.ndarray | None = None  # [2, F] share of his wrists measured, NaN not present
+    phases: dict[str, float] = field(default_factory=dict)  # seconds per grappling state
 
 
 @dataclass
@@ -184,47 +200,12 @@ class _Fall:
     strikes: list[_Strike]  # the opponent's strikes just before
 
 
-def frame_seconds(ts: np.ndarray) -> np.ndarray:
-    if ts.size == 0:
-        return ts.copy()
-    d = np.diff(ts)
-    last = float(np.median(d)) if d.size else 0.0
-    return np.clip(np.append(d, last), 0.0, 0.5)
-
-
 def _norm(v: np.ndarray) -> np.ndarray:
     return np.linalg.norm(v, axis=-1)
 
 
 def _cos(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return np.sum(a * b, axis=-1) / np.maximum(_norm(a) * _norm(b), 1e-9)
-
-
-def _runs(mask: np.ndarray, ts: np.ndarray, max_gap_s: float) -> list[tuple[int, int]]:
-    """Index ranges of consecutive True frames (a time hole > max_gap_s splits them)."""
-    out = []
-    start = prev = None
-    for t in np.flatnonzero(mask):
-        if start is None:
-            start = prev = t
-        elif t == prev + 1 and ts[t] - ts[prev] <= max_gap_s:
-            prev = t
-        else:
-            out.append((start, prev))
-            start = prev = t
-    if start is not None:
-        out.append((start, prev))
-    return out
-
-
-def _close_holes(mask: np.ndarray, ts: np.ndarray, gap_s: float) -> np.ndarray:
-    """Short False stretches between True frames become True."""
-    out = mask.copy()
-    idx = np.flatnonzero(mask)
-    for a, b in zip(idx[:-1], idx[1:]):
-        if b > a + 1 and ts[b] - ts[a] <= gap_s:
-            out[a + 1:b] = True
-    return out
 
 
 def _window_mean(ts: np.ndarray, x: np.ndarray, half_s: float) -> np.ndarray:
@@ -423,7 +404,7 @@ def _elbow_near(f: _Fighter, el: int, a: int, b: int, s: MotionSettings) -> bool
 
 
 def _arm_candidates(f: _Fighter, ts: np.ndarray, s: MotionSettings, own_down: np.ndarray,
-                    opp_down: np.ndarray) -> list[_Candidate]:
+                    opp_down: np.ndarray, own_top: np.ndarray | None = None) -> list[_Candidate]:
     k = f.k
     out = []
     for limb, w, sh in HANDS:
@@ -439,6 +420,9 @@ def _arm_candidates(f: _Fighter, ts: np.ndarray, s: MotionSettings, own_down: np
             tw, dist = float(toward[p]), float(f.dist[p])
             jc = float(np.mean(k.conf[p, [w, el, sh]]))
             if opp_down[p]:  # from above on a downed opponent: no reach needed
+                rising = own_down[int(np.searchsorted(ts, ts[p] - 0.5)):p + 1].any()
+                if rising and (own_top is None or not own_top[p]):
+                    continue  # down himself just now and not on top (getting up, scrambling): no strike
                 if not (peak >= s.ground_strike_peak and tw >= s.ground_strike_toward and dist <= s.control_distance):
                     continue
                 strength = peak / s.ground_strike_peak
@@ -664,10 +648,11 @@ def _elbow_seen_from_behind(f: _Fighter, c: _Candidate, s: MotionSettings) -> _C
 
 
 def _strikes(f: _Fighter, ts: np.ndarray, s: MotionSettings, own_down: np.ndarray, opp_down: np.ndarray,
-             underneath: np.ndarray, arrays: PoseArrays, camera: CameraTrack) -> list[_Strike]:
+             underneath: np.ndarray, arrays: PoseArrays, camera: CameraTrack,
+             own_top: np.ndarray | None = None) -> list[_Strike]:
     kicking, opp_kicking = _kicking(f.k, s), _kicking(f.opp, s)
     found = [_elbow_seen_from_behind(f, c, s)
-             for c in _arm_candidates(f, ts, s, own_down, opp_down) + _leg_candidates(f, ts, s, own_down)]
+             for c in _arm_candidates(f, ts, s, own_down, opp_down, own_top) + _leg_candidates(f, ts, s, own_down)]
     cands = _deduplicate([c for c in found if _arm_motion_is_a_strike(f, c, ts, kicking, opp_kicking, s)], ts, s)
     out = []
     for c in cands:
@@ -678,10 +663,13 @@ def _strikes(f: _Fighter, ts: np.ndarray, s: MotionSettings, own_down: np.ndarra
     return out
 
 
-def _phase(t: int, down: np.ndarray, in_clinch: np.ndarray) -> FightPhase:
-    if down[0, t] or down[1, t]:
-        return FightPhase.ground
-    return FightPhase.clinch if in_clinch[t] else FightPhase.distance
+def _phase(t: int, down: np.ndarray, state: np.ndarray) -> FightPhase:
+    """Where the fight was at frame t: the grappling state; where a fighter is not measured,
+    on the ground if one of them is down, else at distance."""
+    found = grappling_mod.phase(int(state[t]))
+    if found is not None:
+        return found
+    return FightPhase.ground if down[0, t] or down[1, t] else FightPhase.distance
 
 
 # ---- falls ----------------------------------------------------------------------
@@ -711,7 +699,7 @@ def _falls(i: int, kin: tuple[FighterKinematics, FighterKinematics], down: np.nd
         if ts[a2] - ts[b1] > s.fall_max_s or k.present[gap].mean() < 0.5:
             continue
         if v1 == GROUNDED and v2 == STANDING:
-            out.append(_Fall(i, EventType.stance_change, a1, b1, a2, b2, 0.6, {}, [], "Ayağa kalktı", []))
+            out.append(_Fall(i, EventType.stance_change, a1, b1, a2, b2, 0.6, {}, [], RISE_NOTE, []))
             continue
         if not (v1 == STANDING and v2 == GROUNDED):
             continue
@@ -767,6 +755,19 @@ def _falls(i: int, kin: tuple[FighterKinematics, FighterKinematics], down: np.nd
         else:
             out.append(_Fall(i, EventType.stance_change, a1, b1, a2, b2, 0.6, measures, drop, "Yere indi", []))
     return out
+
+
+def _onto_top(fl: _Fall, on_top: np.ndarray, ts: np.ndarray) -> bool:
+    """He went down on top of the opponent (to his knees over him): part of the position, not a fall."""
+    hi = int(np.searchsorted(ts, ts[fl.a2] + 1.0, side="right"))
+    return bool(on_top[fl.fighter, fl.a2:hi].mean() >= 0.5) if hi > fl.a2 else False
+
+
+def _reached_mat(fl: _Fall, mat: np.ndarray, ts: np.ndarray, frame_s: np.ndarray) -> bool:
+    """His hips came down to the mat (sitting, lying) within 2 s of the fall, for at least 0.3 s: a
+    fall. Bent over or crouching (a wrestler's level change in the clinch) is not one."""
+    hi = min(fl.b2, int(np.searchsorted(ts, ts[fl.a2] + 2.0, side="right")) - 1)
+    return float(frame_s[fl.a2:hi + 1][mat[fl.fighter, fl.a2:hi + 1]].sum()) >= 0.3
 
 
 def _fall_event(fl: _Fall, ts_ms: np.ndarray) -> FightEvent:
@@ -906,7 +907,7 @@ def _event(type_: EventType, actor: int | None, target: int | None, a: int, b: i
            location: ImagePoint | None = None, measures: dict[str, float] | None = None,
            note: str | None = None, evidence: list[EvidenceSignal] | None = None, zone: TargetZone | None = None,
            outcome: StrikeOutcome | None = None, outcome_confidence: float | None = None,
-           significant: bool | None = None, phase: FightPhase | None = None) -> FightEvent:
+           significant: bool | None = None, phase: FightPhase | None = None, brief: bool | None = None) -> FightEvent:
     who = SHORT[actor] if actor is not None else "x"
     a, b, peak = int(a), int(b), None if peak is None else int(peak)
     return FightEvent(event_id=f"{type_.value}-{who}-{peak if peak is not None else a}", type=type_,
@@ -916,12 +917,19 @@ def _event(type_: EventType, actor: int | None, target: int | None, a: int, b: i
                       peak_frame=peak, peak_ms=round(float(ts_ms[peak]), 1) if peak is not None else None,
                       limb=limb, possible_contact=contact, location=location, measures=measures or {},
                       confidence=confidence, target_zone=zone, outcome=outcome, outcome_confidence=outcome_confidence,
-                      significant=significant, phase=phase, evidence=list(evidence or []),
+                      significant=significant, phase=phase, brief=brief, evidence=list(evidence or []),
                       data_origin=DataOrigin.measured, note=note)
 
 
+def _found_event(f: grappling_mod.Found, ts_ms: np.ndarray) -> FightEvent:
+    a, b = min(f.a, f.b), max(f.a, f.b)
+    peak = None if f.peak is None else min(b, max(a, f.peak))
+    return _event(f.type, f.actor, f.target, a, b, peak, ts_ms, f.confidence, measures=f.measures, note=f.note,
+                  evidence=f.evidence, brief=f.brief)
+
+
 def _strike_event(i: int, f: _Fighter, x: _Strike, ts: np.ndarray, ts_ms: np.ndarray, down: np.ndarray,
-                  in_clinch: np.ndarray, s: MotionSettings, inferred: bool = False) -> FightEvent:
+                  state: np.ndarray, s: MotionSettings, inferred: bool = False) -> FightEvent:
     c, r = x.cand, x.result
     loc = f.k.image[c.peak, c.end_joint]
     measures = dict(c.measures)
@@ -931,7 +939,7 @@ def _strike_event(i: int, f: _Fighter, x: _Strike, ts: np.ndarray, ts_ms: np.nda
             measures["head_jolt"] = round(jolt, 3)
             measures["impact"] = 1.0 if jolt >= s.impact_head_jolt else 0.0
     measures.update(r.measures)
-    phase = _phase(c.peak, down, in_clinch)
+    phase = _phase(c.peak, down, state)
     return _event(c.type, i, 1 - i, c.start, c.end, c.peak, ts_ms, c.confidence, limb=c.limb, contact=x.contact,
                   measures=measures,
                   location=ImagePoint(x=round(float(loc[0]), 1), y=round(float(loc[1]), 1))
@@ -971,6 +979,14 @@ def _same_fall(e: FightEvent, fl: _Fall, ts_ms: np.ndarray) -> bool:
     return mine and abs((e.peak_ms if e.peak_ms is not None else e.start_ms) - float(ts_ms[fl.a2])) <= 1000.0
 
 
+def _visibility(k: FighterKinematics) -> tuple[np.ndarray, np.ndarray]:
+    """[F] back to the camera (1/0, NaN when not present) and [F] share of his wrists measured."""
+    away = ~k.ok[:, [0, 1, 2]].any(axis=1) & k.ok[:, [LS, RS]].all(axis=1)
+    facing = np.where(k.present, away.astype(np.float64), np.nan)
+    wrists = np.where(k.present, k.ok[:, [LW, RW]].mean(axis=1), np.nan)
+    return facing, wrists
+
+
 def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematics, FighterKinematics],
             s: MotionSettings, identity_conf: np.ndarray | None = None,
             inferred: tuple[tuple[FighterKinematics, FighterKinematics], np.ndarray] | None = None) -> Analysis:
@@ -988,20 +1004,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
     up = np.stack([k.present & (k.posture == STANDING) for k in kin]) & ~down
     distance = _distance(kin)
     both_up = _both_up(posture, down)
-    clinches = _clinch_runs(ts, both_up, distance, frame_s, s)
-    in_clinch = np.zeros(n, bool)
-    for a, b in clinches:
-        in_clinch[a:b + 1] = True
     events: list[FightEvent] = []
-
-    # Strike attempts and what they did.
-    strikes: list[list[_Strike]] = [[], []]
-    for i, f in enumerate(sides):
-        under = _underneath(kin[i], kin[1 - i], down[i], s)
-        strikes[i] = _strikes(f, ts, s, down[i], down[1 - i], under, arrays, camera)
-        for x in strikes[i]:
-            x.event = _strike_event(i, f, x, ts, ts_ms, down, in_clinch, s)
-            events.append(x.event)
 
     # Per-frame signals
     activity = np.full((2, n), np.nan)
@@ -1022,6 +1025,21 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
         raw = np.sum(f.k.center_vel * to_opp, axis=1) / np.maximum(_norm(to_opp), 1e-9) / f.scale
         approach[i] = _window_mean(ts, np.where(f.k.valid & kin[1 - i].valid, raw, np.nan), s.advance_smooth_s / 2)
 
+    # Grappling states, frame by frame: distance, clinch, ground (who is on top), scramble.
+    grap = grappling_mod.states(ts, frame_s, kin, down, distance, approach, s, identity_conf)
+    state = grap.state
+    clinches = [(a, b) for v, a, b in value_runs(state) if v == grappling_mod.CLINCH]
+    on_top, _ = grappling_mod.control_masks(state, grap.clinch_by)
+
+    # Strike attempts and what they did.
+    strikes: list[list[_Strike]] = [[], []]
+    for i, f in enumerate(sides):
+        under = _underneath(kin[i], kin[1 - i], down[i], s)
+        strikes[i] = _strikes(f, ts, s, down[i], down[1 - i], under, arrays, camera, on_top[i])
+        for x in strikes[i]:
+            x.event = _strike_event(i, f, x, ts, ts_ms, down, state, s)
+            events.append(x.event)
+
     movement = np.full((2, n), NO_MOVEMENT, np.int8)
     runs: list[MovementRun] = []
     for i in range(2):
@@ -1037,30 +1055,27 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
                 runs.append(MovementRun(i, adv, int(a), int(b), float(ts_ms[a]),
                                         float(ts_ms[b] + frame_s[b] * 1000), secs))
 
-    for a, b in clinches:
-        events.append(_event(EventType.clinch, None, None, a, b, None, ts_ms, 0.6,
-                             measures={"seconds": round(float(frame_s[a:b + 1].sum()), 2)}))
-
-    # Ground control: one fighter down, the other close and above him.
-    control = np.zeros((2, n), bool)
-    for top in range(2):
-        bottom = 1 - top
-        kt, kb = kin[top], kin[bottom]
-        with np.errstate(all="ignore"):
-            above = (kb.center[:, 1] - kt.center[:, 1]) >= 0.2 * kb.scale
-            near = _norm(kt.center - kb.center) / kb.scale <= s.control_distance
-        mask = down[bottom] & kt.valid & kb.valid & above & near
-        for a, b in _runs(mask, ts, 0.3):
-            secs = float(frame_s[a:b + 1].sum())
-            if secs >= s.control_min_s:
-                control[top, a:b + 1] = True
-                events.append(_event(EventType.ground_control, top, bottom, a, b, None, ts_ms, 0.5,
-                                     measures={"seconds": round(secs, 2)}, note="Tahmini; yakınlık ve duruştan"))
-
-    # Falls and getting up.
+    # Falls, then what the grappling states make of them: takedowns, getting up, reversals...
     falls = [fl for i in range(2) for fl in _falls(i, kin, down, up, share, ts, frame_s, strikes, clinches, distance,
-                                                    control, s)]
-    fall_events = [_fall_event(fl, ts_ms) for fl in falls]
+                                                    on_top, s)]
+    rises = [grappling_mod.Rise(fl.fighter, fl.b1, fl.a2, fl.confidence, fl.a1) for fl in falls
+             if fl.kind == EventType.stance_change and fl.note == RISE_NOTE]
+    found = grappling_mod.transitions(
+        grap, ts, frame_s, kin, down, distance, s,
+        knockdowns=[(fl.fighter, fl.a2) for fl in falls if fl.kind == EventType.knockdown],
+        fall_takedowns=[grappling_mod.FallTakedown(fl.fighter, fl.b1, fl.a2, fl.b2, fl.confidence)
+                        for fl in falls if fl.kind == EventType.takedown],
+        rises=rises, strike_moments=[np.array([ts[x.cand.peak] for x in strikes[i]]) for i in (0, 1)],
+        standing_ref=[standing_reference(k, ts, s) for k in kin])
+    found += grappling_mod.submissions(grap, kin, ts, frame_s, s)
+    grappling_events = [_found_event(f, ts_ms) for f in found]
+    mat = np.stack([grappling_mod.on_mat(k, s) for k in kin])
+    fall_events = [_fall_event(fl, ts_ms) for fl in falls
+                   if fl.kind == EventType.knockdown or (fl.kind == EventType.stance_change and fl.note != RISE_NOTE
+                                                         and not _onto_top(fl, on_top, ts)
+                                                         and _reached_mat(fl, mat, ts, frame_s))]
+    fall_events += [e for e in grappling_events if e.type == EventType.takedown]
+    events += [e for e in grappling_events if e.type != EventType.takedown]
     if inferred is not None and identity_conf is not None:
         kin_x, mask = inferred
         inferred_falls, inferred_strikes = _inferred_knockdowns(arrays, camera, kin, kin_x, mask, identity_conf, down,
@@ -1069,7 +1084,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
         for g, attacker, x in inferred_strikes:
             if any(abs(ts[y.cand.peak] - ts[x.cand.peak]) <= s.same_motion_s for y in strikes[g]):
                 continue  # found without the inference
-            events.append(_strike_event(g, attacker, x, ts, ts_ms, down, in_clinch, s, inferred=True))
+            events.append(_strike_event(g, attacker, x, ts, ts_ms, down, state, s, inferred=True))
         for fl in inferred_falls:
             same = [e for e in fall_events if _same_fall(e, fl, ts_ms)]
             if any(e.type in (EventType.knockdown, EventType.takedown) for e in same):
@@ -1087,6 +1102,19 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
             e.event_id = f"{e.event_id}-{seen[e.event_id]}"
     if identity_conf is not None:
         attribute(events, kin, identity_conf, s)
+
+    # Active control: on top or in control of the clinch while striking or holding a submission.
+    active = grappling_mod.active_control(
+        state, grap.clinch_by, ts,
+        [np.array([ts[e.peak_frame] for e in events if e.actor == FIGHTERS[i] and e.type in STRIKE_TYPES
+                   and e.peak_frame is not None and counted(e)]) for i in (0, 1)],
+        [[(float(ts[e.start_frame]), float(ts[e.end_frame])) for e in events
+          if e.actor == FIGHTERS[i] and e.type == EventType.submission_attempt] for i in (0, 1)], s)
+    for e in events:
+        if e.type == EventType.ground_control and e.actor is not None:
+            i = FIGHTERS.index(e.actor)
+            part = slice(e.start_frame, e.end_frame + 1)
+            e.measures["active_s"] = round(float(frame_s[part][active[i, part]].sum()), 2)
     damage = damage_mod.detect(ts_ms, kin, approach,
                                [(x.event, x.result, i) for i in range(2) for x in strikes[i] if x.event is not None],
                                events, s)
@@ -1095,6 +1123,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
     for i in range(2):
         mine = [e for e in events if e.actor == FIGHTERS[i] and counted(e)]
         hits = [e for e in mine if e.type in STRIKE_TYPES]
+        takedowns = [e for e in mine if e.type == EventType.takedown]
         stats.append({
             "strike_attempts": sum(e.type in HAND_STRIKES for e in mine),
             "kick_attempts": sum(e.type == EventType.kick for e in mine),
@@ -1103,12 +1132,23 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
             "significant_attempts": sum(bool(e.significant) for e in hits),
             "significant_landed": sum(bool(e.significant) and e.outcome == StrikeOutcome.landed for e in hits),
             "possible_knockdowns": sum(e.type == EventType.knockdown for e in mine),
-            "possible_takedowns": sum(e.type == EventType.takedown for e in mine),
-            "control_s": round(float(frame_s[control[i]].sum()), 2),
+            "possible_takedowns": len(takedowns),
+            "takedown_attempts": len(takedowns) + sum(e.type == EventType.takedown_attempt for e in mine),
+            "brief_takedowns": sum(bool(e.brief) for e in takedowns),
+            "reversals": sum(e.type == EventType.reversal for e in mine),
+            "get_ups": sum(e.type == EventType.get_up for e in mine),
+            "submission_attempts": sum(e.type == EventType.submission_attempt for e in mine),
+            "control_s": round(sum(e.measures.get("seconds", 0.0) for e in mine if e.type == EventType.ground_control),
+                               2),
+            "clinch_control_s": round(float(frame_s[(state == grappling_mod.CLINCH) & (grap.clinch_by == i)].sum()), 2),
+            "active_control_s": round(float(frame_s[active[i]].sum()), 2),
             "advance_s": round(sum(r.seconds for r in runs if r.fighter == i and r.advancing), 2),
             "retreat_s": round(sum(r.seconds for r in runs if r.fighter == i and not r.advancing), 2),
             "measured_s": round(float(frame_s[valid[i]].sum()), 2),
         })
+    vis = [_visibility(k) for k in kin]
     return Analysis(events=events, runs=runs, valid=valid, activity=activity, hand_speed=hand, foot_speed=foot,
                     approach=approach, movement=movement, posture=np.where(down, GROUNDED, posture).astype(np.int8),
-                    distance=distance, frame_s=frame_s, stats=stats, damage=damage)
+                    distance=distance, frame_s=frame_s, stats=stats, damage=damage, grappling=grap, active=active,
+                    facing_away=np.stack([v[0] for v in vis]), wrists=np.stack([v[1] for v in vis]),
+                    phases=grappling_mod.phase_seconds(state, frame_s))

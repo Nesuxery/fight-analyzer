@@ -11,6 +11,12 @@ confidence, whether it is a significant strike and the signals behind the
 estimate (`evidence`). One camera and a 2D skeleton cannot make this certain:
 `unknown` means it could not be told, never "missed". Damage signals
 (`DamageSignal`) follow the ABC definition of damage and are estimates too.
+
+Since schema 1.12.0 the grappling events come from a per-frame state machine
+(distance, clinch, ground with red or blue on top, scramble; see
+motion/grappling.py): takedown attempts, takedowns (`brief` when the opponent
+got up at once), reversals, getting up and possible submission attempts. All of
+them are estimates from 2D joints as well.
 """
 
 from __future__ import annotations
@@ -33,8 +39,12 @@ class EventType(StrEnum):
     elbow = "elbow"
     ground_strike = "ground_strike"  # strike from the top position on a grounded opponent
     clinch = "clinch"
-    takedown = "takedown"
-    ground_control = "ground_control"
+    takedown = "takedown"  # landed: the opponent was brought down from his feet (see `brief`)
+    takedown_attempt = "takedown_attempt"  # a level change into the opponent that did not bring him down
+    ground_control = "ground_control"  # on top on the ground
+    reversal = "reversal"  # the fighter underneath came out on top
+    get_up = "get_up"  # back on his feet after being down (from underneath when the opponent was on top)
+    submission_attempt = "submission_attempt"  # possible: an arm held around the opponent's neck
     knockdown = "knockdown"
     stance_change = "stance_change"
     other = "other"
@@ -92,6 +102,13 @@ class EvidenceSignal(StrEnum):
     mobility_drop = "mobility_drop"  # less hand and foot activity for the rest of the round
     # whose it is was inferred: the other fighter is followed with high confidence
     identity_inferred = "identity_inferred"
+    # grappling (schema 1.12.0 on)
+    close_contact = "close_contact"  # the fighters were tied up or very close just before
+    level_change = "level_change"  # the fighter dropped his hips and shoulders into the opponent
+    top_position = "top_position"  # the fighter was above the opponent on the ground afterwards
+    position_change = "position_change"  # who is on top changed
+    neck_wrap = "neck_wrap"  # a forearm held across the opponent's neck, his head against the arm
+    escape_fade = "escape_fade"  # the held fighter's arm and leg motion faded during the hold
 
 
 class ImagePoint(Contract):
@@ -130,6 +147,10 @@ class FightEvent(Contract):
             "Strikes: a significant strike (every strike at distance, power strikes in the clinch and on the "
             "ground). Says nothing about landing."))
     phase: FightPhase | None = Field(default=None, description="Strikes: where the fight was at the peak.")
+    brief: bool | None = Field(
+        default=None, description=(
+            "Takedowns: the attacker stayed on top for less than the hold time because the opponent got up or "
+            "came out on top at once. None: not a takedown, or it could not be told (measurement ended first)."))
     evidence: list[EvidenceSignal] = Field(default_factory=list, description="Signals behind the estimate.")
     attribution_confidence: float | None = Field(
         default=None, ge=0, le=1, description=(

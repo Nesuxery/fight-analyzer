@@ -71,6 +71,8 @@ export interface TimelineEvent {
   significantStrike?: boolean | null;
   /** Seen only by inferring the opponent's identity: listed, not counted, no momentum. */
   inferred?: boolean;
+  /** Takedowns (schema 1.12.0 on): the opponent got up or came out on top at once. */
+  brief?: boolean | null;
 }
 
 /** A damage signal in the event list (an estimate; v2 Bölüm 3a). */

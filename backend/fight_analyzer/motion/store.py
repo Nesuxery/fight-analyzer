@@ -21,6 +21,7 @@ from fight_analyzer.contracts import (
     FighterId,
     FighterSignals,
     FightEvent,
+    GrapplingState,
     MomentumContribution,
     MomentumParameters,
     MomentumTimeline,
@@ -32,6 +33,7 @@ from fight_analyzer.contracts.common import DataOrigin, utcnow
 from fight_analyzer.fsutil import cache_key, staging_dir
 
 from . import exclusions as excl
+from . import grappling as grappling_mod
 from . import momentum as momentum_mod
 from .camera import CAMERA_VERSION, CameraTrack
 from .events import ADVANCING, NEUTRAL, RETREATING, Analysis, MovementRun
@@ -39,8 +41,9 @@ from .kinematics import GROUNDED, STANDING, TRANSITION
 
 # 2: possible impact (head jolt) on contact strikes; 3: attribution confidence; 4: strike outcome, target zone,
 # significant strikes, elbows and ground strikes, falls from the hip height (sitting), knockdowns with an
-# inferred identity, damage signals
-EVENTS_VERSION = 4
+# inferred identity, damage signals; 5: grappling states (strike phase, clinch, ground control, takedowns,
+# attempts, reversals, get-ups, submission attempts, clinch and active control), visibility signals
+EVENTS_VERSION = 5
 # 2: excluded parts; 3: events of uncertain attribution earn nothing; 4: elbows and ground strikes earn the
 # strike attempt weight
 MOMENTUM_VERSION = 4
@@ -48,8 +51,13 @@ MANIFEST = "manifest.json"
 CAMERA_ARRAYS = ("to_ref", "segment", "known", "inliers")
 SIGNAL_ARRAYS = ("sample_ms", "valid", "activity", "hand_speed", "foot_speed", "approach", "movement", "posture",
                  "camera_known", "distance")
+# events version 5 on (older entries have none): sampled grappling state and visibility, and per frame the
+# grappling state, its confidence and who is credited with clinch control
+NEW_SIGNAL_ARRAYS = ("phase", "facing_away", "wrists_measured")
+FRAME_ARRAYS = ("grappling", "grappling_conf", "clinch_by")
 MOVEMENTS = {ADVANCING: Movement.advancing, RETREATING: Movement.retreating, NEUTRAL: Movement.neutral}
 POSTURES = {STANDING: Posture.standing, GROUNDED: Posture.grounded, TRANSITION: Posture.transition}
+PHASES: dict[int, GrapplingState] = dict(grappling_mod.CONTRACT)
 
 
 @dataclass
@@ -58,8 +66,10 @@ class EventsData:
     runs: list[MovementRun]
     stats: list[dict[str, float]]
     camera_known_share: float
-    signals: dict[str, np.ndarray]  # SIGNAL_ARRAYS, sampled at MotionSettings.sample_hz
+    signals: dict[str, np.ndarray]  # SIGNAL_ARRAYS (+ NEW_SIGNAL_ARRAYS), sampled at MotionSettings.sample_hz
     damage: list[DamageSignal] = field(default_factory=list)  # events version 4 on
+    frames: dict[str, np.ndarray] = field(default_factory=dict)  # FRAME_ARRAYS, events version 5 on
+    phases: dict[str, float] = field(default_factory=dict)  # seconds per grappling state, events version 5 on
 
 
 @dataclass
@@ -84,12 +94,22 @@ def _write(stage: Path, inputs: dict, arrays: dict[str, np.ndarray], extra: dict
     (stage / MANIFEST).write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def _read(d: Path, names: tuple[str, ...]) -> tuple[dict, dict[str, np.ndarray]] | None:
+def _read(d: Path, names: tuple[str, ...], optional: tuple[str, ...] = ()
+          ) -> tuple[dict, dict[str, np.ndarray]] | None:
+    """Manifest and arrays of an entry (None when a required array is missing); `optional`
+    arrays are loaded when the entry has them (older entries were written without)."""
     try:
         manifest = json.loads((d / MANIFEST).read_text(encoding="utf-8"))
-        return manifest, {name: np.load(d / f"{name}.npy", allow_pickle=False) for name in names}
+        arrays = {name: np.load(d / f"{name}.npy", allow_pickle=False) for name in names}
     except (OSError, ValueError, KeyError):
         return None
+    for name in optional:
+        if name in manifest.get("arrays", []):
+            try:
+                arrays[name] = np.load(d / f"{name}.npy", allow_pickle=False)
+            except (OSError, ValueError):
+                return None
+    return manifest, arrays
 
 
 def key_inputs(cache_root: Path, kind: str, key: str) -> dict | None:
@@ -145,6 +165,11 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
         out[name] = np.full((2, count), np.nan, np.float32)
     out["movement"] = np.full((2, count), -1, np.int8)
     out["posture"] = np.full((2, count), -1, np.int8)
+    grap = analysis.grappling
+    if grap is not None:
+        out["phase"] = np.full(count, -1, np.int8)
+        out["facing_away"] = np.full((2, count), -1, np.int8)
+        out["wrists_measured"] = np.full((2, count), np.nan, np.float32)
     for k in range(count):
         frames = np.flatnonzero(which == k)
         if frames.size == 0:  # frame rate below the grid: use the nearest frame
@@ -153,6 +178,17 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
         d = analysis.distance[frames]
         if np.isfinite(d).any():
             out["distance"][k] = float(np.nanmean(d))
+        if grap is not None:
+            v = grap.state[frames]
+            known = v[v >= 0]
+            if known.size * 2 >= frames.size:  # most of its frames have a state
+                out["phase"][k] = int(np.bincount(known).argmax())
+            for i in range(2):
+                away = analysis.facing_away[i, frames]
+                away = away[np.isfinite(away)]
+                if away.size:
+                    out["facing_away"][i, k] = int(away.mean() >= 0.5)
+                    out["wrists_measured"][i, k] = float(np.nanmean(analysis.wrists[i, frames]))
         for i in range(2):
             ok = analysis.valid[i, frames]
             out["valid"][i, k] = ok.mean() >= 0.5
@@ -173,30 +209,38 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
 
 
 def events_data(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, s: MotionSettings) -> EventsData:
+    grap = analysis.grappling
+    frames = {} if grap is None else {"grappling": grap.state.astype(np.int8),
+                                      "grappling_conf": grap.conf.astype(np.float32),
+                                      "clinch_by": grap.clinch_by.astype(np.int8)}
     return EventsData(events=analysis.events, runs=analysis.runs, stats=analysis.stats,
                       camera_known_share=round(camera.known_share, 3),
-                      signals=sample(analysis, ts_ms, camera, s.sample_hz), damage=analysis.damage)
+                      signals=sample(analysis, ts_ms, camera, s.sample_hz), damage=analysis.damage, frames=frames,
+                      phases=dict(analysis.phases))
 
 
 def write_events(cache_root: Path, key: str, inputs: dict, data: EventsData) -> None:
     with staging_dir(_entry(cache_root, "events", key)) as stage:
-        _write(stage, inputs, data.signals, {
+        _write(stage, inputs, {**data.signals, **data.frames}, {
             "events": [e.model_dump(mode="json") for e in data.events],
             "damage": [d.model_dump(mode="json") for d in data.damage],
             "runs": [asdict(r) for r in data.runs], "stats": data.stats,
-            "camera_known_share": data.camera_known_share})
+            "camera_known_share": data.camera_known_share, "phases": data.phases})
 
 
 def read_events(cache_root: Path, key: str) -> EventsData | None:
-    got = _read(_entry(cache_root, "events", key), SIGNAL_ARRAYS)
+    got = _read(_entry(cache_root, "events", key), SIGNAL_ARRAYS, NEW_SIGNAL_ARRAYS + FRAME_ARRAYS)
     if got is None:
         return None
-    manifest, signals = got
+    manifest, arrays = got
+    signals = {k: v for k, v in arrays.items() if k not in FRAME_ARRAYS}
+    frames = {k: v for k, v in arrays.items() if k in FRAME_ARRAYS}
     try:
         return EventsData(events=[FightEvent.model_validate(e) for e in manifest["events"]],
                           runs=[MovementRun(**r) for r in manifest["runs"]], stats=manifest["stats"],
                           camera_known_share=float(manifest["camera_known_share"]), signals=signals,
-                          damage=[DamageSignal.model_validate(d) for d in manifest.get("damage", [])])
+                          damage=[DamageSignal.model_validate(d) for d in manifest.get("damage", [])],
+                          frames=frames, phases={k: float(v) for k, v in (manifest.get("phases") or {}).items()})
     except (KeyError, TypeError, ValueError):
         return None
 
@@ -214,11 +258,14 @@ def motion_timeline(job_id: str, data: EventsData, s: MotionSettings) -> MotionT
             activity=[_num(v) for v in sig["activity"][i]], hand_speed=[_num(v) for v in sig["hand_speed"][i]],
             foot_speed=[_num(v) for v in sig["foot_speed"][i]], approach_speed=[_num(v) for v in sig["approach"][i]],
             movement=[MOVEMENTS.get(int(v)) for v in sig["movement"][i]],
-            posture=[POSTURES.get(int(v)) for v in sig["posture"][i]]))
+            posture=[POSTURES.get(int(v)) for v in sig["posture"][i]],
+            facing_away=[None if v < 0 else bool(v) for v in sig["facing_away"][i]] if "facing_away" in sig else [],
+            wrists_measured=[_num(v) for v in sig["wrists_measured"][i]] if "wrists_measured" in sig else []))
+    phase = [PHASES.get(int(v)) for v in sig["phase"]] if "phase" in sig else []
     return MotionTimeline(job_id=job_id, data_origin=DataOrigin.measured, sample_hz=s.sample_hz,
                           sample_ms=[round(float(t), 1) for t in sig["sample_ms"]],
                           camera_known=[bool(v) for v in sig["camera_known"]],
-                          distance=[_num(v) for v in sig["distance"]], fighters=fighters)
+                          distance=[_num(v) for v in sig["distance"]], phase=phase, fighters=fighters)
 
 
 # ---- momentum ----------------------------------------------------------------

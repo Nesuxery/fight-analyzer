@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, RefObject } from "react";
-import type { RoundSource } from "../../contracts/generated";
+import type { EventType, RoundSource } from "../../contracts/generated";
 import { EVENT_LABELS, MATCH_LABELS, ROUND_EDIT_LABELS, TIMELINE_LABELS as T } from "../../labels";
 import type { TimelineEvent } from "../../model/analysis";
 import type { Clock } from "../../player/clock";
@@ -138,6 +138,9 @@ const MARK_TITLE = (e: TimelineEvent, names: Record<"red" | "blue", string> | nu
   `${formatClock(e.startS, true)} · ${e.side && names ? `${names[e.side]} · ` : ""}${EVENT_LABELS[e.type]}` +
   (e.tags?.length ? ` (${e.tags.map((t) => t.label).join(", ")})` : "");
 
+/** Grappling transitions (v2 Bölüm 3b): small hollow marks in the lane of the fighter who made them. */
+const GRAPPLING_MARKS: EventType[] = ["takedown_attempt", "reversal", "get_up", "submission_attempt"];
+
 function Mark({ e, pct, names }: { e: TimelineEvent; pct: (t: number) => string; names: Record<"red" | "blue", string> | null }) {
   const span = e.type === "clinch" || e.type === "ground_control";
   const style = span
@@ -191,7 +194,9 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
   const curve = momentum && momentum.t.length > 1 ? curvePaths(momentum, duration) : null;
   const gaps = momentum?.insufficient ? spans(momentum.t, momentum.insufficient, duration) : [];
   const ticks = makeTicks(clock.duration, width);
-  const lane = (side: "red" | "blue") => events.filter((e) => e.side === side && !e.significant);
+  // a clinch belongs to both fighters: drawn in both lanes, in a neutral tone
+  const lane = (side: "red" | "blue") =>
+    events.filter((e) => (e.side === side || (e.side === null && e.type === "clinch")) && !e.significant);
   const kinds = new Set(events.map((e) => e.type));
 
   return (
@@ -285,6 +290,7 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
         )}
         {(kinds.has("knockdown") || kinds.has("takedown")) && <li><span className="tl__key tl__key--big" />{T.big}</li>}
         {(kinds.has("clinch") || kinds.has("ground_control")) && <li><span className="tl__key tl__key--span" />{T.span}</li>}
+        {GRAPPLING_MARKS.some((k) => kinds.has(k)) && <li><span className="tl__key tl__key--grappling" />{T.grappling}</li>}
         {gaps.length > 0 && <li><span className="tl__key tl__key--gap" />{T.gap}</li>}
         {excluded.length > 0 && <li><span className="tl__key tl__key--excluded" />{T.excluded}</li>}
         {rounds.some((r) => r.source !== "manual") && <li><span className="tl__key tl__key--round-auto" />{T.roundAuto}</li>}

@@ -269,6 +269,7 @@ export function toTimelineEvents(events: FightEvent[], contributions: MomentumCo
     zone: e.target_zone ?? null,
     significantStrike: e.significant ?? null,
     inferred: inferredOnly(e),
+    brief: e.brief ?? null,
   }));
 }
 

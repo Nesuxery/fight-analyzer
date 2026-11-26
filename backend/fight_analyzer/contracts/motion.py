@@ -30,6 +30,17 @@ class Movement(StrEnum):
     neutral = "neutral"
 
 
+class GrapplingState(StrEnum):
+    """Where the fight is, frame by frame (motion/grappling.py). An estimate from 2D joints;
+    a frame on which a fighter is not measured has no state (null), never a guessed one."""
+
+    distance = "distance"  # both on their feet, apart
+    clinch = "clinch"  # both on their feet, tied up
+    ground_red_top = "ground_red_top"  # on the ground, red (fighter_a) above blue
+    ground_blue_top = "ground_blue_top"  # on the ground, blue (fighter_b) above red
+    scramble = "scramble"  # on the ground (one or both), no clear top
+
+
 class FighterSignals(Contract):
     fighter_id: FighterId
     valid: list[bool] = Field(description="Fighter verified with usable joints at the sample.")
@@ -40,6 +51,12 @@ class FighterSignals(Contract):
         description="Hip centre toward (+) / away from (-) the opponent, camera motion removed, body units/s.")
     movement: list[Movement | None]
     posture: list[Posture | None]
+    facing_away: list[bool | None] = Field(
+        default_factory=list, description=(
+            "Back to the camera on most frames of the sample (nose and eyes not measured while both shoulders "
+            "are). How well his strikes can be seen depends on it. Empty: analysed before events version 5."))
+    wrists_measured: list[float | None] = Field(
+        default_factory=list, description="Share of the sample's frames on which his wrists are measured, 0..1.")
 
 
 class MotionTimeline(VersionedContract):
@@ -49,6 +66,10 @@ class MotionTimeline(VersionedContract):
     sample_ms: list[float]
     camera_known: list[bool] = Field(description="Camera motion could be estimated from the background.")
     distance: list[float | None] = Field(description="Distance between the fighters' hip centres, body units.")
+    phase: list[GrapplingState | None] = Field(
+        default_factory=list, description=(
+            "Grappling state at the sample (most of its frames; null: not measured). Empty: analysed before "
+            "events version 5."))
     fighters: list[FighterSignals] = Field(max_length=2)
 
 
@@ -192,11 +213,34 @@ class FighterEventCounts(Contract):
     significant_attempts: int = Field(default=0, ge=0, description="Significant strike attempts.")
     significant_landed: int = Field(default=0, ge=0)
     possible_knockdowns: int = Field(ge=0, description="Knockdowns scored by this fighter.")
-    possible_takedowns: int = Field(ge=0)
-    control_s: float = Field(ge=0)
+    possible_takedowns: int = Field(ge=0, description="Takedowns landed by this fighter (brief ones included).")
+    takedown_attempts: int = Field(
+        default=0, ge=0, description="Takedown attempts, landed ones included (events version 5 on).")
+    brief_takedowns: int = Field(default=0, ge=0, description="Landed takedowns the opponent got up from at once.")
+    reversals: int = Field(default=0, ge=0)
+    get_ups: int = Field(default=0, ge=0)
+    submission_attempts: int = Field(default=0, ge=0, description="Possible submission attempts (low confidence).")
+    control_s: float = Field(ge=0, description="Estimated time on top on the ground.")
+    clinch_control_s: float = Field(
+        default=0, ge=0, description=(
+            "Estimated clinch control: time in the clinch after this fighter drove the opponent back (low "
+            "confidence; the cage is not measured)."))
+    active_control_s: float = Field(
+        default=0, ge=0, description="Control time (ground or clinch) during which he kept striking or threatening "
+                                     "a submission.")
     advance_s: float = Field(ge=0)
     retreat_s: float = Field(ge=0)
     measured_s: float = Field(ge=0, description="Time with valid measurements of this fighter.")
+
+
+class PhaseTimes(Contract):
+    """Seconds of the video in each grappling state (whole video, before exclusions)."""
+
+    distance_s: float = Field(ge=0)
+    clinch_s: float = Field(ge=0)
+    ground_s: float = Field(ge=0, description="On the ground with a clear top.")
+    scramble_s: float = Field(ge=0)
+    unknown_s: float = Field(ge=0, description="A fighter was not measured.")
 
 
 class EventsSummary(Contract):
@@ -207,6 +251,7 @@ class EventsSummary(Contract):
     events: int = Field(ge=0)
     damage_signals: int = Field(default=0, ge=0)
     camera_known_share: float = Field(ge=0, le=1, description="Frames whose camera motion is known.")
+    phases: PhaseTimes | None = Field(default=None, description="Grappling states (events version 5 on).")
     fighters: list[FighterEventCounts] = Field(max_length=2)
 
 

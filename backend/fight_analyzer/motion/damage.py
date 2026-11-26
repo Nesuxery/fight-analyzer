@@ -19,8 +19,13 @@ output_drop        cumulative: after enough damage inside a round the fighter's
                    edit without processing again, so it is derived from the
                    cached events at request time (`with_output_drop`).
 
-submission_danger comes with the grappling states, visible_injury is only ever
-a flag set by the user.
+submission_danger  a possible submission attempt (grappling.py: a neck wrap held
+                   for seconds): severity from how long it was held and how much
+                   the held fighter's arm and leg motion faded during the hold.
+                   Low confidence: in 2D a choke cannot be told apart from head
+                   control or a collar tie for sure.
+
+visible_injury is only ever a flag set by the user.
 
 Nothing here scores anything: the signals are inputs of the judging engine.
 """
@@ -149,6 +154,52 @@ def _retreat(approach: np.ndarray, ts: np.ndarray, at: int, own_strikes: np.ndar
     return hi - 1, {"retreat_share": round(share, 3), "retreat_speed": round(float(-window[ok][away].mean()), 3)}
 
 
+SUBMISSION_MAX_CONFIDENCE = 0.35
+
+
+def _limb_motion(k: FighterKinematics, a: int, b: int) -> np.ndarray:
+    """Mean speed of his wrists and ankles relative to his body on frames a..b (torso lengths/s)."""
+    body = k.ref_vel()[a:b + 1]
+    speeds = []
+    for j in (LW, RW, LA, RA):
+        with np.errstate(all="ignore"):
+            speeds.append(np.linalg.norm(k.vel[a:b + 1, j] - body, axis=1) / k.scale[a:b + 1])
+    stack = np.stack(speeds)
+    count = np.isfinite(stack).sum(axis=0)
+    total = np.where(np.isfinite(stack), stack, 0.0).sum(axis=0)
+    return np.where(count > 0, total / np.maximum(count, 1), np.nan)
+
+
+def submission_danger(e: FightEvent, kin: tuple[FighterKinematics, FighterKinematics], ts_ms: np.ndarray,
+                      s: MotionSettings) -> DamageSignal | None:
+    """Danger of a possible submission attempt for the held fighter: how long it was held and how
+    much his escape motion (arms and legs) faded from the first to the last third of the hold."""
+    if e.type != EventType.submission_attempt or e.target is None:
+        return None
+    target = FIGHTERS.index(e.target)
+    a, b = e.start_frame, e.end_frame
+    held_s = float(ts_ms[b] - ts_ms[a]) / 1000.0
+    motion = _limb_motion(kin[target], a, b)
+    third = max(1, motion.size // 3)
+    first, last = motion[:third], motion[-third:]
+    fade = None
+    if np.isfinite(first).any() and np.isfinite(last).any():
+        early, late = float(np.nanmean(first)), float(np.nanmean(last))
+        if early >= 0.5:  # he moved at first: escapes that could fade
+            fade = _clip01(1 - late / early)
+    evidence = [EvidenceSignal.neck_wrap]
+    measures = {"held_s": round(held_s, 2)}
+    if fade is not None:
+        measures["escape_fade"] = round(fade, 3)
+        if fade >= 0.3:
+            evidence.append(EvidenceSignal.escape_fade)
+    severity = 0.3 + 0.05 * min(held_s, 8.0) + 0.3 * (fade or 0.0)
+    frame = e.peak_frame if e.peak_frame is not None else a
+    return _signal(DamageType.submission_danger, frame, ts_ms, target, severity,
+                   min(SUBMISSION_MAX_CONFIDENCE, e.confidence), e, evidence, measures,
+                   end_ms=float(ts_ms[b]), note="Olası; tutulan boğma girişimi")
+
+
 def detect(ts_ms: np.ndarray, kin: tuple[FighterKinematics, FighterKinematics], approach: np.ndarray,
            strikes: Sequence[tuple[FightEvent, Assessment, int]], events: Sequence[FightEvent],
            s: MotionSettings) -> list[DamageSignal]:
@@ -156,6 +207,10 @@ def detect(ts_ms: np.ndarray, kin: tuple[FighterKinematics, FighterKinematics], 
     `strikes` are the strike events with their assessment and the actor's index."""
     ts = ts_ms / 1000.0
     out: list[DamageSignal] = []
+    for e in events:
+        found = submission_danger(e, kin, ts_ms, s)
+        if found is not None:
+            out.append(found)
     downs: list[list[int]] = [[], []]  # frames at which a fighter went down
     for e in events:
         if e.type == EventType.knockdown and e.target is not None:

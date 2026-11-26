@@ -240,7 +240,7 @@ def test_selection_runs_identity_tracking(env: Env, first: dict):
     events = env.client.get(f"/api/v1/jobs/{job_id}/events").json()
     assert not [e for e in events["events"] if e["type"] in ("punch", "kick", "knee", "knockdown", "takedown")]
     assert all(e["attribution_confidence"] is not None for e in events["events"])
-    assert job["outputs"]["events"]["version"] == 4 and events["damage"] == []  # nothing landed on a photo
+    assert job["outputs"]["events"]["version"] == 5 and events["damage"] == []  # nothing landed on a photo
     assert job["outputs"]["scoring"]["unattributed_events"] == 0
     motion = env.client.get(f"/api/v1/jobs/{job_id}/motion").json()
     assert len(motion["fighters"]) == 2 and len(motion["sample_ms"]) == len(motion["fighters"][0]["valid"]) >= 1

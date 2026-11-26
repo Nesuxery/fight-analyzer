@@ -28,6 +28,7 @@ from fight_analyzer.motion import momentum as mm
 from tests.support.motion_scenes import (
     Fighter,
     MotionScene,
+    arm_at,
     cover,
     dip,
     elbow,
@@ -119,7 +120,10 @@ def test_a_leg_kick_lands_when_the_struck_leg_is_displaced():
 def test_significant_strikes_every_one_at_distance_only_power_ones_in_the_clinch():
     far = one(analyze([punch(1.0, "r", height=-0.15)]))
     assert far.phase == FightPhase.distance and far.significant
-    close = analyze([punch(2.0, "r", out_s=0.12), punch(3.0, "l", out_s=0.07)], distance=1.2, duration=4.0)
+    # blue holds red behind the neck: a clinch (close range without a grip is an exchange in the pocket)
+    collar_tie = arm_at(0.0, 4.5, "l", (0.55, -0.75), (0.1, -0.9))
+    close = analyze([punch(2.0, "r", out_s=0.12), punch(3.0, "l", out_s=0.07)], [collar_tie], distance=1.2,
+                    duration=4.0)
     weak, strong = strikes(close)
     assert weak.phase == strong.phase == FightPhase.clinch
     assert weak.measures["peak_speed"] / S.punch_peak < S.power_strength and not weak.significant

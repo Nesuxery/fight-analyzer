@@ -38,7 +38,13 @@ export type EvidenceSignal =
   | "no_offense"
   | "pace_drop"
   | "mobility_drop"
-  | "identity_inferred";
+  | "identity_inferred"
+  | "close_contact"
+  | "level_change"
+  | "top_position"
+  | "position_change"
+  | "neck_wrap"
+  | "escape_fade";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "DamageKind".
@@ -95,7 +101,11 @@ export type EventType =
   | "ground_strike"
   | "clinch"
   | "takedown"
+  | "takedown_attempt"
   | "ground_control"
+  | "reversal"
+  | "get_up"
+  | "submission_attempt"
   | "knockdown"
   | "stance_change"
   | "other";
@@ -261,6 +271,15 @@ export type Movement = "advancing" | "retreating" | "neutral";
  */
 export type Posture = "standing" | "grounded" | "transition";
 /**
+ * Where the fight is, frame by frame (motion/grappling.py). An estimate from 2D joints;
+ * a frame on which a fighter is not measured has no state (null), never a guessed one.
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "GrapplingState".
+ */
+export type GrapplingState =
+  "distance" | "clinch" | "ground_red_top" | "ground_blue_top" | "scramble";
+/**
  * COCO-17 keypoints in model output order: index k of every keypoint list
  * is the k-th member below (0 = nose ... 16 = right_ankle). This is the
  * order predicted by the Ultralytics YOLO pose models (see
@@ -306,7 +325,7 @@ export type SkeletonFormat = "coco17";
 export type QualityCause = "no_footage" | "camera" | "overlap" | "image";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.11.0.
+ * MMA Fight Analyzer data contracts, schema version 1.12.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
@@ -396,9 +415,25 @@ export interface AnalysisExport {
  * via the `definition` "FighterEventCounts".
  */
 export interface FighterEventCounts {
+  /**
+   * Control time (ground or clinch) during which he kept striking or threatening a submission.
+   */
+  active_control_s: number;
   advance_s: number;
+  /**
+   * Landed takedowns the opponent got up from at once.
+   */
+  brief_takedowns: number;
+  /**
+   * Estimated clinch control: time in the clinch after this fighter drove the opponent back (low confidence; the cage is not measured).
+   */
+  clinch_control_s: number;
+  /**
+   * Estimated time on top on the ground.
+   */
   control_s: number;
   fighter_id: FighterId;
+  get_ups: number;
   kick_attempts: number;
   /**
    * Strikes estimated as landed (events version 4 on).
@@ -413,8 +448,12 @@ export interface FighterEventCounts {
    * Knockdowns scored by this fighter.
    */
   possible_knockdowns: number;
+  /**
+   * Takedowns landed by this fighter (brief ones included).
+   */
   possible_takedowns: number;
   retreat_s: number;
+  reversals: number;
   /**
    * Significant strike attempts.
    */
@@ -424,6 +463,14 @@ export interface FighterEventCounts {
    * Punch, knee, elbow and ground strike attempts.
    */
   strike_attempts: number;
+  /**
+   * Possible submission attempts (low confidence).
+   */
+  submission_attempts: number;
+  /**
+   * Takedown attempts, landed ones included (events version 5 on).
+   */
+  takedown_attempts: number;
 }
 /**
  * A sign that a fighter was damaged. An estimate with its confidence, never a fact.
@@ -475,6 +522,10 @@ export interface FightEvent {
    * Below the attribution threshold: 'Kime ait belirsiz'. Not part of the momentum.
    */
   attribution_uncertain: boolean;
+  /**
+   * Takedowns: the attacker stayed on top for less than the hold time because the opponent got up or came out on top at once. None: not a takedown, or it could not be told (measurement ended first).
+   */
+  brief: boolean | null;
   /**
    * Detector confidence, not ground truth.
    */
@@ -1573,9 +1624,32 @@ export interface EventsSummary {
   fighters: FighterEventCounts[];
   method: string;
   /**
+   * Grappling states (events version 5 on).
+   */
+  phases: PhaseTimes | null;
+  /**
    * EVENTS_VERSION of the result (0: stored before it was kept).
    */
   version: number;
+}
+/**
+ * Seconds of the video in each grappling state (whole video, before exclusions).
+ *
+ * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
+ * via the `definition` "PhaseTimes".
+ */
+export interface PhaseTimes {
+  clinch_s: number;
+  distance_s: number;
+  /**
+   * On the ground with a clear top.
+   */
+  ground_s: number;
+  scramble_s: number;
+  /**
+   * A fighter was not measured.
+   */
+  unknown_s: number;
 }
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
@@ -1974,6 +2048,10 @@ export interface MotionTimeline {
    */
   fighters: FighterSignals[];
   job_id: string;
+  /**
+   * Grappling state at the sample (most of its frames; null: not measured). Empty: analysed before events version 5.
+   */
+  phase: (GrapplingState | null)[];
   sample_hz: number;
   sample_ms: number[];
   /**
@@ -1994,6 +2072,10 @@ export interface FighterSignals {
    * Hip centre toward (+) / away from (-) the opponent, camera motion removed, body units/s.
    */
   approach_speed: (number | null)[];
+  /**
+   * Back to the camera on most frames of the sample (nose and eyes not measured while both shoulders are). How well his strikes can be seen depends on it. Empty: analysed before events version 5.
+   */
+  facing_away: (boolean | null)[];
   fighter_id: FighterId;
   /**
    * Ankles relative to the hips, body units/s.
@@ -2009,6 +2091,10 @@ export interface FighterSignals {
    * Fighter verified with usable joints at the sample.
    */
   valid: boolean[];
+  /**
+   * Share of the sample's frames on which his wrists are measured, 0..1.
+   */
+  wrists_measured: (number | null)[];
 }
 /**
  * manifest.json of a pose cache entry. Per-frame data lives next to it in
@@ -2420,4 +2506,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.11.0";
+export const SCHEMA_VERSION = "1.12.0";

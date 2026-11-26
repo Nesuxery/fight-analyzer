@@ -53,23 +53,28 @@ class Fighter:
     wrist_conf: Callable[[float], float] = lambda t: 0.9
     head_conf: Callable[[float], float] = lambda t: 0.9  # nose, eyes, ears (low: facing away from the camera)
     hands: str = "up"  # "up": guard at the chin; "low": arms hanging (nothing in front of the face)
+    size: Callable[[float], float] = lambda t: 1.0  # apparent size (a small one: someone far away, a spectator)
 
     def pose(self, t: float) -> np.ndarray:
         """[17, 2] joints in torso units (y down). The floor is at y = 1.62 while upright."""
         st: dict = {"x": self.x, "lie": 0.0, "punch": {}, "kick": {}, "head": 0.0, "elbow": {}, "sit": 0.0,
-                    "dip": 0.0, "cover": 0.0, "push": 0.0, "step": {}, "leg": {}}
+                    "dip": 0.0, "cover": 0.0, "push": 0.0, "step": {}, "leg": {}, "lean": 0.0, "kneel": 0.0,
+                    "arm_at": {}}
         for act in self.actions:
             act(t, st)
         theta = st["lie"] * math.pi / 2  # falls backwards
-        up = np.array([-self.facing * math.sin(theta), -math.cos(theta)])
+        body_up = np.array([-self.facing * math.sin(theta), -math.cos(theta)])
+        body_fwd = self.facing * np.array([-body_up[1], body_up[0]])
+        # the torso leans forward over the hips (a shot, bending into the opponent); legs keep the body frame
+        up = math.cos(st["lean"]) * body_up + math.sin(st["lean"]) * body_fwd
         fwd = self.facing * np.array([-up[1], up[0]])
         down = -up
         x = st["x"] - self.facing * st["push"]  # pushed backwards
-        lowered = st["sit"] + st["dip"]  # hips down, feet stay on the floor
+        lowered = st["sit"] + st["dip"] + 0.79 * st["kneel"]  # hips down, feet (knees) stay on the floor
         hip = np.array([x, 1.2 * st["lie"] + lowered])
         sh = hip + up
         ls, rs = sh + 0.25 * fwd, sh - 0.25 * fwd
-        lh, rh = hip + 0.15 * fwd, hip - 0.15 * fwd
+        lh, rh = hip + 0.15 * body_fwd, hip - 0.15 * body_fwd
         # guard: hands near the chin, so a straight punch travels ~0.8 torso lengths
         if self.hands == "low":
             wrists = {"l": ls + 0.1 * fwd + 1.0 * down, "r": rs + 0.1 * fwd + 1.0 * down}
@@ -85,18 +90,22 @@ class Fighter:
             base = ls if hand == "l" else rs
             reach = base + 1.13 * direction * fwd + height * down
             wrists[hand] = wrists[hand] + (reach - wrists[hand]) * k
-        ankles = {"l": lh + 0.25 * fwd + 1.62 * down, "r": rh - 0.25 * fwd + 1.62 * down}
+        ankles = {"l": lh + 0.25 * body_fwd - 1.62 * body_up, "r": rh - 0.25 * body_fwd - 1.62 * body_up}
         if lowered and not st["lie"]:
             for foot in ankles:
                 ankles[foot][1] = 1.62
-                ankles[foot] = ankles[foot] + 0.9 * st["sit"] * fwd  # sitting: legs out in front
+                ankles[foot] = ankles[foot] + 0.9 * st["sit"] * body_fwd  # sitting: legs out in front
+        if st["kneel"]:  # knees on the floor under the hips, shins flat behind
+            for foot, sideways in (("l", 0.1), ("r", -0.1)):
+                target = np.array([hip[0] + (sideways - 0.83) * body_fwd[0], 1.62])
+                ankles[foot] = ankles[foot] + (target - ankles[foot]) * st["kneel"]
         for foot, dx in st["step"].items():
-            ankles[foot] = ankles[foot] + dx * fwd
+            ankles[foot] = ankles[foot] + dx * body_fwd
         for foot, dx in st["leg"].items():
-            ankles[foot] = ankles[foot] - dx * fwd  # the struck leg is knocked back
+            ankles[foot] = ankles[foot] - dx * body_fwd  # the struck leg is knocked back
         for foot, (k, height) in st["kick"].items():
             base = lh if foot == "l" else rh
-            target = base + 1.55 * fwd + height * up
+            target = base + 1.55 * body_fwd + height * body_up
             ankles[foot] = ankles[foot] + (target - ankles[foot]) * k
         le, lw = _ik(ls, wrists["l"], UPPER_ARM, FOREARM, down)
         re, rw = _ik(rs, wrists["r"], UPPER_ARM, FOREARM, down)
@@ -108,8 +117,13 @@ class Fighter:
                 le, lw = le + (strike_e - le) * k, lw + (strike_w - lw) * k
             else:
                 re, rw = re + (strike_e - re) * k, rw + (strike_w - rw) * k
-        lk, la = _ik(lh, ankles["l"], THIGH, SHIN, fwd)
-        rk, ra = _ik(rh, ankles["r"], THIGH, SHIN, fwd)
+        for hand, (k, at_e, at_w) in st["arm_at"].items():  # elbow and wrist placed in the scene
+            if hand == "l":
+                le, lw = le + (at_e - le) * k, lw + (at_w - lw) * k
+            else:
+                re, rw = re + (at_e - re) * k, rw + (at_w - rw) * k
+        lk, la = _ik(lh, ankles["l"], THIGH, SHIN, body_fwd)
+        rk, ra = _ik(rh, ankles["r"], THIGH, SHIN, body_fwd)
         nose = sh + 0.35 * up + 0.1 * fwd - st["head"] * fwd  # head snapped back
         side = np.array([up[1], -up[0]])
         return np.array([nose, nose + 0.05 * up + 0.04 * side, nose + 0.05 * up - 0.04 * side,
@@ -229,6 +243,70 @@ def fall(t0: float, duration_s: float = 0.4) -> Action:
     return act
 
 
+def _window(t: float, t0: float, t1: float | None, out_s: float, back_s: float) -> float:
+    """0..1: going out from t0, held, and (t1 given) back from t1."""
+    if t < t0:
+        return 0.0
+    k = ease((t - t0) / out_s)
+    if t1 is not None and t >= t1:
+        k = min(k, 1 - ease((t - t1) / back_s))
+    return k
+
+
+def lie(t0: float, t1: float | None = None, out_s: float = 0.4, back_s: float = 0.6) -> Action:
+    """Down on his back from t0 and (t1 given) back on his feet from t1."""
+    def act(t: float, st: dict) -> None:
+        st["lie"] = max(st["lie"], _window(t, t0, t1, out_s, back_s))
+    return act
+
+
+def kneel(t0: float, t1: float | None = None, out_s: float = 0.4, back_s: float = 0.5) -> Action:
+    """Down on his knees (torso upright) from t0 and (t1 given) back up from t1: on top of a downed opponent."""
+    def act(t: float, st: dict) -> None:
+        st["kneel"] = max(st["kneel"], _window(t, t0, t1, out_s, back_s))
+    return act
+
+
+def lean(t0: float, t1: float, deg: float = 50.0, out_s: float = 0.3, back_s: float = 0.3) -> Action:
+    """The torso leans forward over the hips between t0 and t1 (a shot; bending into the opponent)."""
+    def act(t: float, st: dict) -> None:
+        st["lean"] = max(st["lean"], math.radians(deg) * _window(t, t0, t1, out_s, back_s))
+    return act
+
+
+def crouch(t0: float, t1: float, depth: float = 0.9, out_s: float = 0.3, back_s: float = 0.3) -> Action:
+    """The hips drop by `depth` (feet stay on the floor) between t0 and t1: a deep level change."""
+    def act(t: float, st: dict) -> None:
+        st["dip"] = max(st["dip"], depth * _window(t, t0, t1, out_s, back_s))
+    return act
+
+
+def hold(t0: float, t1: float, reach: float = 1.0, facing: float = 1.0, out_s: float = 0.3,
+         back_s: float = 0.3) -> Action:
+    """Both hands on the torso of an opponent `reach` torso lengths ahead (a body lock / collar
+    grips) between t0 and t1, moving with the fighter (list it after his walk actions)."""
+    def act(t: float, st: dict) -> None:
+        k = _window(t, t0, t1, out_s, back_s)
+        if k > 0:
+            x = st["x"]
+            st["arm_at"]["l"] = (k, np.array([x + facing * 0.45, -0.7]), np.array([x + facing * (reach - 0.15), -0.6]))
+            st["arm_at"]["r"] = (k, np.array([x + facing * 0.40, -0.45]), np.array([x + facing * (reach - 0.15), -0.3]))
+    return act
+
+
+def arm_at(t0: float, t1: float, hand: str, elbow_xy: tuple[float, float], wrist_xy: tuple[float, float],
+           out_s: float = 0.3, back_s: float = 0.3) -> Action:
+    """Elbow and wrist moved to fixed places of the scene (torso units, y down) between t0 and t1:
+    an arm around the opponent's neck, for instance."""
+    e, w = np.array(elbow_xy, float), np.array(wrist_xy, float)
+
+    def act(t: float, st: dict) -> None:
+        k = _window(t, t0, t1, out_s, back_s)
+        if k > 0:
+            st["arm_at"][hand] = (k, e, w)
+    return act
+
+
 @dataclass
 class MotionScene:
     fighters: tuple[Fighter, Fighter]
@@ -257,7 +335,7 @@ class MotionScene:
             for fi, f in enumerate(self.fighters):
                 if not f.present(t):
                     continue
-                joints = f.pose(t) * self.torso_px + np.array(self.origin)
+                joints = f.pose(t) * self.torso_px * f.size(t) + np.array(self.origin)
                 joints[:, 0] += shift
                 joints += rng.normal(0, self.jitter_px, joints.shape)
                 conf = np.full(17, 0.9)

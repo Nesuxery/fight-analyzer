@@ -82,7 +82,7 @@
           "$ref": "#/$defs/MomentumParameters"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -688,7 +688,7 @@
           "type": "number"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1122,7 +1122,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1172,7 +1172,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -1204,7 +1204,11 @@
         "ground_strike",
         "clinch",
         "takedown",
+        "takedown_attempt",
         "ground_control",
+        "reversal",
+        "get_up",
+        "submission_attempt",
         "knockdown",
         "stance_change",
         "other"
@@ -1253,6 +1257,18 @@
           "title": "Method",
           "type": "string"
         },
+        "phases": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PhaseTimes"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grappling states (events version 5 on)."
+        },
         "version": {
           "default": 0,
           "description": "EVENTS_VERSION of the result (0: stored before it was kept).",
@@ -1269,6 +1285,7 @@
         "events",
         "damage_signals",
         "camera_known_share",
+        "phases",
         "fighters"
       ],
       "title": "EventsSummary",
@@ -1294,7 +1311,13 @@
         "no_offense",
         "pace_drop",
         "mobility_drop",
-        "identity_inferred"
+        "identity_inferred",
+        "close_contact",
+        "level_change",
+        "top_position",
+        "position_change",
+        "neck_wrap",
+        "escape_fade"
       ],
       "title": "EvidenceSignal",
       "type": "string"
@@ -1671,6 +1694,19 @@
           "title": "Attribution Uncertain",
           "type": "boolean"
         },
+        "brief": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Takedowns: the attacker stayed on top for less than the hold time because the opponent got up or came out on top at once. None: not a takedown, or it could not be told (measurement ended first).",
+          "title": "Brief"
+        },
         "confidence": {
           "description": "Detector confidence, not ground truth.",
           "maximum": 1,
@@ -1891,6 +1927,7 @@
         "outcome_confidence",
         "significant",
         "phase",
+        "brief",
         "evidence",
         "attribution_confidence",
         "attribution_uncertain",
@@ -1983,18 +2020,46 @@
     "FighterEventCounts": {
       "additionalProperties": false,
       "properties": {
+        "active_control_s": {
+          "default": 0,
+          "description": "Control time (ground or clinch) during which he kept striking or threatening a submission.",
+          "minimum": 0,
+          "title": "Active Control S",
+          "type": "number"
+        },
         "advance_s": {
           "minimum": 0,
           "title": "Advance S",
           "type": "number"
         },
+        "brief_takedowns": {
+          "default": 0,
+          "description": "Landed takedowns the opponent got up from at once.",
+          "minimum": 0,
+          "title": "Brief Takedowns",
+          "type": "integer"
+        },
+        "clinch_control_s": {
+          "default": 0,
+          "description": "Estimated clinch control: time in the clinch after this fighter drove the opponent back (low confidence; the cage is not measured).",
+          "minimum": 0,
+          "title": "Clinch Control S",
+          "type": "number"
+        },
         "control_s": {
+          "description": "Estimated time on top on the ground.",
           "minimum": 0,
           "title": "Control S",
           "type": "number"
         },
         "fighter_id": {
           "$ref": "#/$defs/FighterId"
+        },
+        "get_ups": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Get Ups",
+          "type": "integer"
         },
         "kick_attempts": {
           "minimum": 0,
@@ -2026,6 +2091,7 @@
           "type": "integer"
         },
         "possible_takedowns": {
+          "description": "Takedowns landed by this fighter (brief ones included).",
           "minimum": 0,
           "title": "Possible Takedowns",
           "type": "integer"
@@ -2034,6 +2100,12 @@
           "minimum": 0,
           "title": "Retreat S",
           "type": "number"
+        },
+        "reversals": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Reversals",
+          "type": "integer"
         },
         "significant_attempts": {
           "default": 0,
@@ -2053,6 +2125,20 @@
           "minimum": 0,
           "title": "Strike Attempts",
           "type": "integer"
+        },
+        "submission_attempts": {
+          "default": 0,
+          "description": "Possible submission attempts (low confidence).",
+          "minimum": 0,
+          "title": "Submission Attempts",
+          "type": "integer"
+        },
+        "takedown_attempts": {
+          "default": 0,
+          "description": "Takedown attempts, landed ones included (events version 5 on).",
+          "minimum": 0,
+          "title": "Takedown Attempts",
+          "type": "integer"
         }
       },
       "required": [
@@ -2065,7 +2151,14 @@
         "significant_landed",
         "possible_knockdowns",
         "possible_takedowns",
+        "takedown_attempts",
+        "brief_takedowns",
+        "reversals",
+        "get_ups",
+        "submission_attempts",
         "control_s",
+        "clinch_control_s",
+        "active_control_s",
         "advance_s",
         "retreat_s",
         "measured_s"
@@ -2296,6 +2389,21 @@
           "title": "Approach Speed",
           "type": "array"
         },
+        "facing_away": {
+          "description": "Back to the camera on most frames of the sample (nose and eyes not measured while both shoulders are). How well his strikes can be seen depends on it. Empty: analysed before events version 5.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Facing Away",
+          "type": "array"
+        },
         "fighter_id": {
           "$ref": "#/$defs/FighterId"
         },
@@ -2364,6 +2472,21 @@
           },
           "title": "Valid",
           "type": "array"
+        },
+        "wrists_measured": {
+          "description": "Share of the sample's frames on which his wrists are measured, 0..1.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Wrists Measured",
+          "type": "array"
         }
       },
       "required": [
@@ -2374,7 +2497,9 @@
         "foot_speed",
         "approach_speed",
         "movement",
-        "posture"
+        "posture",
+        "facing_away",
+        "wrists_measured"
       ],
       "title": "FighterSignals",
       "type": "object"
@@ -2544,6 +2669,18 @@
       "title": "FrameRecord",
       "type": "object"
     },
+    "GrapplingState": {
+      "description": "Where the fight is, frame by frame (motion/grappling.py). An estimate from 2D joints;\na frame on which a fighter is not measured has no state (null), never a guessed one.",
+      "enum": [
+        "distance",
+        "clinch",
+        "ground_red_top",
+        "ground_blue_top",
+        "scramble"
+      ],
+      "title": "GrapplingState",
+      "type": "string"
+    },
     "HealthResponse": {
       "additionalProperties": false,
       "properties": {
@@ -2570,7 +2707,7 @@
           "$ref": "#/$defs/PoseModelInfo"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2773,7 +2910,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -2973,7 +3110,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3909,7 +4046,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -3985,6 +4122,21 @@
           "title": "Job Id",
           "type": "string"
         },
+        "phase": {
+          "description": "Grappling state at the sample (most of its frames; null: not measured). Empty: analysed before events version 5.",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/GrapplingState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Phase",
+          "type": "array"
+        },
         "sample_hz": {
           "exclusiveMinimum": 0,
           "title": "Sample Hz",
@@ -3998,7 +4150,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4013,6 +4165,7 @@
         "sample_ms",
         "camera_known",
         "distance",
+        "phase",
         "fighters"
       ],
       "title": "MotionTimeline",
@@ -4168,6 +4321,48 @@
         "keypoints"
       ],
       "title": "PersonDetection",
+      "type": "object"
+    },
+    "PhaseTimes": {
+      "additionalProperties": false,
+      "description": "Seconds of the video in each grappling state (whole video, before exclusions).",
+      "properties": {
+        "clinch_s": {
+          "minimum": 0,
+          "title": "Clinch S",
+          "type": "number"
+        },
+        "distance_s": {
+          "minimum": 0,
+          "title": "Distance S",
+          "type": "number"
+        },
+        "ground_s": {
+          "description": "On the ground with a clear top.",
+          "minimum": 0,
+          "title": "Ground S",
+          "type": "number"
+        },
+        "scramble_s": {
+          "minimum": 0,
+          "title": "Scramble S",
+          "type": "number"
+        },
+        "unknown_s": {
+          "description": "A fighter was not measured.",
+          "minimum": 0,
+          "title": "Unknown S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "distance_s",
+        "clinch_s",
+        "ground_s",
+        "scramble_s",
+        "unknown_s"
+      ],
+      "title": "PhaseTimes",
       "type": "object"
     },
     "PipelineStage": {
@@ -4371,7 +4566,7 @@
           "title": "Processing S"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4435,7 +4630,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4500,7 +4695,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -4560,7 +4755,7 @@
           "$ref": "#/$defs/ModelInfo"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5310,7 +5505,7 @@
           "type": "array"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5517,7 +5712,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -5902,7 +6097,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -6160,7 +6355,7 @@
           "type": "string"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -6315,7 +6510,7 @@
           "type": "integer"
         },
         "schema_version": {
-          "default": "1.11.0",
+          "default": "1.12.0",
           "description": "Semantic version of the contract this document follows.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "title": "Schema Version",
@@ -6521,7 +6716,7 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "MMA Fight Analyzer data contracts, schema version 1.11.0.",
+  "description": "MMA Fight Analyzer data contracts, schema version 1.12.0.",
   "properties": {
     "AnalysisExport": {
       "$ref": "#/$defs/AnalysisExport"
@@ -6626,5 +6821,5 @@
     "left_ankle",
     "right_ankle"
   ],
-  "x-schema-version": "1.11.0"
+  "x-schema-version": "1.12.0"
 }

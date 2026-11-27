@@ -1,10 +1,79 @@
 # MMA Fight Analyzer
 
+**Local, explainable analysis of recorded MMA fights.** Upload a fight video, pick the red and
+blue corner, and get skeletons drawn on the video, strike and grappling events, round boundaries
+read from the broadcast clock, an experimental momentum curve and AI judge scorecards. Everything
+runs on your own machine; no video leaves it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/result-dark.png">
+  <img alt="Result screen in Demo mode: skeletons over the video, per-fighter statistics, momentum and the event timeline" src="docs/images/result-light.png">
+</picture>
+
+*Demo mode with a synthetic scene; the app labels demo data as such and never shows it as an analysis.*
+
+### What it does
+
+- **Pose and identity:** YOLO26 pose for every person in every frame, OC-SORT tracklets within
+  each camera shot, and an appearance model (shorts and torso) that keeps the two fighters'
+  identities across camera cuts. Referee and corner staff are kept apart; where an identity
+  cannot be verified it stays "uncertain" instead of being guessed.
+- **Rounds from the broadcast:** the scorebug clock is found without a model and read with a
+  small OCR model (PP-OCRv5, ONNX); replays, stoppages and breaks are excluded automatically.
+  The user's corrections always win.
+- **Events:** camera motion is removed (optical flow + RANSAC), joints are smoothed and measured
+  in torso lengths, so nothing depends on resolution or frame rate. Strike attempts get a target
+  zone and an estimated outcome; a per-frame state machine tracks distance, clinch and ground
+  positions with takedowns, reversals and possible submissions.
+- **Scoring:** an explainable momentum ledger and three virtual judges (10-Point Must). Every
+  value carries a confidence and is labelled as an AI estimate, never as an official result.
+- **Exports:** an MP4 with skeletons and effects, per-frame CSV and a JSON of all events.
+
+### Engineering
+
+- FastAPI API and a separate analysis worker (SQLite job queue, heartbeats, cancellation), React +
+  TypeScript UI with a canvas overlay synced to the video frame (`requestVideoFrameCallback`).
+- Versioned Pydantic contracts are the single source of truth: JSON Schema and TypeScript types
+  are generated from them and checked in CI-style (`check.cmd`).
+- Content-addressed caches with their own version numbers, so a logic change recomputes only the
+  stages it affects (a 15-minute fight takes ~1.5 h of CPU pose estimation once; the rest reruns in
+  seconds to minutes).
+- Tests: 325 pytest tests (synthetic skeleton scenes for every detection rule), 96 frontend unit
+  tests, shared fixtures that keep browser and export numbers identical.
+- Offline by design: models come from pinned official sources with SHA-256 checks, the app makes
+  no network requests while analysing.
+
+### Status and limits
+
+Work in progress (v2: judging by the 2025 ABC criteria is next). A single broadcast camera and 2D
+skeletons limit what can be measured: when two fighters are tied up the pose model often sees one
+skeleton for both, so much of the grappling is marked "not measured" (with a separate, clearly
+labelled estimate). Thresholds were tuned on two broadcasts and are not yet validated against
+official statistics.
+
+### Quick start (Windows 10/11, Python 3.14, Node.js ≥ 22.12)
+
+```bash
+start.cmd
+```
+
+The first run installs everything (`scripts/setup.ps1`) and downloads the models. A **Demo** mode
+shows every screen with synthetic data, without a video.
+
+License: [AGPL-3.0](LICENSE) (the project builds on Ultralytics YOLO); see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+---
+
+*The detailed documentation below is in Turkish. User guide: [docs/KULLANIM.md](docs/KULLANIM.md).*
+
 Kayıtlı MMA maç videolarını **yerelde** analiz eden tek kullanıcılı uygulama:
 video yükleme, iki dövüşçü seçimi, video üzerinde renkli iskeletler, hareket
 istatistikleri, deneysel momentum yüzdeleri ve olay zaman çizelgesi.
 
-> **Mevcut durum: Aşama 9 – MMA hakemlik motoru (AI tahmini).** Unified Rules
+> **Mevcut durum: v2 Bölüm 3 (olaylar ve metrikler) sürüyor;** kararlar ve ölçümler
+> [NOTES.md](NOTES.md)'de, plan [docs/v2-plan.md](docs/v2-plan.md)'de. Aşağıdaki özet v1'in
+> son aşamalarını anlatır. **Aşama 9 – MMA hakemlik motoru (AI tahmini).** Unified Rules
 > 10-Point Must ile raund bazında puanlama, üç sanal hakem, karar türleri ve
 > güven seviyesi; bitişler (KO/TKO/submission/DQ/durdurma) kullanıcı girdisiyle,
 > puan kararından ayrı (bkz. "AI hakemlik"). Resmi sonuç değildir.

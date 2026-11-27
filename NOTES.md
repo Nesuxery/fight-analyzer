@@ -809,8 +809,11 @@ formülü aynı.
   bir denemede yeniden bakılsın.
 
 ### Sonraki oturumlar için başlangıç notu (27 Kasım 2026)
-(b) onaylandı; 3b kararları uygulandı (yukarıda), kullanıcı onayı ve gizli rakip tahmininin
-sayımlara / kontrol süresine / momentuma girip girmeyeceği kararı bekleniyor. (c) ayrıca başlar
+(b) onaylandı; 3b kararları uygulandı (yukarıda) ve onaylandı (27 Kasım 2026); gizli rakip tahmini
+şimdilik sayımlara, kontrol süresine ve momentuma girmiyor (kullanıcı ayrıca karar verirse
+değişir); büyük poz modeli entegre edilmedi. Bölüm 3 (a, b ve 3b kararları) main'e birleştirildi;
+repo aynı gün kullanıcının isteğiyle public yapıldı (AGPL-3.0, README başında İngilizce tanıtım,
+Demo ekran görüntüleri `docs/images/`). (c) ayrıca başlar
 (Bölüm 3.5–3.6: `RoundFeatures`, düzeltme katmanı, `python -m fight_analyzer.features` raunt
 tablosu). Hazır olanlar: `dominance.measure` (3.4, herhangi bir aralık), olay önbelleğindeki kare
 dizileri (`grappling`, `clinch_by`, `grappling_hidden` ve güveni / görülen dövüşçü),
@@ -824,7 +827,9 @@ altında (`run3b.py`, `grids3b.py`, `coverage.py`, `dets_at.py`, `nms_probe.py`,
 `hidden_probe.py`, `hidden_episodes.py`, `hidden_trace.py`, `hidden_blind.py`, `stretch_grid.py`,
 `clock_probe.py`, `big_pose_test.py`, `fetch_big.py`).
 
-- (a), (b) ve 3b kararları `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
+- (a), (b) ve 3b kararları `v2/bolum-3` dalında yapıldı ve kullanıcının sözüyle main'e birleştirilip
+  gönderildi (27 Kasım 2026). Repo public: geçmiş dahil herkes görebilir; `local/`, `data/`, videolar ve
+  model ağırlıkları git dışında kalmalı.
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →

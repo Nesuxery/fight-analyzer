@@ -42,6 +42,8 @@ Thumbs.db
 .DS_Store
 .vscode/
 .idea/
+# Local Claude Code settings (launch configurations with local paths)
+/.claude/
 
 # Local test material derived from user videos (clips, frames, scratch data dirs): never committed
 /local/

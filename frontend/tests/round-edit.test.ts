@@ -16,7 +16,7 @@ const FPS = 30;
 const FRAMES = 16215;
 const seg = (index: number, start: number, end: number, source: RoundSegment["source"] = "ocr"): RoundSegment => ({
   index, start_frame: start, end_frame: end, video_start_s: start / FPS, video_end_s: (end + 1) / FPS,
-  clock_start: 300, clock_end: 0, source, confidence: 0.99, partial: false,
+  clock_start: 300, clock_end: 0, source, confidence: 0.99, partial: false, start_extrapolated_s: null,
 });
 const AUTO = [seg(1, 315, 9314), seg(2, 9525, 15914)];
 const NONE = editsOf(null);

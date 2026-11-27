@@ -14,7 +14,13 @@ Rules (all thresholds in BroadcastSettings):
 - runs shorter than `min_round_s` of clock time are not rounds;
 - start: if the first running read is within `start_snap_s` of the round
   length, the round started when the clock left the top (extrapolated);
-  otherwise the recording starts inside the round (partial);
+  if it is further down but within `start_extrapolate_max_s`, the clock was
+  covered at the start of the round (a sponsor graphic, a late scorebug): the
+  start is extrapolated back from the first read, marked as such
+  (`start_extrapolated_s`) and its confidence lowered, as long as that start
+  lies inside the video, after the previous round and not before a logo
+  transition that leads into the round; otherwise the recording starts inside
+  the round (partial);
 - end: a last running read within `end_snap_s` of 0:00 means the round ran
   out (zero time); a clock that freezes above 0:00 stopped early (finish,
   partial); a clock that disappears is cut off at the last read (partial).
@@ -24,6 +30,7 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -61,6 +68,8 @@ class ClockRound:
     partial: bool
     confidence: float
     reads: list[Read]
+    # seconds from the start to the first read when the start was extrapolated back over a covered clock
+    start_extrapolated_s: float | None = None
 
 
 def _consistent(a: Read, b: Read, tol: float) -> bool:
@@ -147,8 +156,28 @@ def _zero_time(reads: list[Read]) -> float:
     return float(np.median([r.t + r.clock for r in reads])) - 0.5
 
 
+def _covered_start(top_t: float, first_t: float, previous_end: float,
+                   transitions: Sequence[tuple[float, float]]) -> float | None:
+    """Where a round whose clock was covered at the start began: the moment the clock left the
+    top (`top_t`), if that lies inside the video and after the previous round. A logo transition
+    between it and the first read means the broadcast came back into a running round: not
+    extrapolated (None). One ending in the second after `top_t` is the transition into the
+    round, within the half-second precision of the zero time: the round starts after it."""
+    if top_t < 0 or top_t <= previous_end:
+        return None
+    start = top_t
+    for a, b in transitions:
+        if a < first_t and b > top_t:
+            if b > top_t + 1.0:
+                return None
+            start = max(start, b)
+    return start if start < first_t else None
+
+
 def rounds_from_runs(runs: list[Run], duration_s: float, s: BroadcastSettings,
-                     ruleset: RulesetSettings) -> tuple[list[ClockRound], list[BroadcastNote]]:
+                     ruleset: RulesetSettings, transitions: Sequence[tuple[float, float]] = ()
+                     ) -> tuple[list[ClockRound], list[BroadcastNote]]:
+    """`transitions`: logo transitions (wipes) of the broadcast, (start, end) seconds."""
     notes: list[BroadcastNote] = []
     out: list[ClockRound] = []
     for run in runs:
@@ -160,8 +189,16 @@ def rounds_from_runs(runs: list[Run], duration_s: float, s: BroadcastSettings,
         first, last = running[0], running[-1]
         z_start, z_end = _zero_time(running[:HEAD]), _zero_time(running[-HEAD:])
         partial = False
-        if length - first.clock <= s.start_snap_s and z_start - length >= 0:
+        covered: float | None = None  # seconds of the start the clock did not show
+        gap = length - first.clock
+        extrapolated = (_covered_start(z_start - length, first.t, out[-1].end_t if out else 0.0, transitions)
+                        if s.start_snap_s < gap <= s.start_extrapolate_max_s else None)
+        if gap <= s.start_snap_s and z_start - length >= 0:
             start_t, clock_start = z_start - length, length
+        elif extrapolated is not None:
+            # the clock was covered (a sponsor graphic, a late scorebug): back from the first read
+            start_t, clock_start = extrapolated, length
+            covered = round(first.t - start_t, 1)
         else:
             # inside the round from the first evidence (from the video start if that is right there)
             start_t, clock_start, partial = (0.0 if first.t <= 2.0 else first.t - 0.5), first.clock, True
@@ -178,14 +215,18 @@ def rounds_from_runs(runs: list[Run], duration_s: float, s: BroadcastSettings,
         votes = Counter(r.round for r in reads if r.round is not None)
         index, agree = (votes.most_common(1)[0] if votes else (None, 0))
         share = agree / max(1, sum(votes.values()))
-        expected = s.ocr_hz * (end_t - start_t)
+        # reads per second where the clock could be read (a covered start lowers the confidence once, below)
+        expected = s.ocr_hz * (end_t - start_t - (covered or 0.0))
         density = min(1.0, len(reads) / max(1.0, expected))
         index_factor = 1.0 if share >= 0.7 and agree >= 2 else 0.8 if share >= 0.5 and agree >= 2 else 0.6
         if index_factor == 0.6:
             index = None
+        confidence = min(1.0, (0.25 + 0.75 * density) * index_factor)
+        if covered is not None:
+            confidence *= s.extrapolated_start_factor
         out.append(ClockRound(index=index or 0, start_t=start_t, end_t=end_t, clock_start=clock_start,
-                              clock_end=clock_end, partial=partial,
-                              confidence=round(min(1.0, (0.25 + 0.75 * density) * index_factor), 2), reads=reads))
+                              clock_end=clock_end, partial=partial, confidence=round(confidence, 2), reads=reads,
+                              start_extrapolated_s=covered))
     # Round numbers: as read; unreadable ones follow their predecessor.
     for i, r in enumerate(out):
         if r.index == 0:
@@ -204,7 +245,8 @@ def to_segment(r: ClockRound, fps: float, frame_count: int) -> RoundSegment:
     end = min(frame_count - 1, max(start, math.ceil(r.end_t * fps) - 1))
     return RoundSegment(index=r.index, start_frame=start, end_frame=end, video_start_s=round(start / fps, 3),
                         video_end_s=round((end + 1) / fps, 3), clock_start=r.clock_start, clock_end=r.clock_end,
-                        source=RoundSource.ocr, confidence=r.confidence, partial=r.partial)
+                        source=RoundSource.ocr, confidence=r.confidence, partial=r.partial,
+                        start_extrapolated_s=r.start_extrapolated_s)
 
 
 def timeline(rounds: list[ClockRound], duration_s: float, hz: float,
@@ -233,8 +275,10 @@ def timeline(rounds: list[ClockRound], duration_s: float, hz: float,
     return ts, rnd, rem, conf
 
 
-def infer(reads: list[Read], duration_s: float, s: BroadcastSettings,
-          ruleset: RulesetSettings) -> tuple[list[ClockRound], list[BroadcastNote]]:
+def infer(reads: list[Read], duration_s: float, s: BroadcastSettings, ruleset: RulesetSettings,
+          transitions: Sequence[tuple[float, float]] = ()) -> tuple[list[ClockRound], list[BroadcastNote]]:
+    """`transitions`: logo transitions (wipes), (start, end) seconds; a start is not extrapolated
+    back over one (see rounds_from_runs)."""
     usable = [r for r in sorted(reads, key=lambda r: r.t) if r.conf >= s.min_read_conf]
     runs = split_runs(drop_misreads(usable, s.run_tolerance_s), s.run_tolerance_s)
-    return rounds_from_runs(runs, duration_s, s, ruleset)
+    return rounds_from_runs(runs, duration_s, s, ruleset, transitions)

@@ -420,6 +420,16 @@
 }
 .tl__mark--clinch { background: var(--text-2); }
 
+/* hidden-opponent estimate (gizli rakip çıkarımı): a dashed outline, never a filled measurement */
+.tl__mark--hidden_grappling {
+  top: 5px;
+  bottom: 5px;
+  margin-left: 0;
+  border-radius: 2px;
+  background: transparent;
+  border: 1px dashed var(--text-2);
+}
+
 /* grappling transitions: small hollow marks (v2 Bölüm 3b) */
 .tl__mark--takedown_attempt,
 .tl__mark--reversal,
@@ -576,6 +586,7 @@
 .tl__key--knee { width: 7px; height: 7px; background: var(--tone); }
 .tl__key--contact { width: 6px; height: 6px; border-radius: 1px; box-shadow: 0 0 0 1.5px var(--warning); }
 .tl__key--span { width: 14px; height: 6px; background: var(--tone); opacity: 0.5; }
+.tl__key--hidden { width: 14px; height: 6px; border: 1px dashed var(--text-2); border-radius: 2px; }
 .tl__key--grappling { width: 6px; height: 6px; border-radius: 1px; box-shadow: inset 0 0 0 1.5px var(--tone); }
 .tl__key--big {
   width: 0;

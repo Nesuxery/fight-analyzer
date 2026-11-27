@@ -118,6 +118,56 @@ def test_recording_that_starts_inside_a_round_is_partial():
     assert len(rounds) == 1 and rounds[0].partial and rounds[0].clock_start == 199
 
 
+def _round_reads(start: float, first_read: float, end: float, length: float = 300.0,
+                 number: int | None = 3) -> list[Read]:
+    """A round whose clock leaves the top at `start`, readable only from `first_read` on."""
+    out, t = [], first_read
+    while t < end:
+        out.append(Read(t, float(_secs(length - (t - start))), number, 0.99))
+        t += 1.0
+    return out
+
+
+def test_a_covered_clock_at_the_round_start_is_extrapolated_back_and_marked():
+    # a sponsor graphic hides the clock for the first 12 s of the round (Khabib-Poirier R3)
+    covered = _round_reads(30.0, 42.0, 330.0)
+    rounds, _ = clock.infer(covered, 340, S, RS)
+    assert len(rounds) == 1
+    r = rounds[0]
+    assert r.start_t == pytest.approx(30.0, abs=1.0) and r.clock_start == 300 and not r.partial
+    assert r.start_extrapolated_s == pytest.approx(12.0, abs=1.0)
+    full, _ = clock.infer(_round_reads(30.0, 30.0, 330.0), 340, S, RS)
+    assert full[0].start_extrapolated_s is None and full[0].start_t == pytest.approx(30.0, abs=1.0)
+    assert r.confidence == pytest.approx(full[0].confidence * S.extrapolated_start_factor, abs=0.011)
+    segment = clock.to_segment(r, 30.0, 340 * 30)
+    assert segment.start_extrapolated_s == r.start_extrapolated_s and segment.source == RoundSource.ocr
+    # the logo transition that leads into the round ends just before the bell: still extrapolated
+    rounds, _ = clock.infer(covered, 340, S, RS, transitions=[(28.0, 29.8)])
+    assert rounds[0].start_t == pytest.approx(30.0, abs=1.0) and rounds[0].start_extrapolated_s is not None
+
+
+def test_a_start_is_not_extrapolated_where_the_broadcast_came_back_into_a_running_round():
+    covered = _round_reads(30.0, 42.0, 330.0)
+    # a logo transition between the extrapolated start and the first read: the broadcast came back
+    # into the round there; what came before is not the round
+    rounds, _ = clock.infer(covered, 340, S, RS, transitions=[(35.0, 36.2)])
+    assert rounds[0].partial and rounds[0].start_extrapolated_s is None
+    assert rounds[0].start_t == pytest.approx(41.5) and rounds[0].clock_start == 288
+    # too far below the top (beyond start_extrapolate_max_s): the recording joins the round late
+    late = _round_reads(30.0, 30.0 + S.start_extrapolate_max_s + 5, 330.0)
+    rounds, _ = clock.infer(late, 340, S, RS)
+    assert rounds[0].partial and rounds[0].start_extrapolated_s is None
+    # the extrapolated start would lie before the video: the recording starts inside the round
+    rounds, _ = clock.infer(_round_reads(-11.0, 1.0, 289.0), 300, S, RS)
+    assert rounds[0].partial and rounds[0].start_t == 0.0 and rounds[0].start_extrapolated_s is None
+    # ... or inside the previous round
+    r2 = [Read(float(t), float(_secs(300 - (t - 10))), 2, 0.99) for t in range(10, 300)]
+    r3 = _round_reads(296.0, 308.0, 600.0)
+    rounds, _ = clock.infer(r2 + r3, 610, S, RS)
+    assert [r.index for r in rounds] == [2, 3]
+    assert rounds[1].partial and rounds[1].start_extrapolated_s is None and rounds[1].start_t == pytest.approx(307.5)
+
+
 def test_unreadable_round_numbers_are_inferred_and_noted():
     script = scorebug.Script()
     reads = [Read(r.t, r.clock, None, r.conf) for r in reads_for(script)]

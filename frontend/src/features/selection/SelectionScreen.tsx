@@ -86,5 +86,5 @@ const DEMO_BOUT: BoutConfig = {
 };
 const DEMO_ROUNDS: RoundSegment[] = [{
   index: 1, start_frame: 0, end_frame: DEMO_DURATION_S * DEMO_FPS - 1, video_start_s: 0, video_end_s: DEMO_DURATION_S,
-  clock_start: 300, clock_end: 0, source: "ocr", confidence: 0.9, partial: false,
+  clock_start: 300, clock_end: 0, source: "ocr", confidence: 0.9, partial: false, start_extrapolated_s: null,
 }];

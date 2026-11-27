@@ -274,6 +274,15 @@ class MotionSettings:
     clinch_control_max_confidence: float = 0.35  # the cage is not measured
     active_before_s: float = 1.0  # control is active this long before ...
     active_after_s: float = 2.0  # ... and after each strike attempt of the controlling fighter
+    # Hidden opponent (gizli rakip çıkarımı, grappling.hidden_opponent): tied up, the pose model often gives one
+    # skeleton for both, so one fighter goes unmeasured. A separate low-confidence estimate, never counted.
+    hidden_contact_distance: float = 2.2  # this close around the moment the state became unknown (a shot closes ~2)
+    hidden_contact_window_s: float = 1.0
+    hidden_min_s: float = 4.0  # estimated time of a stretch, at least (live overlaps in exchanges last up to ~3.5 s)
+    hidden_bridge_s: float = 2.5  # holes with neither fighter measured between two equal estimates
+    hidden_gap_s: float = 10.0  # nothing estimated this long (close-ups, both lost): what follows needs new evidence
+    hidden_standing_s: float = 30.0  # standing estimates at most this far from the evidence (closeness, a fighter down)
+    hidden_max_confidence: float = 0.35  # times the seen fighter's identity confidence
     sample_hz: float = 10.0  # resolution of the signal timelines sent to the UI
     # Camera motion from the background
     camera_width: int = 640
@@ -369,6 +378,11 @@ class BroadcastSettings:
     min_round_s: float = 20.0  # shorter clock runs are not rounds
     min_run_reads: int = 5
     start_snap_s: float = 6.0  # first running read this close to the top: the round started there
+    # First read further down, up to this much below the top: the clock was covered at the start of the round
+    # (a sponsor graphic, a late scorebug). The start is extrapolated back from the first read and marked so; a
+    # broadcast that comes back into a running round with a logo transition is not extrapolated.
+    start_extrapolate_max_s: float = 20.0
+    extrapolated_start_factor: float = 0.85  # on the round's confidence
     end_snap_s: float = 3.0  # last read this close to 0:00: the round ran out
     max_interpolate_s: float = 12.0  # clock gaps longer than this stay unknown
     # Without a readable clock: a long quiet stretch with people sitting / many people in view.

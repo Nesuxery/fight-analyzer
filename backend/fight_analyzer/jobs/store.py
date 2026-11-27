@@ -490,9 +490,10 @@ NONFIGHT_SINCE = 2
 # (tracking/identity.py IDENTITY_VERSION 6). Version 7 only lowers the confidence of some
 # frames: results of version 6 stay current enough to open without the banner.
 IDENTITY_SINCE = 6
-# Events from this version on carry strike outcomes, target zones and damage signals (EVENTS_VERSION 4) and
-# the grappling states with their events and control times (EVENTS_VERSION 5).
-EVENTS_SINCE = 5
+# Events from this version on carry strike outcomes, target zones and damage signals (EVENTS_VERSION 4), the
+# grappling states with their events and control times (EVENTS_VERSION 5) and the hidden-opponent estimate
+# (EVENTS_VERSION 6: without it a grappling-heavy bout shows most of its grappling only as "not measured").
+EVENTS_SINCE = 6
 
 
 def _derived(params: dict[str, Any], outputs: JobOutputs, video: VideoInfo | None,

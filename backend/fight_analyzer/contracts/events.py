@@ -17,6 +17,11 @@ Since schema 1.12.0 the grappling events come from a per-frame state machine
 motion/grappling.py): takedown attempts, takedowns (`brief` when the opponent
 got up at once), reversals, getting up and possible submission attempts. All of
 them are estimates from 2D joints as well.
+
+Since schema 1.13.0 a `hidden_grappling` event marks a stretch in which one
+fighter was not measured and the two were estimated to be tied up
+("gizli rakip çıkarımı"): an inference, not a measurement. It is listed, but
+never counted, credited as control or given momentum points.
 """
 
 from __future__ import annotations
@@ -45,6 +50,8 @@ class EventType(StrEnum):
     reversal = "reversal"  # the fighter underneath came out on top
     get_up = "get_up"  # back on his feet after being down (from underneath when the opponent was on top)
     submission_attempt = "submission_attempt"  # possible: an arm held around the opponent's neck
+    # estimate only (gizli rakip çıkarımı): tied up while one fighter was not measured; never counted
+    hidden_grappling = "hidden_grappling"
     knockdown = "knockdown"
     stance_change = "stance_change"
     other = "other"
@@ -109,6 +116,8 @@ class EvidenceSignal(StrEnum):
     position_change = "position_change"  # who is on top changed
     neck_wrap = "neck_wrap"  # a forearm held across the opponent's neck, his head against the arm
     escape_fade = "escape_fade"  # the held fighter's arm and leg motion faded during the hold
+    # schema 1.13.0 on: one fighter was not measured (one skeleton for two tied-up fighters); inferred
+    opponent_hidden = "opponent_hidden"
 
 
 class ImagePoint(Contract):

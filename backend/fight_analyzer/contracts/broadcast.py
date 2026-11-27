@@ -56,6 +56,11 @@ class RoundSegment(Contract):
     source: RoundSource
     confidence: float = Field(ge=0, le=1)
     partial: bool = Field(description="Not the full round length in the recording (finish, or cut off).")
+    start_extrapolated_s: float | None = Field(
+        default=None, ge=0, description=(
+            "Clock rounds: the clock was not readable at the start (covered by a graphic, or the scorebug came "
+            "late), so the start was extrapolated back from the first clock read this many seconds later; the "
+            "confidence is lower. None: the start was read on the clock (or entered, or found otherwise)."))
 
     @model_validator(mode="after")
     def _ordered(self) -> RoundSegment:

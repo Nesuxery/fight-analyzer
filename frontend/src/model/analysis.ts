@@ -71,6 +71,9 @@ export interface TimelineEvent {
   significantStrike?: boolean | null;
   /** Seen only by inferring the opponent's identity: listed, not counted, no momentum. */
   inferred?: boolean;
+  /** Hidden-opponent estimate (schema 1.13.0 on, "gizli rakip çıkarımı"): tied up while one fighter was not
+   * measured. An inference: listed, never counted, no control time, no momentum. */
+  hidden?: boolean;
   /** Takedowns (schema 1.12.0 on): the opponent got up or came out on top at once. */
   brief?: boolean | null;
 }

@@ -31,7 +31,9 @@ from .analyze import BroadcastData
 from .clock import Read
 from .replay import Signals
 
-BROADCAST_VERSION = 3  # 2: scorebug presence, replay label, replays / stoppages / non-fight parts; 3: break vs replay label
+# 2: scorebug presence, replay label, replays / stoppages / non-fight parts; 3: break vs replay label;
+# 4: a round start whose clock was covered is extrapolated back from the first read (start_extrapolated_s)
+BROADCAST_VERSION = 4
 MANIFEST = "manifest.json"
 READS = "reads.npy"
 SIGNALS = "signals.npy"  # per sample: time, scorebug match, replay label, clock state, limb speed

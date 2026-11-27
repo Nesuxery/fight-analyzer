@@ -2,7 +2,9 @@
 // watching a part again, seeking or changing the playback rate must not change them.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { eventEffect, frameMs, measuredStats, motionSums, redShare, sampleAt, totals } from "../src/model/measured.ts";
+import {
+  eventEffect, eventMoment, frameMs, measuredStats, motionSums, redShare, sampleAt, toTimelineEvents, totals,
+} from "../src/model/measured.ts";
 
 const HZ = 10;
 const FPS = 30;
@@ -95,6 +97,25 @@ test("the effect of one event is the share with it minus the share without it", 
   const without = redShare({ red: m.red - kdNow, blue: m.blue }, 4);
   assert.ok(Math.abs(effect.redDelta - (redShare(m, 4) - without)) < 1e-9);
   assert.equal(eventEffect(contribs as never, "nothing", t, params as never), null);
+});
+
+test("a hidden-opponent estimate is listed with its own tag and never counted as control", () => {
+  // red on top carried over a stretch in which blue was not measured (gizli rakip çıkarımı)
+  const hidden = { ...ev("h1", "hidden_grappling", "fighter_a", 3000), peak_frame: null, peak_ms: null,
+                   start_frame: 60, end_frame: 240, start_ms: 2000, end_ms: 8000, confidence: 0.3,
+                   measures: { seconds: 6 }, evidence: ["opponent_hidden", "close_contact", "top_position"] };
+  const control = { ...ev("gc", "ground_control", "fighter_a", 1000), peak_frame: null, peak_ms: null,
+                    start_frame: 30, end_frame: 59, start_ms: 1000, end_ms: 1990, measures: { seconds: 1 } };
+  const sums = motionSums(motion as never);
+  const stats = measuredStats("red", 299, frameMs(299, FPS), [...events, hidden, control] as never, sums);
+  const without = measuredStats("red", 299, frameMs(299, FPS), [...events, control] as never, sums);
+  assert.deepEqual(stats, without);
+  assert.equal(stats.controlS, 1); // the measured control only
+  const [view] = toTimelineEvents([hidden] as never);
+  assert.equal(view!.hidden, true);
+  assert.ok(!view!.inferred);
+  assert.equal(view!.startS, 2); // a stretch: from its start
+  assert.equal(eventMoment(hidden as never), 8000); // timed by its end, like control
 });
 
 test("sample lookup covers every time", () => {

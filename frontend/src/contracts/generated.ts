@@ -44,7 +44,8 @@ export type EvidenceSignal =
   | "top_position"
   | "position_change"
   | "neck_wrap"
-  | "escape_fade";
+  | "escape_fade"
+  | "opponent_hidden";
 /**
  * This interface was referenced by `FightAnalyzerContracts`'s JSON-Schema
  * via the `definition` "DamageKind".
@@ -106,6 +107,7 @@ export type EventType =
   | "reversal"
   | "get_up"
   | "submission_attempt"
+  | "hidden_grappling"
   | "knockdown"
   | "stance_change"
   | "other";
@@ -278,7 +280,7 @@ export type Posture = "standing" | "grounded" | "transition";
  * via the `definition` "GrapplingState".
  */
 export type GrapplingState =
-  "distance" | "clinch" | "ground_red_top" | "ground_blue_top" | "scramble";
+  "distance" | "clinch" | "ground_red_top" | "ground_blue_top" | "scramble" | "tied_up";
 /**
  * COCO-17 keypoints in model output order: index k of every keypoint list
  * is the k-th member below (0 = nose ... 16 = right_ankle). This is the
@@ -325,7 +327,7 @@ export type SkeletonFormat = "coco17";
 export type QualityCause = "no_footage" | "camera" | "overlap" | "image";
 
 /**
- * MMA Fight Analyzer data contracts, schema version 1.12.0.
+ * MMA Fight Analyzer data contracts, schema version 1.13.0.
  */
 export interface FightAnalyzerContracts {
   AnalysisExport?: AnalysisExport;
@@ -1219,6 +1221,10 @@ export interface RoundSegment {
    */
   partial: boolean;
   source: RoundSource;
+  /**
+   * Clock rounds: the clock was not readable at the start (covered by a graphic, or the scorebug came late), so the start was extrapolated back from the first clock read this many seconds later; the confidence is lower. None: the start was read on the clock (or entered, or found otherwise).
+   */
+  start_extrapolated_s: number | null;
   start_frame: number;
   /**
    * End of the last frame: (end_frame + 1) / fps.
@@ -1645,6 +1651,10 @@ export interface PhaseTimes {
    * On the ground with a clear top.
    */
   ground_s: number;
+  /**
+   * Part of unknown_s estimated as tied up while one fighter was not measured (gizli rakip çıkarımı; an inference, events version 6 on).
+   */
+  hidden_s: number;
   scramble_s: number;
   /**
    * A fighter was not measured.
@@ -2052,6 +2062,10 @@ export interface MotionTimeline {
    * Grappling state at the sample (most of its frames; null: not measured). Empty: analysed before events version 5.
    */
   phase: (GrapplingState | null)[];
+  /**
+   * Hidden-opponent estimate at the sample where `phase` is not measured (gizli rakip çıkarımı: one fighter unmeasured, the two estimated to be tied up): tied_up (standing or on the ground, not told apart), or the state measured right before and after when both are the same tied-up state. An inference with low confidence, never a measurement. Empty: analysed before events version 6.
+   */
+  phase_hidden: (GrapplingState | null)[];
   sample_hz: number;
   sample_ms: number[];
   /**
@@ -2506,4 +2520,4 @@ export interface UploadLimits {
 }
 
 /** Contract version this UI was built against. */
-export const SCHEMA_VERSION = "1.12.0";
+export const SCHEMA_VERSION = "1.13.0";

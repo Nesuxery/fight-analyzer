@@ -3,6 +3,7 @@ import type { KeyboardEvent, PointerEvent, RefObject } from "react";
 import type { EventType, RoundSource } from "../../contracts/generated";
 import { EVENT_LABELS, MATCH_LABELS, ROUND_EDIT_LABELS, TIMELINE_LABELS as T } from "../../labels";
 import type { TimelineEvent } from "../../model/analysis";
+import { SPAN_TYPES } from "../../model/measured";
 import type { Clock } from "../../player/clock";
 import { formatClock } from "../../player/clock";
 import { ticks as makeTicks, useWidth } from "./ticks";
@@ -140,9 +141,10 @@ const MARK_TITLE = (e: TimelineEvent, names: Record<"red" | "blue", string> | nu
 
 /** Grappling transitions (v2 Bölüm 3b): small hollow marks in the lane of the fighter who made them. */
 const GRAPPLING_MARKS: EventType[] = ["takedown_attempt", "reversal", "get_up", "submission_attempt"];
+const BOTH_LANES: ReadonlySet<EventType> = new Set(["clinch", "hidden_grappling"]);
 
 function Mark({ e, pct, names }: { e: TimelineEvent; pct: (t: number) => string; names: Record<"red" | "blue", string> | null }) {
-  const span = e.type === "clinch" || e.type === "ground_control";
+  const span = SPAN_TYPES.has(e.type);
   const style = span
     ? { left: pct(e.startS), width: `max(3px, ${pct(e.endS - e.startS)})` }
     : { left: pct(e.startS) };
@@ -194,9 +196,10 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
   const curve = momentum && momentum.t.length > 1 ? curvePaths(momentum, duration) : null;
   const gaps = momentum?.insufficient ? spans(momentum.t, momentum.insufficient, duration) : [];
   const ticks = makeTicks(clock.duration, width);
-  // a clinch belongs to both fighters: drawn in both lanes, in a neutral tone
+  // a clinch (or a hidden-opponent estimate with nobody on top) belongs to both fighters: drawn in both
+  // lanes, in a neutral tone
   const lane = (side: "red" | "blue") =>
-    events.filter((e) => (e.side === side || (e.side === null && e.type === "clinch")) && !e.significant);
+    events.filter((e) => (e.side === side || (e.side === null && BOTH_LANES.has(e.type))) && !e.significant);
   const kinds = new Set(events.map((e) => e.type));
 
   return (
@@ -290,6 +293,7 @@ export function Timeline({ clock, time, events, momentum, names = null, disabled
         )}
         {(kinds.has("knockdown") || kinds.has("takedown")) && <li><span className="tl__key tl__key--big" />{T.big}</li>}
         {(kinds.has("clinch") || kinds.has("ground_control")) && <li><span className="tl__key tl__key--span" />{T.span}</li>}
+        {kinds.has("hidden_grappling") && <li><span className="tl__key tl__key--hidden" />{T.hidden}</li>}
         {GRAPPLING_MARKS.some((k) => kinds.has(k)) && <li><span className="tl__key tl__key--grappling" />{T.grappling}</li>}
         {gaps.length > 0 && <li><span className="tl__key tl__key--gap" />{T.gap}</li>}
         {excluded.length > 0 && <li><span className="tl__key tl__key--excluded" />{T.excluded}</li>}

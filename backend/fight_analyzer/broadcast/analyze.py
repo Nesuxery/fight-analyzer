@@ -250,8 +250,10 @@ def analyze(path: Path, video: VideoInfo, load_poses: Callable[[], PoseArrays], 
         notes.append(BroadcastNote(code=BroadcastNoteCode.roi_unreadable))
     rounds: list[RoundSegment] = []
     found: list[clock.ClockRound] = []
+    wipes = replay.wipe_events(cut_step, cuts, fps, s) if cut_step is not None else []
+    transitions = [(a / fps, (b + 1) / fps) for a, b in wipes]
     if reads:
-        found, inferred = clock.infer(reads, duration, s, ruleset)
+        found, inferred = clock.infer(reads, duration, s, ruleset, transitions)
         notes += inferred
         rounds = [clock.to_segment(r, fps, frames_n) for r in found]
         if not rounds:
@@ -267,10 +269,8 @@ def analyze(path: Path, video: VideoInfo, load_poses: Callable[[], PoseArrays], 
     limb_speed = np.full(samples, np.nan, np.float32)
     if track_id is not None and samples:
         limb_speed = replay.activity(poses if poses is not None else load_poses(), track_id, fps, s.sample_hz, samples)
-    wipes = replay.wipe_events(cut_step, cuts, fps, s) if cut_step is not None else []
     signals = replay.Signals(t=seen.t, bug=seen.bug, label=seen.label,
-                             clock=replay.clock_states(seen.t, found, s), activity=limb_speed,
-                             wipes=[(a / fps, (b + 1) / fps) for a, b in wipes])
+                             clock=replay.clock_states(seen.t, found, s), activity=limb_speed, wipes=transitions)
     segments = replay.detect(signals, found, fps, frames_n, s)
     usable = sum(1 for r in reads if r.conf >= s.min_read_conf)
     clock_share = round(min(1.0, usable / max(1.0, duration * s.ocr_hz)), 3)

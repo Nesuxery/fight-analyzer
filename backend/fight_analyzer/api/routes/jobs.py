@@ -487,7 +487,9 @@ def broadcast_timeline(store: StoreDep, settings: SettingsDep, job_id: JobId) ->
     if data is None:
         raise ApiProblem(410, "broadcast_missing", "Raunt bilgisi önbellekte bulunamadı.")
     duration = av.video.frame_count / av.video.fps
-    found, _ = clock_mod.infer(data.reads, duration, settings.broadcast, settings.ruleset)
+    signals = broadcast_store.read_signals(settings.cache_dir, b.cache_key)  # the same logo transitions as the stage
+    found, _ = clock_mod.infer(data.reads, duration, settings.broadcast, settings.ruleset,
+                               signals.wipes if signals is not None else ())
     hz = settings.broadcast.ocr_hz
     ts, rnd, rem, conf = clock_mod.timeline(found, duration, hz, settings.broadcast.max_interpolate_s)
     return BroadcastTimeline(job_id=job_id, fps=av.video.fps, sample_hz=hz, t_s=ts, round=rnd, remaining_s=rem,

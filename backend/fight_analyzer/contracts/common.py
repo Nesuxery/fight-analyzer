@@ -13,7 +13,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "1.12.0"
+SCHEMA_VERSION = "1.13.0"
 
 # Job ids are uuid4 hex strings.
 JOB_ID_PATTERN = r"^[0-9a-f]{32}$"

@@ -36,7 +36,9 @@ Grappling (grappling.py, v2 Bölüm 3b)
     Clinches, ground control (on top), takedowns (landed or brief), takedown
     attempts, reversals, getting up and possible submission attempts are found
     from the states and their transitions; clinch control and active control
-    are estimated there too.
+    are estimated there too. Where the state is unknown because only one of
+    two tied-up fighters is measured, a separate hidden-opponent estimate
+    (`hidden_grappling` events, never counted) says they are still tied up.
 Falls
     A stable standing stretch followed by a stable down one. A possible
     knockdown when a strike of the opponent peaked just before (not in a
@@ -158,6 +160,7 @@ class Analysis:
     stats: list[dict[str, float]] = field(default_factory=list)
     damage: list[DamageSignal] = field(default_factory=list)
     grappling: grappling_mod.Grappling | None = None  # per-frame states (events version 5 on)
+    hidden: grappling_mod.Hidden | None = None  # hidden-opponent estimate (events version 6 on)
     active: np.ndarray | None = None  # [2, F] active control
     facing_away: np.ndarray | None = None  # [2, F] 1 back to the camera, 0 not, NaN not present
     wrists: np.ndarray | None = None  # [2, F] share of his wrists measured, NaN not present
@@ -957,10 +960,20 @@ def counted(e: FightEvent) -> bool:
 
 
 def attribute(events: list[FightEvent], kin: tuple[FighterKinematics, FighterKinematics],
-              identity_conf: np.ndarray, s: MotionSettings) -> None:
-    """Set the attribution confidence of every event from the identity confidence [F, 2]."""
+              identity_conf: np.ndarray, s: MotionSettings, hidden: grappling_mod.Hidden | None = None) -> None:
+    """Set the attribution confidence of every event from the identity confidence [F, 2]. A hidden-opponent
+    estimate takes it from the fighter seen on its frames and is never "Kime ait belirsiz" (it has its own
+    label and nobody is credited with it)."""
     for e in events:
         frames = slice(e.start_frame, e.end_frame + 1)
+        if e.type == EventType.hidden_grappling:
+            seen = hidden.seen[frames] if hidden is not None else np.zeros(0, np.int8)
+            rows = np.arange(e.start_frame, e.end_frame + 1)[:seen.size][seen >= 0]
+            conf = identity_conf[rows, seen[seen >= 0]] if rows.size else np.zeros(0)
+            conf = conf[np.isfinite(conf)]
+            e.attribution_confidence = round(float(np.clip(conf.mean(), 0, 1)), 3) if conf.size else 0.0
+            e.attribution_uncertain = False
+            continue
         values = []
         for f in ([FIGHTERS.index(e.actor)] if e.actor is not None else [0, 1]):
             conf = identity_conf[frames, f][kin[f].present[frames]]
@@ -1028,6 +1041,8 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
     # Grappling states, frame by frame: distance, clinch, ground (who is on top), scramble.
     grap = grappling_mod.states(ts, frame_s, kin, down, distance, approach, s, identity_conf)
     state = grap.state
+    # where one of two tied-up fighters is not measured: a separate estimate, never part of the state
+    hidden = grappling_mod.hidden_opponent(state, kin, down, distance, ts, frame_s, s, identity_conf)
     clinches = [(a, b) for v, a, b in value_runs(state) if v == grappling_mod.CLINCH]
     on_top, _ = grappling_mod.control_masks(state, grap.clinch_by)
 
@@ -1068,6 +1083,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
         rises=rises, strike_moments=[np.array([ts[x.cand.peak] for x in strikes[i]]) for i in (0, 1)],
         standing_ref=[standing_reference(k, ts, s) for k in kin])
     found += grappling_mod.submissions(grap, kin, ts, frame_s, s)
+    found += grappling_mod.hidden_events(hidden, frame_s)
     grappling_events = [_found_event(f, ts_ms) for f in found]
     mat = np.stack([grappling_mod.on_mat(k, s) for k in kin])
     fall_events = [_fall_event(fl, ts_ms) for fl in falls
@@ -1101,7 +1117,7 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
         if seen[e.event_id] > 1:
             e.event_id = f"{e.event_id}-{seen[e.event_id]}"
     if identity_conf is not None:
-        attribute(events, kin, identity_conf, s)
+        attribute(events, kin, identity_conf, s, hidden)
 
     # Active control: on top or in control of the clinch while striking or holding a submission.
     active = grappling_mod.active_control(
@@ -1149,6 +1165,6 @@ def analyze(arrays: PoseArrays, camera: CameraTrack, kin: tuple[FighterKinematic
     vis = [_visibility(k) for k in kin]
     return Analysis(events=events, runs=runs, valid=valid, activity=activity, hand_speed=hand, foot_speed=foot,
                     approach=approach, movement=movement, posture=np.where(down, GROUNDED, posture).astype(np.int8),
-                    distance=distance, frame_s=frame_s, stats=stats, damage=damage, grappling=grap, active=active,
-                    facing_away=np.stack([v[0] for v in vis]), wrists=np.stack([v[1] for v in vis]),
-                    phases=grappling_mod.phase_seconds(state, frame_s))
+                    distance=distance, frame_s=frame_s, stats=stats, damage=damage, grappling=grap, hidden=hidden,
+                    active=active, facing_away=np.stack([v[0] for v in vis]), wrists=np.stack([v[1] for v in vis]),
+                    phases=grappling_mod.phase_seconds(state, frame_s, hidden.state))

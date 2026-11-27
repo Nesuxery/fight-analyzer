@@ -1,6 +1,7 @@
 # Proje notları: önemli kararlar ve kalan işler
 
-Son güncelleme: 27 Kasım 2026 (v2 Bölüm 3b onaylandı; kullanıcının 3b kararları ve Bölüm 4 notu). Ayrıntılı
+Son güncelleme: 27 Kasım 2026 (v2 Bölüm 3b kararları uygulandı: gizli rakip çıkarımı, raunt başının
+saatten geriye hesaplanması, büyük poz modeli denemesi, Bölüm 4 notu plana işlendi). Ayrıntılı
 teknik açıklama [README.md](README.md), kullanım [docs/KULLANIM.md](docs/KULLANIM.md).
 v2 kuralları kökteki [CLAUDE.md](CLAUDE.md) dosyasında; bu notlarla çeliştiği yerde
 CLAUDE.md geçerlidir.
@@ -24,14 +25,14 @@ CLAUDE.md geçerlidir.
   fight_analyzer.jobs`), Vite/React arayüzü. Hepsi `127.0.0.1`; `start.cmd` tek komut.
 - İş kaydı SQLite (WAL); işçi kalp atışı, 30 sn sonra yarım iş yeniden kuyruğa,
   2 denemeden sonra `worker_lost`.
-- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.12.0**);
+- Sürümlü Pydantic sözleşmeleri tek doğruluk kaynağı (şema şu an **1.13.0**);
   JSON Schema ve TS tipleri bundan üretilir, `check.cmd` güncelliğini denetler.
   Üretilen dosyalar (şema, TS tipleri, overlay dosyaları) `.gitattributes` ile her
   checkout'ta LF; denetim bayt bayt karşılaştırır ve gevşetilmedi.
 - Önbellekler içerik adresli (anahtar = girdilerin özeti), pickle yok
   (JSON + `allow_pickle=False` .npy). Her önbelleğin kendi sürüm sabiti var
   (`KEY_SCHEMA "1.2.0"`, `IDENTITY_VERSION 7`, `CAMERA_VERSION 2`,
-  `EVENTS_VERSION 5`, `MOMENTUM_VERSION 4`, `BROADCAST_VERSION 3`); mantık değişince
+  `EVENTS_VERSION 6`, `MOMENTUM_VERSION 4`, `BROADCAST_VERSION 4`); mantık değişince
   ilgili sürüm artırılır, şema sürümü saatler süren poz çıkarımını yeniden yaptırmaz.
 
 ### Video ve poz
@@ -592,7 +593,10 @@ momentumu hesaplar (örnek yayında 18 sn).
   "bilinmiyor" payı yüksekse hakem güveni düşer ve raunt "grappling ölçülemedi" diye
   işaretlenir. Görünmeyen grappling, vuruşları görünen dövüşçünün lehine yorumlanmaz: ölçülen
   vuruşlar yalnızca görülebilen (çoğunlukla ayakta geçen) bölümü temsil eder. Khabib–Poirier'de
-  "bilinmiyor" payı R1 %63, R2 %78, R3 %76 (3b).
+  "bilinmiyor" payı R1 %63, R2 %78, R3 %76 (3b). **docs/v2-plan.md'ye işlendi** (27 Kasım 2026:
+  4.2 adım 1, 4.6 `data_quality`, 4.7 test); veri tarafı gizli rakip çıkarımıyla hazır (aşağıda
+  "3b kararlarının uygulanması"): bilinmeyenin "sarılı" tahmin edilen kısmı ve o sırada hangi
+  dövüşçünün görüldüğü (görülen dövüşçü üstünlük kanıtı değildir).
 
 ### Grappling durumları, kontrol ve baskınlık (v2 Bölüm 3b, 26 Kasım 2026)
 Bölüm 3'ün (b) aşaması. Kod: `motion/grappling.py` (kare bazlı durum makinesi, geçiş
@@ -713,7 +717,8 @@ açılır, "Yeniden işle" yalnızca olayları ve momentumu hesaplar.
   "olası" boyun sarma; 2B'de derinlik ayrımı boy oranıyla kaba; eşikler bir yayın ve sentetik
   sahnelerle ayarlandı.
 - **(b) onayı ve kararlar (kullanıcı kararları, 27 Kasım 2026):** (b) onaylandı (commit
-  `92d5a13`). Aşağıdakiler bu oturumda **uygulanmadı**; kullanıcı yeni oturumda yapacak:
+  `92d5a13`). Aşağıdakiler o oturumda uygulanmadı; ertesi oturumda uygulandı (bir sonraki başlık,
+  "3b kararlarının uygulanması"):
   - *Gizli rakip çıkarımı:* evet. Bir dövüşçü görünmüyorken az önce rakibine sarılı olduğu
     biliniyorsa o an ayrı ve açıkça etiketli bir tahmin olur ("Kimlik çıkarımı" gibi), düşük
     güvenle işaretlenir ve ölçülmüş gibi gösterilmez. Sayımlara, kontrol süresine ve momentuma
@@ -728,21 +733,98 @@ açılır, "Yeniden işle" yalnızca olayları ve momentumu hesaplar.
     okumasından geriye hesaplanır; kaynağı ayrı işaretlenir ve güveni biraz düşük olur
     (Khabib–Poirier R3: ilk okuma 4:49, gerçek başlangıç 11 sn önce).
 
-### Sonraki oturumlar için başlangıç notu (27 Kasım 2026)
-(b) onaylandı. Kullanıcı yeni oturumda önce 3b kararlarını yapacak (yukarıda "(b) onayı ve
-kararlar": gizli rakip çıkarımı, büyük poz modeli denemesi, raunt başlangıcının saatten geriye
-hesaplanması); sıra ve kapsam o oturumun isteğine göre. (c) ayrıca başlar (Bölüm 3.5–3.6:
-`RoundFeatures`, düzeltme katmanı, `python -m fight_analyzer.features` raunt tablosu). Hazır
-olanlar: `dominance.measure` (3.4, herhangi bir aralık), olay önbelleğindeki kare dizileri
-(`grappling`, `clinch_by`), `grappling.active_control` (düzeltilmiş olay listesiyle yeniden
-hesaplanabilir), 10 Hz `facing_away` / `wrists_measured`. Khabib–Poirier karalama işi
-`931d7565` (`local/fa-data`; adlar, 5 rauntluk unvan maçı ve elle düzeltilmiş R3 başı girili);
-karalama sunucusu kapalı, gerekince "fa-scratch" yapılandırmasıyla açılır. Karelerle denetim
-yardımcıları `local/bolum3b/tools/` altında (`run3b.py`, `grids3b.py`, `coverage.py`,
-`dets_at.py`, `nms_probe.py`, `gaps.py`, `pick.py`, `frames_at.py`, `compare_sample.py`,
-`timing.py`).
+### 3b kararlarının uygulanması (27 Kasım 2026)
+Kod: `motion/grappling.py` (`hidden_opponent`, `hidden_events`), `motion/events.py`, `motion/store.py`,
+`broadcast/clock.py`; ayarlar `MotionSettings.hidden_*` (olay anahtarına girer) ve
+`BroadcastSettings.start_extrapolate_max_s` / `extrapolated_start_factor`. Şema 1.13.0,
+`EVENTS_VERSION` 6 (`EVENTS_SINCE` 6: sürüm 5 analizleri bantla açılır, "Yeniden işle" olayları ve
+yayın aşamasını yeniden hesaplar), `BROADCAST_VERSION` 4 (bant yok: fark yalnızca saati raunt başında
+kapalı kalan rauntlar). Poz, takip hazırlığı, kimlik, kamera ve `KEY_SCHEMA` değişmedi; momentum
+formülü aynı.
+- **Gizli rakip çıkarımı (`hidden_grappling`):** sarılınca poz modeli iki dövüşçüye çoğunlukla tek
+  iskelet veriyor; biri ölçülemiyor ve durum "bilinmiyor". Bilinmeyen bir bölümde yalnızca bir
+  dövüşçünün ölçüldüğü karelerde ayrı bir tahmin yapılır. Kanıt: durum bilinmez olduğu anın ±1 sn
+  çevresinde iki dövüşçü ≤ 2,2 gövde boyu yakın ya da hemen öncesinde sarılı (bir dalış ≈ 2 gövde
+  boyundan başlıyor), ve görünen dövüşçünün yerde olduğu her kare (bir dövüşçü tek başına uzun süre
+  yerde kalmaz). 10 sn hiçbir şey tahmin edilemezse (yakın çekim, ikisi de kayıp) bölüm bölünür;
+  sonraki parça yalnızca "yerde" kanıtıyla sürer. Yakınlık görülen parçada ayaktaki kareler kanıta en
+  çok 30 sn uzaklıkta tutulur; yakınlık görülmeyen parçada ayaktaki kareler tahmin edilmez. Her parça
+  en az 4 sn sürmeli (örnek yayında canlı değişimlerde bir dövüşçünün diğerini kapatması en çok
+  ≈ 3,4 sn). ≤ 2,5 sn'lik iki tarafı ölçülmeyen boşluklar köprülenir.
+  - *Ayakta mı yerde mi söylenmez:* kör kare denetiminde (sistemin kararını görmeden, 36 kare)
+    tahmin edilen 24 karenin **24'ünde dövüşçüler gerçekten sarılıydı**, ama birleşik iskeletin
+    duruşundan çıkan "ayakta / yerde" ayrımı 24'ün 11'inde yanlıştı. Bu yüzden tahmin `tied_up`
+    ("sarılı"; yeni `GrapplingState`); yalnızca bilinmeyen bölümün iki yanında aynı sarılı durum
+    ölçüldüyse (ör. iki yanda "yerde kırmızı üstte") o durum taşınır. Görülen dövüşçü üstte sayılmaz
+    (model bazen alttakini gösteriyor: R1 3:17'de görünen Poirier'di).
+  - *Sayılmaz:* ayrı olay türü (`hidden_grappling`, kanıt `opponent_hidden`), ayrı kare dizileri
+    (`grappling_hidden`, `_conf`, `_seen`), 10 Hz `MotionTimeline.phase_hidden`,
+    `PhaseTimes.hidden_s`. Güven ≤ 0,35 × görünen dövüşçünün kimlik güveni. Sayımlara, kontrol
+    süresine, momentuma, hakem kanıtına, 3.4 ölçümlerine girmez (tüketiciler olay türünü açık
+    listelerle süzüyor; testler bunu sabitliyor). Ölçülen durum dizisi hiç değişmez. **Kullanıcı
+    kararı bekliyor:** sayımlara / kontrol süresine / momentuma girsin mi (şimdilik girmiyor, 3a'daki
+    kimlik çıkarımıyla aynı).
+  - *Arayüz (asgari):* olay listesinde "Görünmeyen grappling (tahmini)" ve "Gizli rakip çıkarımı"
+    etiketi (açıklamalı), zaman çizelgesinde iki şeritte kesikli çerçeve ve açıklaması.
+  - *Khabib–Poirier (karalama işi 931d7565, yeniden hesap):* raunt içindeki "bilinmiyor" süresinin
+    R1'de 102 / 183 sn'si (%55), R2'de 74 / 227 sn'si (%32), R3'te 13 / 96 sn'si (%13) "sarılı"
+    tahmin edildi (R1'de 5 sn'si iki yandan taşınan "kırmızı üstte"); 13 parça. Kalan bilinmeyen
+    çoğunlukla iki dövüşçünün de ölçülemediği yakın çekimler. Tahmin edilmeyen 12 bilinmeyen karenin
+    6'sında da sarılıydılar, 5'i karar verilemeyen yakın çekim, 1'i ayrık: kural temkinli. Maç sonrası
+    (dışlanan bölüm) 11,5 sn "sarılı" tahmini kalıyor (Khabib'in diz çöktüğü ve tekrarlarda yerde
+    olduğu kareler); ilk kuralda kutlama boyunca ayakta tahmin sürüyordu, bölme ve 30 sn sınırı bunun
+    için eklendi. Ölçülen sayımlar ve kontrol değişmedi (Khabib yer kontrolü 4,47 sn).
+  - *Topuria–Volkanovski:* raunt içinde tahmin yok; raunt arasında (dışlanan bölüm, 5:13) 4,5 sn'lik
+    tek parça.
+  - *Bilinen sınırlar:* kimlik katmanı bir dövüşçüyü ayrık dururken uzun süre bulamazsa (benzer
+    şort) yakınlıktan sonraki 30 sn içinde yanlış "sarılı" tahmini çıkabilir; sarılmanın bittiği an
+    gecikmeli (rakip ayrılıp tekrar tanınana kadar). Tek kayıtla ayarlandı.
+- **Raunt başı saatten geriye (Bölüm 2a kuralı):** ilk okuma tepeden 6 sn'den fazla, 20 sn'ye kadar
+  aşağıdaysa başlangıç ilk okumadan geriye hesaplanır, `RoundSegment.start_extrapolated_s` (ilk okumaya
+  kadar geçen süre) ile işaretlenir ve güveni × 0,85 olur (okuma yoğunluğu saatin okunabildiği kısım
+  üzerinden). O an videodan önceyse (kayıt raunt içinde başlıyor), önceki rauntla çakışıyorsa ya da
+  arada bir logo geçişi varsa (yayın rauntun içine dönmüş) geriye hesaplanmaz; o anın hemen önündeki
+  (≤ 1 sn) logo geçişi rauntu başlatan geçiştir. Arayüzde raunt satırında "başı saatten geriye
+  hesaplandı (N sn)" ve açıklaması. **Khabib–Poirier R3:** ilk okuma 670,0 sn'de 4:48; saat şeridi
+  12 sn grafik altında (scorebug eşleşmesi ≈ 0), 655,9–657,3 sn'de logo geçişi. Yeni başlangıç
+  657,5 sn = kare 19706 (elle düzeltilen kare 19720 = 658,0 sn; fark 0,47 sn, 14 kare), güven 0,60 → 0,51, işaret 12,5 sn. Örnek yayın ve
+  sentetik tekrar klibinde rauntlar değişmedi. 20 sn sınırı: yayının bir rauntun içine sert kesimle
+  (logo geçişsiz) geç dönmesini raunt başı sanmamak için; daha uzun kapalı saat kısmi raunt kalır.
+- **Büyük poz modeli denemesi:** `yolo26x-pose.pt` (126 242 553 bayt, ultralytics/assets v8.4.0,
+  GitHub'ın yayımladığı SHA-256 ile doğrulandı) yalnızca `local/bolum3b/models/` altına indirildi
+  (git'e girmez, `local/` ile silinir); uygulamanın modeli (`yolo26s-pose`), model kayıt defteri ve
+  `KEY_SCHEMA` değişmedi, hiçbir önbelleğe yazılmadı. 50 kare: `nms_probe.py`'nin 9 karesi + gizli rakip
+  tahmininin karelerinden zamana yayılmış 41 kare; aynı ayarlar (imgsz 640, conf 0,25, iou 0,7,
+  batch 4, CPU). Gözle sayım (`local/bolum3b/out/bigpose-*.jpg`, `bigpose-visual.json`): ikinci
+  dövüşçüyü kullanılabilir iskeletle (≥ 6 gövde eklemi) yolo26x ≈ 15–17 karede, yolo26s ≈ 5–9 karede
+  buluyor; x, s'nin bulduğu 4 karede kaybediyor; ikisi birden 3 karede. Kazanç çoğunlukla ayaktaki
+  klinçte ve alttakinin bacakları göründüğünde; alttakinin gövdesi kapalı yer karelerinde ve yakın
+  çekimlerde ikisi de bulamıyor; bulunan ikinci iskeletlerin çoğu kısmi (üst gövde ya da bacaklar).
+  Otomatik sayım (s 28, x 34) seyircileri ve hakemi de saydığı için kullanılmadı. Süre: s 0,16, x 1,09
+  sn/kare (6,6 kat). *Değerlendirme:* yalnızca bilinmeyen karelerde çalıştırmak Khabib–Poirier'de
+  ≈ 15 200 kare × 1,09 sn ≈ 4,6 saat, yalnızca gizli rakip tahmini karelerinde ≈ 5 700 kare ≈ 1,7 saat
+  ekler (tüm poz geçişi 1,5 saat); kazanç tahmin edilen karelerin ≈ üçte biri, kimlik katmanının o
+  kısmi iskeletleri Poirier olarak tanıyıp tanımayacağı ayrıca belirsiz. **Önerim:** şimdi entegre
+  edilmesin; GPU'lu bir makinede (x maliyeti küçük) ya da daha ucuz `yolo26l-pose` (58 MB) ile ikinci
+  bir denemede yeniden bakılsın.
 
-- (a) ve (b) `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
+### Sonraki oturumlar için başlangıç notu (27 Kasım 2026)
+(b) onaylandı; 3b kararları uygulandı (yukarıda), kullanıcı onayı ve gizli rakip tahmininin
+sayımlara / kontrol süresine / momentuma girip girmeyeceği kararı bekleniyor. (c) ayrıca başlar
+(Bölüm 3.5–3.6: `RoundFeatures`, düzeltme katmanı, `python -m fight_analyzer.features` raunt
+tablosu). Hazır olanlar: `dominance.measure` (3.4, herhangi bir aralık), olay önbelleğindeki kare
+dizileri (`grappling`, `clinch_by`, `grappling_hidden` ve güveni / görülen dövüşçü),
+`grappling.phase_seconds` (bilinmeyen ve "sarılı" tahmin edilen süre dahil; (c)'de raunt aralığıyla
+çağrılacak), `grappling.active_control` (düzeltilmiş olay listesiyle yeniden hesaplanabilir), 10 Hz
+`facing_away` / `wrists_measured`. Khabib–Poirier karalama işi `931d7565` (`local/fa-data`; adlar,
+5 rauntluk unvan maçı ve elle düzeltilmiş R3 başı girili); karalama sunucusu kapalı, gerekince
+"fa-scratch" yapılandırmasıyla açılır. Karelerle denetim yardımcıları `local/bolum3b/tools/`
+altında (`run3b.py`, `grids3b.py`, `coverage.py`, `dets_at.py`, `nms_probe.py`, `gaps.py`, `pick.py`,
+`frames_at.py`, `compare_sample.py`, `timing.py`; 3b kararları için `run_hidden.py`,
+`hidden_probe.py`, `hidden_episodes.py`, `hidden_trace.py`, `hidden_blind.py`, `stretch_grid.py`,
+`clock_probe.py`, `big_pose_test.py`, `fetch_big.py`).
+
+- (a), (b) ve 3b kararları `v2/bolum-3` dalında; merge/push kullanıcının sözüyle.
 
 ### AI hakemlik (Aşama 9)
 - Unified Rules 10-Point Must; kriter sırası katı: etkili vuruş/grappling →
@@ -927,12 +1009,12 @@ Yukarıdaki iki bölümle çeliştiği yerde bunlar geçerlidir:
 - [ ] "Olası temas" yakın mesafede çok sık çıkıyor; "olası etki" eşiği (0,3) ve
   ölçüsü gerçek etiketli verilerle ayarlanmalı.
 - [ ] Grappling'de alttaki/arkadaki dövüşçü poz modelince bulunmuyor (iki dövüşçüye tek
-  iskelet); Khabib–Poirier kaydında videonun %77'si "bilinmiyor" (v2 3b). Karar (27 Kasım
-  2026): gizli rakip çıkarımı ayrı, etiketli, düşük güvenli tahmin olarak denenecek; büyük poz
-  modeli ≈ 50 karelik hızlı denemeyle sınanacak; ayrıca kullanıcı düzeltmesi ((c)).
-- [ ] Raunt başı saatin ilk okumasından geriye hesaplanmıyor: Khabib–Poirier R3'te sponsor
-  grafiği saati 11 sn kapatınca başlangıç 11 sn geç (v2 2a kuralı). Karar (27 Kasım 2026):
-  geriye hesaplanacak, kaynağı ayrı işaretlenecek, güveni biraz düşük.
+  iskelet); Khabib–Poirier kaydında videonun %77'si "bilinmiyor" (v2 3b). 27 Kasım 2026: gizli
+  rakip çıkarımı eklendi (raunt içi bilinmeyenin %13–55'i "sarılı" tahmini; ayakta / yerde
+  ayrılmıyor); büyük poz modeli denendi (ikinci dövüşçü ≈ 1/3 karede, 6,6 kat süre; entegre
+  edilmedi). Kalan: kullanıcı düzeltmesi ((c)); GPU'lu makinede ya da `yolo26l` ile yeniden deneme.
+- [x] Raunt başı saatin ilk okumasından geriye hesaplanıyor (27 Kasım 2026; işaretli, güveni
+  × 0,85; Khabib–Poirier R3 elle düzeltmeye 0,47 sn).
 - [ ] Hakem profili ağırlıkları ve 10-8 eşikleri gerçek resmi skor kartlarıyla
   karşılaştırılarak ayarlanmalı (şu an tasarım değerleri).
 

@@ -241,7 +241,8 @@ def test_events_from_before_strike_outcomes_ask_for_reprocessing(client: TestCli
     assert with_events()["outdated"] == ["events_outdated"]  # stored before the version was kept: opens, with the banner
     assert with_events(version=3)["outdated"] == ["events_outdated"]
     assert with_events(version=4)["outdated"] == ["events_outdated"]  # before the grappling states
-    assert with_events(version=5)["outdated"] == []
+    assert with_events(version=5)["outdated"] == ["events_outdated"]  # before the hidden-opponent estimate
+    assert with_events(version=6)["outdated"] == []
 
 
 def test_the_users_own_parts_are_always_stored_as_manual(client: TestClient, store: JobStore):

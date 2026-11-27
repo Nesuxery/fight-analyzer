@@ -39,6 +39,7 @@ class GrapplingState(StrEnum):
     ground_red_top = "ground_red_top"  # on the ground, red (fighter_a) above blue
     ground_blue_top = "ground_blue_top"  # on the ground, blue (fighter_b) above red
     scramble = "scramble"  # on the ground (one or both), no clear top
+    tied_up = "tied_up"  # hidden-opponent estimate only: tied up, standing or on the ground (not told apart)
 
 
 class FighterSignals(Contract):
@@ -70,6 +71,12 @@ class MotionTimeline(VersionedContract):
         default_factory=list, description=(
             "Grappling state at the sample (most of its frames; null: not measured). Empty: analysed before "
             "events version 5."))
+    phase_hidden: list[GrapplingState | None] = Field(
+        default_factory=list, description=(
+            "Hidden-opponent estimate at the sample where `phase` is not measured (gizli rakip çıkarımı: one "
+            "fighter unmeasured, the two estimated to be tied up): tied_up (standing or on the ground, not told "
+            "apart), or the state measured right before and after when both are the same tied-up state. An "
+            "inference with low confidence, never a measurement. Empty: analysed before events version 6."))
     fighters: list[FighterSignals] = Field(max_length=2)
 
 
@@ -241,6 +248,10 @@ class PhaseTimes(Contract):
     ground_s: float = Field(ge=0, description="On the ground with a clear top.")
     scramble_s: float = Field(ge=0)
     unknown_s: float = Field(ge=0, description="A fighter was not measured.")
+    hidden_s: float = Field(
+        default=0, ge=0, description=(
+            "Part of unknown_s estimated as tied up while one fighter was not measured (gizli rakip çıkarımı; an "
+            "inference, events version 6 on)."))
 
 
 class EventsSummary(Contract):

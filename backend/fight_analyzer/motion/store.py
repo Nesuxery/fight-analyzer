@@ -42,8 +42,9 @@ from .kinematics import GROUNDED, STANDING, TRANSITION
 # 2: possible impact (head jolt) on contact strikes; 3: attribution confidence; 4: strike outcome, target zone,
 # significant strikes, elbows and ground strikes, falls from the hip height (sitting), knockdowns with an
 # inferred identity, damage signals; 5: grappling states (strike phase, clinch, ground control, takedowns,
-# attempts, reversals, get-ups, submission attempts, clinch and active control), visibility signals
-EVENTS_VERSION = 5
+# attempts, reversals, get-ups, submission attempts, clinch and active control), visibility signals;
+# 6: hidden-opponent estimate (tied up while one fighter is not measured; hidden_grappling events, never counted)
+EVENTS_VERSION = 6
 # 2: excluded parts; 3: events of uncertain attribution earn nothing; 4: elbows and ground strikes earn the
 # strike attempt weight
 MOMENTUM_VERSION = 4
@@ -52,9 +53,11 @@ CAMERA_ARRAYS = ("to_ref", "segment", "known", "inliers")
 SIGNAL_ARRAYS = ("sample_ms", "valid", "activity", "hand_speed", "foot_speed", "approach", "movement", "posture",
                  "camera_known", "distance")
 # events version 5 on (older entries have none): sampled grappling state and visibility, and per frame the
-# grappling state, its confidence and who is credited with clinch control
-NEW_SIGNAL_ARRAYS = ("phase", "facing_away", "wrists_measured")
-FRAME_ARRAYS = ("grappling", "grappling_conf", "clinch_by")
+# grappling state, its confidence and who is credited with clinch control; version 6 on: the hidden-opponent
+# estimate (sampled, and per frame with its confidence and the fighter seen)
+NEW_SIGNAL_ARRAYS = ("phase", "facing_away", "wrists_measured", "phase_hidden")
+FRAME_ARRAYS = ("grappling", "grappling_conf", "clinch_by", "grappling_hidden", "grappling_hidden_conf",
+                "grappling_hidden_seen")
 MOVEMENTS = {ADVANCING: Movement.advancing, RETREATING: Movement.retreating, NEUTRAL: Movement.neutral}
 POSTURES = {STANDING: Posture.standing, GROUNDED: Posture.grounded, TRANSITION: Posture.transition}
 PHASES: dict[int, GrapplingState] = dict(grappling_mod.CONTRACT)
@@ -166,10 +169,13 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
     out["movement"] = np.full((2, count), -1, np.int8)
     out["posture"] = np.full((2, count), -1, np.int8)
     grap = analysis.grappling
+    hidden = analysis.hidden
     if grap is not None:
         out["phase"] = np.full(count, -1, np.int8)
         out["facing_away"] = np.full((2, count), -1, np.int8)
         out["wrists_measured"] = np.full((2, count), np.nan, np.float32)
+    if hidden is not None:
+        out["phase_hidden"] = np.full(count, -1, np.int8)
     for k in range(count):
         frames = np.flatnonzero(which == k)
         if frames.size == 0:  # frame rate below the grid: use the nearest frame
@@ -189,6 +195,11 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
                 if away.size:
                     out["facing_away"][i, k] = int(away.mean() >= 0.5)
                     out["wrists_measured"][i, k] = float(np.nanmean(analysis.wrists[i, frames]))
+        if hidden is not None:
+            v = hidden.state[frames]
+            est = v[v >= 0]
+            if est.size * 2 >= frames.size:  # most of its frames are estimated
+                out["phase_hidden"][k] = int(np.bincount(est).argmax())
         for i in range(2):
             ok = analysis.valid[i, frames]
             out["valid"][i, k] = ok.mean() >= 0.5
@@ -209,10 +220,14 @@ def sample(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, hz: float
 
 
 def events_data(analysis: Analysis, ts_ms: np.ndarray, camera: CameraTrack, s: MotionSettings) -> EventsData:
-    grap = analysis.grappling
+    grap, hidden = analysis.grappling, analysis.hidden
     frames = {} if grap is None else {"grappling": grap.state.astype(np.int8),
                                       "grappling_conf": grap.conf.astype(np.float32),
                                       "clinch_by": grap.clinch_by.astype(np.int8)}
+    if hidden is not None:
+        frames |= {"grappling_hidden": hidden.state.astype(np.int8),
+                   "grappling_hidden_conf": hidden.conf.astype(np.float32),
+                   "grappling_hidden_seen": hidden.seen.astype(np.int8)}
     return EventsData(events=analysis.events, runs=analysis.runs, stats=analysis.stats,
                       camera_known_share=round(camera.known_share, 3),
                       signals=sample(analysis, ts_ms, camera, s.sample_hz), damage=analysis.damage, frames=frames,
@@ -262,10 +277,12 @@ def motion_timeline(job_id: str, data: EventsData, s: MotionSettings) -> MotionT
             facing_away=[None if v < 0 else bool(v) for v in sig["facing_away"][i]] if "facing_away" in sig else [],
             wrists_measured=[_num(v) for v in sig["wrists_measured"][i]] if "wrists_measured" in sig else []))
     phase = [PHASES.get(int(v)) for v in sig["phase"]] if "phase" in sig else []
+    hidden = [PHASES.get(int(v)) for v in sig["phase_hidden"]] if "phase_hidden" in sig else []
     return MotionTimeline(job_id=job_id, data_origin=DataOrigin.measured, sample_hz=s.sample_hz,
                           sample_ms=[round(float(t), 1) for t in sig["sample_ms"]],
                           camera_known=[bool(v) for v in sig["camera_known"]],
-                          distance=[_num(v) for v in sig["distance"]], phase=phase, fighters=fighters)
+                          distance=[_num(v) for v in sig["distance"]], phase=phase, phase_hidden=hidden,
+                          fighters=fighters)
 
 
 # ---- momentum ----------------------------------------------------------------

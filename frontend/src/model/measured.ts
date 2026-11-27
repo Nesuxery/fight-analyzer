@@ -187,9 +187,12 @@ export const HAND_STRIKES: ReadonlySet<string> = new Set(["punch", "knee", "elbo
 export const inferredOnly = (e: FightEvent): boolean =>
   e.attribution_uncertain && (e.evidence ?? []).includes("identity_inferred");
 
+/** Stretches rather than moments: drawn as spans, timed by their end. */
+export const SPAN_TYPES: ReadonlySet<string> = new Set(["clinch", "ground_control", "hidden_grappling"]);
+
 /** When an event happens (its peak; the end for time-based ones such as control). */
 export function eventMoment(e: FightEvent): number {
-  return e.type === "ground_control" || e.type === "clinch" ? e.end_ms : (e.peak_ms ?? e.start_ms);
+  return SPAN_TYPES.has(e.type) ? e.end_ms : (e.peak_ms ?? e.start_ms);
 }
 
 /** Detector confidence below this is labelled "Düşük güven". */
@@ -269,6 +272,7 @@ export function toTimelineEvents(events: FightEvent[], contributions: MomentumCo
     zone: e.target_zone ?? null,
     significantStrike: e.significant ?? null,
     inferred: inferredOnly(e),
+    hidden: e.type === "hidden_grappling",
     brief: e.brief ?? null,
   }));
 }

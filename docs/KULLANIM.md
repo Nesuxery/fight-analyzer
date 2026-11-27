@@ -99,6 +99,12 @@ saklanır. Video ve üzerindeki iskelet ve efekt renkleri iki temada aynıdır.
    düşük olduğunu söyler: olay sayılır ama momentuma puan eklemez. Kamera
    kesiminden hemen sonra dövüşçüler iç içe görünüyorsa kimlik, dövüşçüler
    birkaç kare ayrı görülene kadar düşük güvenli ("Örtüşme") sayılır.
+   **"Görünmeyen grappling (tahmini)"** satırları ve **"Gizli rakip çıkarımı"**
+   etiketi: dövüşçüler sarılınca poz modeli çoğunlukla ikisine tek iskelet verir
+   ve biri ölçülemez. Az önce yakın oldukları ya da görünen dövüşçü yerde olduğu
+   için o sürede sarılı oldukları tahmin edilir (ayakta mı yerde mi olduğu
+   söylenmez). Bu bir ölçüm değildir: sayımlara, kontrol süresine ve momentuma
+   girmez; zaman çizelgesinde kesikli çerçeveyle gösterilir.
 5. **Dışlanan bölümler (tekrar, raunt arası, giriş, maç sonrası):** Dövüş
    süresi olmayan bölümler otomatik dışlanır ve zaman çizelgesinin altındaki
    **"Dışlanan bölümler"** listesinde "otomatik" etiketi, nedeni, güveni ve
@@ -158,7 +164,10 @@ kullanılmaz.
 "Maç bilgileri"):
 - *Raunt sayısı* (çoğu maçta 3, şampiyonluk maçında 5): "Maç ayarları"nda.
 - *Raunt sınırları:* scorebug saati okunabildiyse otomatik bulunur
-  ("scorebug saatinden", güven yüzdesiyle). Düzeltmek için sınırı zaman
+  ("scorebug saatinden", güven yüzdesiyle). Raundun ilk saniyelerinde saat bir
+  grafiğin altında kaldıysa başlangıç saatin ilk okunduğu andan geriye
+  hesaplanır; satırda "başı saatten geriye hesaplandı" yazar ve güven biraz
+  düşüktür. Düzeltmek için sınırı zaman
   çizelgesinde sürükle ya da tutamacı seçip ok tuşlarıyla kaydır (Shift ile
   5 sn, Delete rauntu siler); "Raunt ekle (şu andan)" oynatma anından bir
   raunt ekler. Dokunduğun raunt "elle girildi" olur ve **otomatiği her zaman

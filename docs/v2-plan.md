@@ -362,6 +362,7 @@ Mevcut modülü kuran prompt, 2017 metnindeki kriter sırasını izliyordu. Fark
 Her sanal hakem her round için şu adımları uygular:
 
 1. Uygunluk: round dışlanmamış olmalı ve ölçülebilir süresi config'teki eşiği (ör. %50) geçmeli. Geçmiyorsa yine en olası skor üretilir, ama `insufficient_data` bayrağı ve düşük güven gösterilir. Round kayıtta hiç yoksa "puanlanamadı" olur.
+   - Görünmeyen grappling (kullanıcı kararı, 27 Kasım 2026): roundda grappling durumunun "bilinmiyor" payı config eşiğini geçerse güven düşer ve round `grappling_unmeasured` ("grappling ölçülemedi") olarak işaretlenir. Gizli rakip çıkarımıyla "sarılı" tahmin edilen süre (`hidden_grappling` olayları ve `grappling_hidden` kare dizisi, Bölüm 3b) bu bayrağın kanıtıdır, ölçüm değildir: kontrol süresine, sayımlara ve kimsenin lehine puana girmez. Ölçülen vuruşlar yalnızca görülebilen (çoğunlukla ayakta geçen) bölümü temsil eder; görünmeyen grappling, vuruşları görünen dövüşçünün lehine yorumlanmaz. Gizli rakip tahmininde hangi dövüşçünün görüldüğü (`red_seen_s` / `blue_seen_s`) üstünlük kanıtı değildir: poz modeli sarılınca çoğunlukla üstteki ya da öndekini gösterir.
 2. Etkinlik skoru, her dövüşçü için: `E = w1·D_imm + w2·D_cum + w3·Dom`.
    - D\_imm, anlık hasar: knockdown, wobble, ağır kafa vuruşu, zorunlu geri çekilme (forced\_retreat), submission tehlikesi; şiddet × güven toplamı.
    - D\_cum, kümülatif hasar: isabetli önemli vuruşlar azalan getiriyle (ör. karekök ölçek), çıktı düşüşü ve kullanıcının eklediği görünür hasar bayrağı.
@@ -412,7 +413,7 @@ Profiller config'te durur. Mevcut modülde hakem profilleri varsa yeni bir set e
 `JudgingResult` (Pydantic):
 
 - Üst bilgi: schema\_version, ruleset, engine\_version, weights\_version, seed.
-- rounds\[\]: index, status (`complete` | `partial` | `excluded` | `no_data`), phase\_split, decided\_by, margin, dövüşçü başına significant\_damage ve dominance\_level, effective\_time\_share, damage\_edge ve grappling\_edge (üstün taraf ve farkın gücü), top\_attacks (en etkili 3–5 saldırının olay kimlikleri), judges\[\] (judge\_id, red, blue, reasons\[\]), deductions\[\], confidence (p\_red, p\_ten\_eight), data\_quality.
+- rounds\[\]: index, status (`complete` | `partial` | `excluded` | `no_data`), phase\_split, decided\_by, margin, dövüşçü başına significant\_damage ve dominance\_level, effective\_time\_share, damage\_edge ve grappling\_edge (üstün taraf ve farkın gücü), top\_attacks (en etkili 3–5 saldırının olay kimlikleri), judges\[\] (judge\_id, red, blue, reasons\[\]), deductions\[\], confidence (p\_red, p\_ten\_eight), data\_quality (ölçülebilir süre, grappling "bilinmiyor" payı, bunun gizli rakip çıkarımıyla "sarılı" tahmin edilen kısmı, `grappling_unmeasured`).
 - outcome: type (`finish` | `decision` | `technical_decision` | `no_contest` | `dq` | `incomplete`), winner (`red` | `blue` | null), method, round, time, judge\_totals\[\], decision\_type, summary\_reasons\[\] (kazananın neden kazandığı), confidence, user\_confirmed.
 - Reason: code (enum), params (sayılar), evidence\_event\_ids. Metni arayüz şablondan üretir.
 
@@ -431,6 +432,7 @@ pytest ile tablo bazlı:
 - Kazanana kesinti 9-9, kaybedene kesinti 10-8.
 - Karar türleri: 29-28 ×3 oybirliği; 29-28, 29-28, 28-29 bölünmüş; 29-28, 29-28, 28-28 oy çokluğu; 28-28, 28-28, 29-28 oy çokluğuyla beraberlik; 29-28, 28-29, 28-28 bölünmüş beraberlik.
 - Onaylı bitiş kartlardan önce gelir. Eksik kayıtta resmi kazanan yoktur.
+- "Bilinmiyor" payı yüksek round: `grappling_unmeasured` ve düşük güven; gizli rakip çıkarımıyla "sarılı" tahmin edilen süre ve o sırada görülen dövüşçü kimseye üstünlük yazmaz.
 - Aynı girdi ve seed ile Monte Carlo aynı sonucu verir. Momentum değerleri değişse de skorlar değişmez.
 
 ### Kabul ölçütleri

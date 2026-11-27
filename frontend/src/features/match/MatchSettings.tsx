@@ -6,7 +6,7 @@ import type {
   RoundNote,
   RoundSegment,
 } from "../../contracts/generated";
-import { MATCH_LABELS as L, ROUND_EDIT_LABELS, UI_LABELS } from "../../labels";
+import { MATCH_LABELS as L, ROUND_EDIT_LABELS, UI_LABELS, formatDuration } from "../../labels";
 import { formatClock } from "../../player/clock";
 import { Badge, Button, Card, DemoTag, HelpTip, SectionHeading, SegmentedControl, cx } from "../../ui";
 
@@ -59,6 +59,13 @@ export function RoundRows({ rounds, actions, compact = false }: {
             {L.source[r.source]}
             {r.source !== "manual" && <> · <span className="num">{L.confidence(Math.round(r.confidence * 100))}</span></>}
             {r.clock_end != null && r.clock_end > 0 && <> · {L.clockEnd(formatClock(r.clock_end))}</>}
+            {r.start_extrapolated_s != null && r.source !== "manual" && (
+              <> · {L.startExtrapolated(formatDuration(r.start_extrapolated_s))}{" "}
+                <HelpTip label={UI_LABELS.help(L.startExtrapolated(formatDuration(r.start_extrapolated_s)))} align="end">
+                  {L.startExtrapolatedHelp}
+                </HelpTip>
+              </>
+            )}
           </span>
           {r.partial && (
             <span className="mset__partial">

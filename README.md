@@ -654,7 +654,12 @@ okunan adlar yayın grafiğinden çıkarılan **AI tahminidir**, resmi zamanlama
   ilerlerken saat duruyorsa durma; üç okumaya kadar tutarsız okuma OCR hatası
   sayılıp atılır. Başlangıç, ilk okumalardan saatin tepeden (5:00) çıktığı ana
   geri çekilir; saat 0:00'a inerse raunt tamamdır, üstünde donarsa erken bitmiştir
-  (ör. nakavt, `partial`), kaybolursa son okumada kesilir.
+  (ör. nakavt, `partial`), kaybolursa son okumada kesilir. İlk okuma tepeden 6 sn'den
+  fazla, 20 sn'ye kadar aşağıdaysa saat raunt başında kapalıydı (sponsor grafiği,
+  geç gelen scorebug): başlangıç ilk okumadan geriye hesaplanır, `start_extrapolated_s`
+  ile işaretlenir ve güveni × 0,85 olur; o an videodan önceyse, önceki rauntla
+  çakışıyorsa ya da arada yayının rauntun içine dönüşünü gösteren bir logo geçişi
+  varsa geriye hesaplanmaz (kısmi raunt). Yayın sürümü 4.
 - **OCR yoksa:** pozlardan raunt arası tespiti (≥45 sn dövüşsüz, oturan kişi ya
   da kafeste çok kişi). Güveni en fazla 0,5'tir; ara bulunamazsa raunt iddia
   edilmez (tüm video "R1" sayılmaz).

@@ -186,6 +186,7 @@ export function EventList({ events, damage = [], clock, time, names, demo, selec
                     <StrikeTags e={e} />
                     {e.brief && <span className="tag tag--muted" title={EVENT_TAG_LABELS.briefHelp}>{EVENT_TAG_LABELS.brief}</span>}
                     {e.inferred && <span className="tag tag--muted" title={EVENT_TAG_LABELS.inferredHelp}>{EVENT_TAG_LABELS.inferred}</span>}
+                    {e.hidden && <span className="tag tag--muted" title={EVENT_TAG_LABELS.hiddenHelp}>{EVENT_TAG_LABELS.hidden}</span>}
                     {e.tags?.map((t) => (
                       <span key={t.label} className={`tag tag--${t.tone}`} title={t.title}>{t.label}</span>
                     ))}

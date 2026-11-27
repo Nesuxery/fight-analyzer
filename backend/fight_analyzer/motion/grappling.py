@@ -73,6 +73,20 @@ Control
                       striking (`active_before_s` .. `active_after_s` around each
                       attempt) or holds a submission attempt. Holding a position
                       alone is not dominance (ABC 2025), so it is kept apart.
+Hidden opponent (gizli rakip çıkarımı, `hidden_opponent`)
+    When two fighters are tied up, the pose model often finds one skeleton for
+    both (mostly the one on top or in front): the other one goes unmeasured and
+    the state is UNKNOWN. Where only one fighter is measured on such frames and
+    they were close when the state became unknown (or the fighter seen is down,
+    which a fighter is not for long on his own), a separate estimate says they
+    are still tied up (TIED_UP): whether standing or on the ground is not said,
+    because the merged skeleton's posture does not tell (11 of 24 frames wrong
+    on the tuning recording); only between two equal measured tied-up states
+    is that state carried over. It is never part of the measured state: its
+    own arrays, low confidence, its own event type (`hidden_grappling`), and
+    nothing is counted, credited as control or given momentum points from it.
+    The fighter seen is not taken to be on top: the one the model shows is not
+    always the one in control.
 """
 
 from __future__ import annotations
@@ -91,11 +105,14 @@ from .kinematics import LE, LH, LK, LA, LS, LW, RA, RE, RH, RK, RS, RW, STANDING
 from .series import close_holes, runs, value_runs, window_mask
 
 UNKNOWN, DISTANCE, CLINCH, RED_TOP, BLUE_TOP, SCRAMBLE = -1, 0, 1, 2, 3, 4
+TIED_UP = 5  # hidden-opponent estimate only: tied up, standing or on the ground (not told apart)
 TOP = (RED_TOP, BLUE_TOP)  # the state with fighter i on top
 STANDING_STATES = frozenset({DISTANCE, CLINCH})
 GROUND_STATES = frozenset({RED_TOP, BLUE_TOP, SCRAMBLE})
+TIED = frozenset({CLINCH, RED_TOP, BLUE_TOP, SCRAMBLE})
 CONTRACT = {DISTANCE: GrapplingState.distance, CLINCH: GrapplingState.clinch, RED_TOP: GrapplingState.ground_red_top,
-            BLUE_TOP: GrapplingState.ground_blue_top, SCRAMBLE: GrapplingState.scramble}
+            BLUE_TOP: GrapplingState.ground_blue_top, SCRAMBLE: GrapplingState.scramble,
+            TIED_UP: GrapplingState.tied_up}
 HEAD = (0, 1, 2, 3, 4)
 LOW_JOINTS = (LS, RS, LH, RH, LK, RK, LA, RA)  # what lies on the mat when he is down (hands can post)
 FILLED, CHANGED = 0.5, 0.5  # confidence factors of filled and relabelled frames
@@ -328,8 +345,10 @@ def _relabel(cur: int, p: int | None, q: int | None, sp: float, sq: float) -> in
     return None if new == cur else new
 
 
-def _merge_short(state: np.ndarray, frame_s: np.ndarray, min_s: float) -> np.ndarray:
-    """Runs shorter than min_s are relabelled from the shortest up (`_relabel`); equal neighbours merge."""
+def _merge_short(state: np.ndarray, frame_s: np.ndarray, min_s: float, relabel=None) -> np.ndarray:
+    """Runs shorter than min_s are relabelled from the shortest up (`relabel`, default `_relabel`); equal
+    neighbours merge."""
+    relabel = relabel or _relabel
     rl = value_runs(state)
     m = len(rl)
     if m < 2:
@@ -363,8 +382,8 @@ def _merge_short(state: np.ndarray, frame_s: np.ndarray, min_s: float) -> np.nda
         if not alive[k] or d != sec[k]:
             continue
         p, q = prev[k], nxt[k]
-        new = _relabel(val[k], val[p] if p >= 0 else None, val[q] if q >= 0 else None,
-                       sec[p] if p >= 0 else 0.0, sec[q] if q >= 0 else 0.0)
+        new = relabel(val[k], val[p] if p >= 0 else None, val[q] if q >= 0 else None,
+                      sec[p] if p >= 0 else 0.0, sec[q] if q >= 0 else 0.0)
         if new is None:
             continue
         val[k] = new
@@ -877,12 +896,207 @@ def submissions(g: Grappling, kin: tuple[FighterKinematics, FighterKinematics], 
     return out
 
 
+# ---- hidden opponent ------------------------------------------------------------------
+
+_UP, _DOWN = 1, 2  # the fighter seen stands / is down (evidence inside hidden_opponent, not a state)
+
+
+@dataclass
+class HiddenEpisode:
+    """A stretch of the hidden-opponent estimate (a part of one unknown run of the measured state)."""
+
+    a: int  # first estimated frame
+    b: int  # last estimated frame
+    carried: int | None  # the measured state right before and after (the same one, tied up), carried over
+    contact: float | None  # closest distance when the state became unknown (0: tied up); None: not seen close
+
+
+@dataclass
+class Hidden:
+    """Hidden-opponent estimate (gizli rakip çıkarımı) on frames whose measured state is UNKNOWN."""
+
+    state: np.ndarray  # [F] int8 TIED_UP, or a carried CLINCH / RED_TOP / BLUE_TOP / SCRAMBLE; UNKNOWN: none
+    conf: np.ndarray  # [F] float32, 0 where nothing is estimated
+    seen: np.ndarray  # [F] int8 fighter measured on the frame (0 red, 1 blue); -1 neither (bridged) or none
+    down: np.ndarray  # [F] bool: the fighter seen is down (evidence of the tie-up, not the kind of it)
+    episodes: list[HiddenEpisode] = field(default_factory=list)
+
+
+def no_hidden(n: int) -> Hidden:
+    return Hidden(np.full(n, UNKNOWN, np.int8), np.zeros(n, np.float32), np.full(n, -1, np.int8), np.zeros(n, bool))
+
+
+def _relabel_hidden(cur: int, p: int | None, q: int | None, sp: float, sq: float) -> int | None:
+    """New value of a short run: a short island in unestimated time is dropped, one next to a single
+    estimate joins it, one between two takes the longer (or the same) neighbour's."""
+    p = None if p == UNKNOWN else p
+    q = None if q == UNKNOWN else q
+    if p is None and q is None:
+        new = UNKNOWN
+    elif p is None or q is None:
+        new = q if p is None else p
+    else:
+        new = p if p == q else max((sp, p), (sq, q))[1]
+    return None if new == cur else new
+
+
+def _bridge(kind: np.ndarray, ts: np.ndarray, limit_s: float) -> np.ndarray:
+    """Unestimated holes (neither fighter measured) of at most limit_s between two equal values take it."""
+    out = kind.copy()
+    rl = value_runs(kind)
+    for k in range(1, len(rl) - 1):
+        v, a, b = rl[k]
+        if v == UNKNOWN and rl[k - 1][0] == rl[k + 1][0] != UNKNOWN and ts[rl[k + 1][1]] - ts[rl[k - 1][2]] <= limit_s:
+            out[a:b + 1] = rl[k - 1][0]
+    return out
+
+
+def _pieces(kind: np.ndarray, ts: np.ndarray, gap_s: float) -> list[tuple[int, int]]:
+    """Index ranges of the estimated parts of a run, split where nothing is estimated for longer than gap_s."""
+    idx = np.flatnonzero(kind != UNKNOWN)
+    if idx.size == 0:
+        return []
+    out, start = [], int(idx[0])
+    for p, q in zip(idx[:-1], idx[1:]):
+        if ts[q] - ts[p] > gap_s:
+            out.append((start, int(p)))
+            start = int(q)
+    out.append((start, int(idx[-1])))
+    return out
+
+
+def _near(t: np.ndarray, moments: np.ndarray, within_s: float) -> np.ndarray:
+    """[len(t)] bool: within within_s of one of the sorted moments."""
+    if moments.size == 0:
+        return np.zeros(t.size, bool)
+    k = np.clip(np.searchsorted(moments, t), 1, moments.size) - 1
+    gap = np.minimum(np.abs(t - moments[k]), np.abs(t - moments[np.minimum(k + 1, moments.size - 1)]))
+    return gap <= within_s
+
+
+def hidden_opponent(state: np.ndarray, kin: tuple[FighterKinematics, FighterKinematics], down: np.ndarray,
+                    distance: np.ndarray, ts: np.ndarray, frame_s: np.ndarray, s: MotionSettings,
+                    identity_conf: np.ndarray | None = None) -> Hidden:
+    """The hidden-opponent estimate on the UNKNOWN runs of the (smoothed) state, on the frames on which
+    exactly one fighter is measured (short flickers merged, holes with neither measured bridged up to
+    `hidden_bridge_s`). Evidence that the two are tied up: they were within `hidden_contact_distance`
+    around the moment the state became unknown (or tied up right before), and every frame on which the
+    fighter seen is down (a fighter is not on the ground for long on his own). A run is cut where
+    nothing is estimated for `hidden_gap_s`; only its first part has the closeness. A part with it keeps
+    the frames on which the fighter seen stands within `hidden_standing_s` of the evidence (long after
+    his opponent was last seen near him he may just be apart from an opponent the identity layer lost);
+    a part without it keeps only the frames on which he is down, and only with `hidden_min_s` of them.
+    Every part must last `hidden_min_s` (one fighter hiding the other for a moment in an exchange is not
+    grappling). The estimate is TIED_UP: on the tuning recording the merged skeleton's posture did not
+    tell a clinch from the ground (wrong on 11 of 24 frames checked by eye). Only a run between two equal
+    measured tied-up states, with nothing cut out, carries that state over. The confidence is
+    `hidden_max_confidence` times the seen fighter's identity confidence, half of that on bridged frames."""
+    n = state.size
+    out = no_hidden(n)
+    if n == 0:
+        return out
+    valid = np.stack([k.valid for k in kin])
+    one = valid[0] ^ valid[1]
+    who = np.where(valid[0], 0, 1).astype(np.int8)
+    ident = np.full((n, 2), 0.8)
+    if identity_conf is not None and identity_conf.shape[0] == n:
+        ident = np.clip(np.nan_to_num(identity_conf, nan=0.0), 0.0, 1.0)
+    rows = np.arange(n)
+    for v, a, b in value_runs(state):
+        if v != UNKNOWN or not one[a:b + 1].any():
+            continue
+        before = int(state[a - 1]) if a > 0 else UNKNOWN
+        after = int(state[b + 1]) if b + 1 < n else UNKNOWN
+        lo = int(np.searchsorted(ts, ts[a] - s.hidden_contact_window_s))
+        hi = int(np.searchsorted(ts, ts[a] + s.hidden_contact_window_s, side="right"))
+        near = distance[lo:hi]
+        contact: float | None = 0.0 if before in TIED else (float(np.nanmin(near)) if np.isfinite(near).any() else None)
+        if contact is not None and contact > s.hidden_contact_distance:
+            contact = None
+        idx = rows[a:b + 1]
+        vis = one[a:b + 1]
+        i_seen = who[a:b + 1]
+        kind = np.where(down[i_seen, idx], _DOWN, _UP).astype(np.int8)
+        kind[~vis] = UNKNOWN
+        fs, tt = frame_s[a:b + 1], ts[a:b + 1]
+        kind = _merge_short(kind, fs, s.state_min_s, _relabel_hidden)
+        kind = _bridge(kind, tt, s.hidden_bridge_s)
+        kind = _merge_short(kind, fs, s.state_min_s, _relabel_hidden)
+        pieces = _pieces(kind, tt, s.hidden_gap_s)
+        for p, (x, y) in enumerate(pieces):
+            part = kind[x:y + 1].copy()
+            pf, pt = fs[x:y + 1], tt[x:y + 1]
+            close = contact if p == 0 else None  # the closeness was seen where the run began
+            is_down = part == _DOWN
+            if close is None and float(pf[is_down].sum()) < s.hidden_min_s:
+                continue
+            up = np.flatnonzero(part == _UP)
+            if close is None:  # not seen close: a fighter down says he is grappling, one standing says nothing
+                part[up] = UNKNOWN
+            else:
+                evidence = np.sort(np.concatenate([[tt[0]], pt[is_down]]))
+                part[up[~_near(pt[up], evidence, s.hidden_standing_s)]] = UNKNOWN
+            part = _merge_short(part, pf, s.state_min_s, _relabel_hidden)
+            est = part != UNKNOWN
+            if float(pf[est].sum()) < s.hidden_min_s:
+                continue
+            carried = before if len(pieces) == 1 and before in TIED and before == after else None
+            frames = idx[x:y + 1]
+            seen_here = vis[x:y + 1]
+            who_here = i_seen[x:y + 1]
+            measured = est & seen_here
+            c = np.where(measured, s.hidden_max_confidence * ident[frames, who_here], 0.0)
+            bridged = est & ~seen_here
+            if bridged.any():
+                c[bridged] = 0.5 * float(c[measured].mean()) if measured.any() else 0.0
+            out.state[frames] = np.where(est, TIED_UP if carried is None else carried, UNKNOWN)
+            out.conf[frames] = c.astype(np.float32)
+            out.seen[frames] = np.where(measured, who_here, -1)
+            out.down[frames] = est & (part == _DOWN)
+            out.episodes.append(HiddenEpisode(int(frames[est][0]), int(frames[est][-1]), carried, close))
+    return out
+
+
+def hidden_events(h: Hidden, frame_s: np.ndarray) -> list[Found]:
+    """One `hidden_grappling` event per estimated stretch: listed with its label, never counted."""
+    found = []
+    for ep in h.episodes:
+        part = slice(ep.a, ep.b + 1)
+        st, fs, sn = h.state[part], frame_s[part], h.seen[part]
+        est = st != UNKNOWN
+        measures = {"seconds": round(float(fs[est].sum()), 2), "seen_down_s": round(float(fs[h.down[part]].sum()), 2),
+                    "red_seen_s": round(float(fs[sn == 0].sum()), 2), "blue_seen_s": round(float(fs[sn == 1].sum()), 2)}
+        evidence = [EvidenceSignal.opponent_hidden]
+        if ep.contact is not None:
+            measures["contact_distance"] = round(ep.contact, 2)
+            evidence.append(EvidenceSignal.close_contact)
+        actor = target = None
+        if ep.carried in TOP:
+            actor = TOP.index(ep.carried)
+            target = 1 - actor
+            evidence.append(EvidenceSignal.top_position)
+        note = ("Gizli rakip çıkarımı: biri görünmüyordu; sarılı oldukları tahmin edildi (ayakta mı yerde mi "
+                "ayırt edilmedi). Ölçülmedi, sayılmaz.")
+        if ep.carried is not None:
+            note = ("Gizli rakip çıkarımı: biri görünmüyordu; öncesinde ve sonrasında ölçülen durum ("
+                    f"{CARRIED_TEXT[ep.carried]}) sürmüş sayıldı. Ölçülmedi, sayılmaz.")
+        found.append(Found(EventType.hidden_grappling, actor, target, ep.a, ep.b, None,
+                           round(float(h.conf[part][est].mean()), 3), measures, evidence, note))
+    return found
+
+
+CARRIED_TEXT = {CLINCH: "klinç", RED_TOP: "yerde kırmızı üstte", BLUE_TOP: "yerde mavi üstte", SCRAMBLE: "yerde karmaşa"}
+
+
 # ---- summaries ----------------------------------------------------------------------
 
-def phase_seconds(state: np.ndarray, frame_s: np.ndarray) -> dict[str, float]:
-    """Seconds in each state (whole video)."""
+def phase_seconds(state: np.ndarray, frame_s: np.ndarray, hidden: np.ndarray | None = None) -> dict[str, float]:
+    """Seconds in each state (whole video); `hidden`: the hidden-opponent estimate, a part of the unknown time."""
     def secs(mask: np.ndarray) -> float:
         return round(float(frame_s[mask].sum()), 2)
-    return {"distance_s": secs(state == DISTANCE), "clinch_s": secs(state == CLINCH),
-            "ground_s": secs((state == RED_TOP) | (state == BLUE_TOP)), "scramble_s": secs(state == SCRAMBLE),
-            "unknown_s": secs(state == UNKNOWN)}
+    out = {"distance_s": secs(state == DISTANCE), "clinch_s": secs(state == CLINCH),
+           "ground_s": secs((state == RED_TOP) | (state == BLUE_TOP)), "scramble_s": secs(state == SCRAMBLE),
+           "unknown_s": secs(state == UNKNOWN)}
+    if hidden is not None:
+        out["hidden_s"] = secs(hidden != UNKNOWN)
+    return out
